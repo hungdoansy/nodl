@@ -110,13 +110,13 @@ Renderer                    Main Process                Child Process
 
 ---
 
-## Phase 1: Electron Scaffold + Editor + Basic JS Execution
+## Phase 1: Electron Scaffold + Editor + Basic JS Execution ✅
 
 **Goal:** Electron app opens a window with Monaco editor on the left and console output on the right. JS code runs in a child process and output appears.
 
 ### Tasks
 
-1. **Project init**
+1. **Project init** ✅
    - Initialize with Vite + React + TypeScript
    - Use **pnpm** for all package operations (`pnpm create`, `pnpm add`, `pnpm run`)
    - Set `"packageManager": "pnpm@9"` and `"engines": { "node": ">=22" }` in `package.json`
@@ -126,28 +126,28 @@ Renderer                    Main Process                Child Process
    - Install deps: `pnpm add @monaco-editor/react react-resizable-panels zustand tailwindcss electron-store`
    - Configure Tailwind, set up base styles (dark background, monospace output)
 
-2. **Electron main process**
-   - `electron/main.ts`: create `BrowserWindow` with `preload.ts`, load Vite dev URL or built HTML
-   - Window config: 1200x800 default, min size 800x500, frameless or native title bar (platform-dependent)
-   - `preload.ts`: expose `electronAPI` via `contextBridge` with typed methods
+2. **Electron main process** ✅
+   - `src/main/index.ts`: create `BrowserWindow` with `preload.ts`, load Vite dev URL or built HTML
+   - Window config: 1200x800 default, min size 800x500, hiddenInset title bar on macOS
+   - `src/preload/index.ts`: expose `electronAPI` via `contextBridge` with typed methods
 
-3. **App shell (renderer)**
+3. **App shell (renderer)** ✅
    - `App.tsx`: vertical layout — Header (fixed height, draggable region for frameless) + body (flex-1, split panes)
    - Use `react-resizable-panels` for horizontal split: EditorPane | OutputPane
    - Minimum pane sizes: 20% each
 
-4. **Monaco editor integration**
+4. **Monaco editor integration** ✅
    - `EditorPane.tsx`: render Monaco with JS language, dark theme
-   - Controlled value via Zustand store (`tabs.activeTab.code`)
+   - Controlled value via Zustand store (`editor.code`)
    - Default code: `console.log("Hello, nodl!");`
 
-5. **Basic JS execution via child process**
-   - `electron/executor/runner.ts`:
+5. **Basic JS execution via child process** ✅
+   - `src/main/executor/runner.ts`:
      - Fork a worker script with `child_process.fork()`
-     - Worker receives code via IPC message, executes with `vm.runInNewContext()` or wrapped `eval`
+     - Worker receives code via IPC message, executes with AsyncFunction
      - Intercept `console` methods in the sandbox, send each call back via `process.send()`
      - Execution timeout: 5 seconds (configurable), kill child on timeout
-   - `electron/executor/console-capture.ts`:
+   - `src/main/executor/console-capture.ts`:
      - Create sandboxed console that serializes args (handles circular refs, non-serializable values)
      - Each entry: `{ id, method, args: SerializedValue[], timestamp }`
    - IPC handlers in main:
@@ -156,7 +156,7 @@ Renderer                    Main Process                Child Process
      - `ipc:output-entry` → forward to renderer (stream, not batch)
      - `ipc:execution-done` → signal completion with duration & exit code
 
-6. **Output panel (renderer)**
+6. **Output panel (renderer)** ✅
    - `OutputPane.tsx`: scrollable list of `ConsoleEntry` components
    - Color-code by method: log=white, warn=yellow, error=red, info=blue
    - Stringify primitives inline, show `[Object]` / `[Array]` for complex types (Phase 2 does tree expansion)
@@ -164,7 +164,7 @@ Renderer                    Main Process                Child Process
    - "Stop" button (visible during execution) to kill running code
    - Auto-scroll to bottom on new entries
 
-7. **Manual run**
+7. **Manual run** ✅
    - "Run" button (▶) in editor toolbar triggers execution via IPC
    - Keyboard shortcut: `Cmd/Ctrl + Enter`
    - Clear previous output before each run
