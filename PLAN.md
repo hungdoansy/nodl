@@ -364,7 +364,7 @@ Renderer                    Main Process                Child Process
    - Error highlighting: when execution errors, highlight the error line in the editor with a red gutter marker
    - Empty state for output: "Run your code to see output here"
 
-5. **Packaging & distribution**
+5. **Packaging & distribution** ✅
    - `electron-builder.yml`: configure for macOS (.dmg), Windows (.exe), Linux (.AppImage)
    - Code signing setup (documented, not automated in v1)
    - Auto-update support via `electron-updater` (stretch goal)

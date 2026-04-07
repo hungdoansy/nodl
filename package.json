@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A JavaScript/TypeScript scratchpad desktop app",
   "main": "./out/main/index.js",
+  "author": "hungdoansy",
   "homepage": "https://github.com/hungdoansy/nodl",
   "packageManager": "pnpm@9.15.9",
   "type": "module",
@@ -17,7 +18,9 @@
     "postinstall": "electron-builder install-app-deps",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "pack": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",

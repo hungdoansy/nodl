@@ -1,0 +1,78 @@
+appId: com.hungdoansy.nodl
+productName: nodl
+copyright: Copyright © 2024-2026 hungdoansy
+
+directories:
+  buildResources: resources
+  output: dist
+
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+
+extraResources:
+  - from: node_modules/esbuild
+    to: node_modules/esbuild
+    filter:
+      - "**/*"
+
+# macOS
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+
+dmg:
+  sign: false
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Windows
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  artifactName: "${productName}-${version}-win-${arch}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+# Linux
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Development
+  artifactName: "${productName}-${version}-linux-${arch}.${ext}"
+  maintainer: hungdoansy
+  synopsis: A JavaScript/TypeScript scratchpad desktop app
+  description: nodl is a fast, lightweight desktop app for writing and running JavaScript/TypeScript code snippets with instant output.
