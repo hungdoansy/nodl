@@ -5,8 +5,34 @@ export const IPC = {
   OUTPUT_ENTRY: 'ipc:output-entry',
   EXECUTION_DONE: 'ipc:execution-done',
   SAVE_STATE: 'ipc:save-state',
-  LOAD_STATE: 'ipc:load-state'
+  LOAD_STATE: 'ipc:load-state',
+  INSTALL_PACKAGE: 'ipc:install-package',
+  REMOVE_PACKAGE: 'ipc:remove-package',
+  LIST_PACKAGES: 'ipc:list-packages',
+  SEARCH_PACKAGES: 'ipc:search-packages'
 } as const
+
+/** Installed package info */
+export interface InstalledPackage {
+  name: string
+  version: string
+}
+
+/** npm search result */
+export interface PackageSearchResult {
+  name: string
+  description: string
+  version: string
+  date: string
+}
+
+/** Result of install/remove operation */
+export interface PackageOperationResult {
+  success: boolean
+  name: string
+  version?: string
+  error?: string
+}
 
 /** Persisted app state */
 export interface PersistedState {
@@ -63,6 +89,10 @@ export interface ElectronAPI {
   onExecutionDone: (callback: (result: ExecutionResult) => void) => () => void
   saveState: (state: PersistedState) => void
   loadState: () => Promise<PersistedState | null>
+  installPackage: (name: string) => Promise<PackageOperationResult>
+  removePackage: (name: string) => Promise<PackageOperationResult>
+  listPackages: () => Promise<InstalledPackage[]>
+  searchPackages: (query: string) => Promise<PackageSearchResult[]>
 }
 
 declare global {

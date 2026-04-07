@@ -5,6 +5,12 @@ import type { OutputEntry, ExecutionResult, RunCodePayload, WorkerMessage } from
 const WORKER_PATH = join(__dirname, 'worker.js')
 const DEFAULT_TIMEOUT = 5000
 
+let nodeModulesPath = ''
+
+export function setNodeModulesPath(path: string): void {
+  nodeModulesPath = path
+}
+
 interface RunnerCallbacks {
   onOutput: (entry: OutputEntry) => void
   onDone: (result: ExecutionResult) => void
@@ -38,7 +44,10 @@ export function createRunner(): Runner {
 
       child = fork(WORKER_PATH, [], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-        env: { ...process.env }
+        env: {
+          ...process.env,
+          NODE_PATH: nodeModulesPath || process.env.NODE_PATH || ''
+        }
       })
 
       child.on('message', (msg: WorkerMessage) => {

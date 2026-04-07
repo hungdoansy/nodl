@@ -1,4 +1,7 @@
-import type { ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult, PersistedState } from '../../shared/types'
+import type {
+  ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
+  PersistedState, PackageOperationResult, InstalledPackage, PackageSearchResult
+} from '../../shared/types'
 
 function getAPI(): ElectronAPI | null {
   return window.electronAPI ?? null
@@ -26,4 +29,20 @@ export function saveState(state: PersistedState): void {
 
 export async function loadState(): Promise<PersistedState | null> {
   return (await getAPI()?.loadState()) ?? null
+}
+
+export async function installPackage(name: string): Promise<PackageOperationResult> {
+  return (await getAPI()?.installPackage(name)) ?? { success: false, name, error: 'API not available' }
+}
+
+export async function removePackage(name: string): Promise<PackageOperationResult> {
+  return (await getAPI()?.removePackage(name)) ?? { success: false, name, error: 'API not available' }
+}
+
+export async function listPackages(): Promise<InstalledPackage[]> {
+  return (await getAPI()?.listPackages()) ?? []
+}
+
+export async function searchPackages(query: string): Promise<PackageSearchResult[]> {
+  return (await getAPI()?.searchPackages(query)) ?? []
 }

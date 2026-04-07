@@ -2,8 +2,9 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
-import { createRunner } from './executor/runner'
+import { createRunner, setNodeModulesPath } from './executor/runner'
 import { transpile } from './executor/transpiler'
+import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath } from './executor/package-manager'
 import { IPC } from '../../shared/types'
 import type { RunCodePayload, PersistedState } from '../../shared/types'
 
@@ -71,7 +72,27 @@ ipcMain.handle(IPC.LOAD_STATE, () => {
   return loadPersistedState()
 })
 
+// --- Package management ---
+ipcMain.handle(IPC.INSTALL_PACKAGE, (_event, name: string) => {
+  return installPackage(name)
+})
+
+ipcMain.handle(IPC.REMOVE_PACKAGE, (_event, name: string) => {
+  return removePackage(name)
+})
+
+ipcMain.handle(IPC.LIST_PACKAGES, () => {
+  return listPackages()
+})
+
+ipcMain.handle(IPC.SEARCH_PACKAGES, (_event, query: string) => {
+  return searchPackages(query)
+})
+
 // --- Code execution ---
+// Set NODE_PATH so worker processes can resolve installed packages
+setNodeModulesPath(getNodeModulesPath())
+
 let runner = createRunner()
 
 ipcMain.on(IPC.RUN_CODE, (_event, payload: RunCodePayload) => {

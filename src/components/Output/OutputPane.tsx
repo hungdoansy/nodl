@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { ConsoleEntryComponent } from './ConsoleEntry'
+import { PackageList } from '../Packages/PackageList'
 
 export function OutputPane() {
   const { entries, isRunning, lastResult, stop, clear } = useCodeExecution()
@@ -46,6 +47,7 @@ export function OutputPane() {
           {lastResult.success ? '✓' : '✗'} Ran in {lastResult.duration}ms
         </div>
       )}
+      <PackageList />
     </div>
   )
 }

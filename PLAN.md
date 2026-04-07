@@ -276,42 +276,38 @@ Renderer                    Main Process                Child Process
 
 ---
 
-## Phase 4: npm Package Support
+## Phase 4: npm Package Support ✅
 
 **Goal:** Users can install real npm packages and require/import them in their code.
 
 ### Tasks
 
-1. **Package installation via npm**
-   - `electron/executor/package-manager.ts`:
-     - Maintain a shared `node_modules` directory in app's userData folder (e.g., `~/.nodl/packages/`)
-     - `installPackage(name, version?)`: run `pnpm add <pkg>` in that directory via `child_process.exec`
-     - `removePackage(name)`: run `pnpm remove <pkg>`
-     - Return installed version on success, error on failure
-   - This gives **real** npm packages running in **real** Node.js — not CDN shims
+1. **Package installation via pnpm** ✅
+   - `src/main/executor/package-manager.ts`:
+     - Shared `node_modules` in app's userData folder (`packages/`)
+     - `installPackage(name)`: runs `pnpm add <pkg>` via `child_process.execSync`
+     - `removePackage(name)`: runs `pnpm remove <pkg>`
+     - `listPackages()`: reads from `package.json` dependencies
+     - `searchPackages(query)`: queries npm registry API
+     - Returns installed version on success, error on failure
 
-2. **Package dialog**
+2. **Package dialog** ✅
    - `PackageDialog.tsx`: modal with search input
-   - Debounced search against npm registry API (`https://registry.npmjs.org/-/v1/search?text=...`)
-   - Show results: name, description, version, weekly downloads
-   - Click to install → shows progress spinner → IPC to main → main runs pnpm add → result back
-   - Error handling: network errors, install failures
+   - Debounced search against npm registry API (300ms)
+   - Show results: name, description, version
+   - Click to install with progress state via IPC
 
-3. **Package list sidebar**
-   - Small collapsible section showing installed packages (global, shared across tabs)
+3. **Package list sidebar** ✅
+   - Collapsible section in output pane showing installed packages
    - Each entry: name@version, remove button
-   - Removing triggers `pnpm remove` via IPC
+   - "+ Add" button opens search dialog
 
-4. **Module resolution in executor**
-   - The child process execution environment has `NODE_PATH` set to the shared `node_modules`
-   - `require()` and `import` (via dynamic import or top-level await) resolve from there
-   - For `import` syntax in code: transpile to `require()` via esbuild, or use dynamic import
-   - No CDN rewriting needed — real packages, real require
+4. **Module resolution in executor** ✅
+   - `NODE_PATH` set to shared `node_modules` in child process fork env
+   - `require()` resolves installed packages natively
 
-5. **Built-in Node.js modules**
-   - Code can use `require('fs')`, `require('path')`, etc. natively
-   - The child process is a real Node.js process — all built-in modules work
-   - This is a major advantage over browser-based RunJS clones
+5. **Built-in Node.js modules** ✅
+   - Child process is real Node.js — all builtins work natively
 
 ### Acceptance Criteria
 - User installs "lodash" → writes `const _ = require("lodash")` → `_.chunk([1,2,3,4], 2)` works
