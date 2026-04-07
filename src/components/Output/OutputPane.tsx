@@ -18,12 +18,15 @@ export function OutputPane() {
       <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border-b border-zinc-700">
         <span className="text-xs font-medium text-zinc-400">Output</span>
         {isRunning && (
-          <button
-            onClick={stop}
-            className="px-2 py-0.5 text-xs rounded bg-red-600 hover:bg-red-500 text-white transition-colors"
-          >
-            ■ Stop
-          </button>
+          <>
+            <span className="inline-block w-3 h-3 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+            <button
+              onClick={stop}
+              className="px-2 py-0.5 text-xs rounded bg-red-600 hover:bg-red-500 text-white transition-colors"
+            >
+              ■ Stop
+            </button>
+          </>
         )}
         <button
           onClick={clear}
@@ -38,12 +41,20 @@ export function OutputPane() {
             Run your code to see output here
           </div>
         )}
+        {entries.length === 0 && isRunning && (
+          <div className="flex items-center justify-center h-full gap-2 text-zinc-500 text-sm">
+            <span className="inline-block w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+            Running...
+          </div>
+        )}
         {entries.map((entry) => (
           <ConsoleEntryComponent key={entry.id} entry={entry} />
         ))}
       </div>
       {lastResult && (
-        <div className="px-3 py-1 bg-zinc-800/50 border-t border-zinc-700 text-xs text-zinc-500">
+        <div className={`px-3 py-1 bg-zinc-800/50 border-t border-zinc-700 text-xs ${
+          lastResult.success ? 'text-zinc-500' : 'text-red-400'
+        }`}>
           {lastResult.success ? '✓' : '✗'} Ran in {lastResult.duration}ms
         </div>
       )}

@@ -1,9 +1,12 @@
-import Editor from '@monaco-editor/react'
+import { useRef, useCallback } from 'react'
+import Editor, { type OnMount } from '@monaco-editor/react'
+import type { editor as monacoEditor } from 'monaco-editor'
 import { useTabsStore } from '../../store/tabs'
 import { useSettingsStore } from '../../store/settings'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useAutoRun } from '../../hooks/useAutoRun'
 import { useTheme } from '../../hooks/useTheme'
+import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
 
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -18,10 +21,22 @@ export function EditorPane() {
   const minimap = useSettingsStore((s) => s.minimap)
   const autoRunEnabled = useSettingsStore((s) => s.autoRunEnabled)
   const autoRunDelay = useSettingsStore((s) => s.autoRunDelay)
-  const setAutoRunEnabled = useSettingsStore((s) => s.setSetting)
+  const setSetting = useSettingsStore((s) => s.setSetting)
   const resolvedTheme = useTheme()
 
+  const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
+
   useAutoRun(run, autoRunEnabled, autoRunDelay)
+  useErrorHighlighting(editorRef)
+
+  const handleMount: OnMount = useCallback((editor) => {
+    editorRef.current = editor
+    editor.addCommand(
+      // eslint-disable-next-line no-bitwise
+      2048 | 3, // KeyMod.CtrlCmd | KeyCode.Enter
+      () => run()
+    )
+  }, [run])
 
   return (
     <div className="flex flex-col h-full">
@@ -35,7 +50,7 @@ export function EditorPane() {
           ▶ Run
         </button>
         <button
-          onClick={() => setAutoRunEnabled('autoRunEnabled', !autoRunEnabled)}
+          onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
             autoRunEnabled
               ? 'bg-amber-600 hover:bg-amber-500 text-white'
@@ -69,15 +84,10 @@ export function EditorPane() {
             scrollBeyondLastLine: false,
             wordWrap: wordWrap ? 'on' : 'off',
             tabSize,
-            automaticLayout: true
+            automaticLayout: true,
+            glyphMargin: true
           }}
-          onMount={(editor) => {
-            editor.addCommand(
-              // eslint-disable-next-line no-bitwise
-              2048 | 3, // KeyMod.CtrlCmd | KeyCode.Enter
-              () => run()
-            )
-          }}
+          onMount={handleMount}
         />
       </div>
     </div>

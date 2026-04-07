@@ -353,7 +353,7 @@ Renderer                    Main Process                Child Process
    - `Cmd/Ctrl + Shift + P`: Command palette (stretch goal)
    - Register via Electron `globalShortcut` or in-renderer key handlers
 
-4. **Native desktop polish**
+4. **Native desktop polish** ✅
    - App icon and proper app name in dock/taskbar
    - macOS: traffic light buttons positioned correctly, drag region in header
    - Window state persistence: remember size, position, maximized state on relaunch

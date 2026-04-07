@@ -10,13 +10,59 @@ import type { RunCodePayload, PersistedState, AppSettings } from '../../shared/t
 
 let mainWindow: BrowserWindow | null = null
 
+// --- Window state persistence ---
+interface WindowState {
+  x?: number
+  y?: number
+  width: number
+  height: number
+  isMaximized: boolean
+}
+
+const windowStateFile = join(app.getPath('userData'), 'nodl-window-state.json')
+
+function loadWindowState(): WindowState {
+  try {
+    if (existsSync(windowStateFile)) {
+      return JSON.parse(readFileSync(windowStateFile, 'utf-8')) as WindowState
+    }
+  } catch {
+    // Fall through to defaults
+  }
+  return { width: 1200, height: 800, isMaximized: false }
+}
+
+function saveWindowState(): void {
+  if (!mainWindow) return
+  try {
+    const isMaximized = mainWindow.isMaximized()
+    const bounds = isMaximized ? mainWindow.getNormalBounds() : mainWindow.getBounds()
+    const state: WindowState = {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized
+    }
+    writeFileSync(windowStateFile, JSON.stringify(state), 'utf-8')
+  } catch {
+    // Silently fail
+  }
+}
+
 function createWindow(): void {
+  const savedState = loadWindowState()
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: savedState.width,
+    height: savedState.height,
+    ...(savedState.x !== undefined && savedState.y !== undefined
+      ? { x: savedState.x, y: savedState.y }
+      : {}),
     minWidth: 800,
     minHeight: 500,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 12, y: 10 } : undefined,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -25,6 +71,13 @@ function createWindow(): void {
     },
     backgroundColor: '#18181b' // zinc-900
   })
+
+  if (savedState.isMaximized) {
+    mainWindow.maximize()
+  }
+
+  // Save window state on changes
+  mainWindow.on('close', saveWindowState)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)

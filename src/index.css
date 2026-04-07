@@ -7,3 +7,25 @@ html, body, #root {
   margin: 0;
   padding: 0;
 }
+
+/* Monaco editor error line highlighting */
+.error-line-decoration {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.error-glyph-margin {
+  background-color: #ef4444;
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: 4px;
+  margin-top: 6px;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
