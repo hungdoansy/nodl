@@ -3,8 +3,24 @@ export const IPC = {
   RUN_CODE: 'ipc:run-code',
   STOP_EXECUTION: 'ipc:stop-execution',
   OUTPUT_ENTRY: 'ipc:output-entry',
-  EXECUTION_DONE: 'ipc:execution-done'
+  EXECUTION_DONE: 'ipc:execution-done',
+  SAVE_STATE: 'ipc:save-state',
+  LOAD_STATE: 'ipc:load-state'
 } as const
+
+/** Persisted app state */
+export interface PersistedState {
+  version: number
+  tabs: Array<{
+    id: string
+    name: string
+    language: 'javascript' | 'typescript'
+    code: string
+    createdAt: number
+    updatedAt: number
+  }>
+  activeTabId: string
+}
 
 /** Console methods we capture */
 export type ConsoleMethod = 'log' | 'warn' | 'error' | 'info' | 'debug' | 'table' | 'clear'
@@ -45,6 +61,8 @@ export interface ElectronAPI {
   stopExecution: () => void
   onOutputEntry: (callback: (entry: OutputEntry) => void) => () => void
   onExecutionDone: (callback: (result: ExecutionResult) => void) => () => void
+  saveState: (state: PersistedState) => void
+  loadState: () => Promise<PersistedState | null>
 }
 
 declare global {

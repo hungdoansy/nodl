@@ -233,58 +233,39 @@ Renderer                    Main Process                Child Process
 
 ---
 
-## Phase 3: Multi-Tab System + Persistence
+## Phase 3: Multi-Tab System + Persistence ✅
 
 **Goal:** Users can manage multiple independent scratchpads, and everything survives app restart.
 
 ### Tasks
 
-1. **Tab store**
-   - `tabs.ts` Zustand slice:
-     ```ts
-     interface Tab {
-       id: string          // nanoid
-       name: string        // user-editable, default "Untitled 1"
-       language: "javascript" | "typescript"
-       code: string
-       createdAt: number
-       updatedAt: number
-     }
-     ```
-   - Actions: `createTab`, `closeTab`, `renameTab`, `setActiveTab`, `updateCode`, `reorderTabs`
+1. **Tab store** ✅
+   - `src/store/tabs.ts` Zustand store with Tab interface (id, name, language, code, timestamps)
+   - Actions: `createTab`, `closeTab`, `renameTab`, `setActiveTab`, `updateCode`, `setLanguage`, `reorderTabs`, `restoreTabs`
 
-2. **TabBar component**
+2. **TabBar component** ✅
    - Horizontal scrollable tab list in the header
    - Each tab: name label, close (×) button
    - Double-click tab name to rename (inline edit)
    - "+" button to create new tab
    - Active tab highlighted
-   - Drag to reorder (use native drag events or a small lib)
+   - Drag to reorder (native drag events)
    - At least 1 tab must remain — closing the last tab creates a fresh default tab
 
-3. **Per-tab isolation**
-   - Each tab has its own: code, output entries, installed packages
-   - Switching tabs swaps all state instantly
+3. **Per-tab isolation** ✅
+   - Each tab has its own: code, language, output entries
+   - Output store keyed by tab ID — switching tabs swaps all state instantly
    - Output is preserved when switching away and back
 
-4. **Persistence layer using electron-store**
-   - `electron-store` stores data as JSON file in the app's userData directory
-   - Schema:
-     ```ts
-     {
-       version: number,
-       tabs: Tab[],
-       activeTabId: string,
-       settings: Settings,
-       packages: Record<tabId, Package[]>
-     }
-     ```
+4. **Persistence layer** ✅
+   - JSON file persistence in app's userData directory (`nodl-state.json`)
+   - IPC channels: `save-state` (send) + `load-state` (invoke/handle)
    - On store change → debounced write via IPC to main process (500ms)
    - On app load → main process reads file, sends to renderer via IPC
-   - Schema versioning: version key, migrate on bump
+   - Schema versioning: version key
 
-5. **Session restore**
-   - On open: restore all tabs, active tab, code, settings
+5. **Session restore** ✅
+   - `usePersistence` hook loads state on mount, saves on change
    - If storage is empty/corrupt: create one default tab with welcome code
 
 ### Acceptance Criteria

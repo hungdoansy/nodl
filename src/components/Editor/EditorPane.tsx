@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import Editor from '@monaco-editor/react'
-import { useEditorStore } from '../../store/editor'
+import { useTabsStore } from '../../store/tabs'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useAutoRun } from '../../hooks/useAutoRun'
 
 export function EditorPane() {
-  const { code, setCode, language, setLanguage } = useEditorStore()
+  const activeTab = useTabsStore((s) => s.activeTab)
+  const updateCode = useTabsStore((s) => s.updateCode)
+  const setLanguage = useTabsStore((s) => s.setLanguage)
+  const tab = activeTab()
   const { run, isRunning } = useCodeExecution()
   const [autoRun, setAutoRun] = useState(false)
 
@@ -34,20 +37,21 @@ export function EditorPane() {
           Auto {autoRun ? 'ON' : 'OFF'}
         </button>
         <button
-          onClick={() => setLanguage(language === 'javascript' ? 'typescript' : 'javascript')}
+          onClick={() => setLanguage(tab.language === 'javascript' ? 'typescript' : 'javascript')}
           className="px-2 py-1 text-xs font-medium rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors ml-auto"
           title="Toggle language"
         >
-          {language === 'typescript' ? '.ts' : '.js'}
+          {tab.language === 'typescript' ? '.ts' : '.js'}
         </button>
       </div>
       <div className="flex-1">
         <Editor
+          key={tab.id}
           height="100%"
-          language={language}
+          language={tab.language}
           theme="vs-dark"
-          value={code}
-          onChange={(value) => setCode(value ?? '')}
+          value={tab.code}
+          onChange={(value) => updateCode(value ?? '')}
           options={{
             fontSize: 14,
             fontFamily: 'Menlo, Monaco, Consolas, monospace',

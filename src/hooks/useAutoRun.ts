@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { useEditorStore } from '../store/editor'
+import { useTabsStore } from '../store/tabs'
 
 export function useAutoRun(run: () => void, enabled: boolean, delay = 300) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const code = useEditorStore((s) => s.code)
+  const activeTab = useTabsStore((s) => s.activeTab)
+  const code = activeTab().code
 
   useEffect(() => {
     if (!enabled) return

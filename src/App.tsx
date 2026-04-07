@@ -2,8 +2,11 @@ import { Panel, Group, Separator } from 'react-resizable-panels'
 import { Header } from './components/Header/Header'
 import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
+import { usePersistence } from './hooks/usePersistence'
 
 export default function App() {
+  usePersistence()
+
   return (
     <div className="flex flex-col h-screen">
       <Header />

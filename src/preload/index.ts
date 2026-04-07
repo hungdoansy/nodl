@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../../shared/types'
-import type { ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult } from '../../shared/types'
+import type { ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult, PersistedState } from '../../shared/types'
 
 const api: ElectronAPI = {
   runCode(payload: RunCodePayload) {
@@ -25,6 +25,14 @@ const api: ElectronAPI = {
     return () => {
       ipcRenderer.removeListener(IPC.EXECUTION_DONE, handler)
     }
+  },
+
+  saveState(state: PersistedState) {
+    ipcRenderer.send(IPC.SAVE_STATE, state)
+  },
+
+  loadState(): Promise<PersistedState | null> {
+    return ipcRenderer.invoke(IPC.LOAD_STATE)
   }
 }
 
