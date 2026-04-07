@@ -39,6 +39,26 @@ export async function loadSettings(): Promise<AppSettings | null> {
   return (await getAPI()?.loadSettings()) ?? null
 }
 
+export function onMenuNewTab(callback: () => void): () => void {
+  return getAPI()?.onMenuNewTab(callback) ?? (() => {})
+}
+
+export function onMenuCloseTab(callback: () => void): () => void {
+  return getAPI()?.onMenuCloseTab(callback) ?? (() => {})
+}
+
+export function onMenuRunCode(callback: () => void): () => void {
+  return getAPI()?.onMenuRunCode(callback) ?? (() => {})
+}
+
+export function onMenuToggleSettings(callback: () => void): () => void {
+  return getAPI()?.onMenuToggleSettings(callback) ?? (() => {})
+}
+
+export function onMenuToggleTheme(callback: () => void): () => void {
+  return getAPI()?.onMenuToggleTheme(callback) ?? (() => {})
+}
+
 export async function installPackage(name: string): Promise<PackageOperationResult> {
   return (await getAPI()?.installPackage(name)) ?? { success: false, name, error: 'API not available' }
 }

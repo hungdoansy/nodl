@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
@@ -169,8 +169,111 @@ ipcMain.on(IPC.STOP_EXECUTION, () => {
   runner.stop()
 })
 
+// --- App menu ---
+function createAppMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [{
+          label: app.name,
+          submenu: [
+            { role: 'about' as const },
+            { type: 'separator' as const },
+            {
+              label: 'Settings...',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => mainWindow?.webContents.send(IPC.MENU_TOGGLE_SETTINGS)
+            },
+            { type: 'separator' as const },
+            { role: 'hide' as const },
+            { role: 'hideOthers' as const },
+            { role: 'unhide' as const },
+            { type: 'separator' as const },
+            { role: 'quit' as const }
+          ]
+        }]
+      : []),
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Tab',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => mainWindow?.webContents.send(IPC.MENU_NEW_TAB)
+        },
+        {
+          label: 'Close Tab',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => mainWindow?.webContents.send(IPC.MENU_CLOSE_TAB)
+        },
+        { type: 'separator' },
+        {
+          label: 'Run Code',
+          accelerator: 'CmdOrCtrl+Enter',
+          click: () => mainWindow?.webContents.send(IPC.MENU_RUN_CODE)
+        },
+        ...(isMac ? [] : [
+          { type: 'separator' as const },
+          {
+            label: 'Settings...',
+            accelerator: 'CmdOrCtrl+,',
+            click: () => mainWindow?.webContents.send(IPC.MENU_TOGGLE_SETTINGS)
+          },
+          { type: 'separator' as const },
+          { role: 'quit' as const }
+        ])
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Theme',
+          click: () => mainWindow?.webContents.send(IPC.MENU_TOGGLE_THEME)
+        },
+        { type: 'separator' },
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac
+          ? [{ type: 'separator' as const }, { role: 'front' as const }]
+          : [{ role: 'close' as const }])
+      ]
+    }
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
 // --- App lifecycle ---
 app.whenReady().then(() => {
+  createAppMenu()
   createWindow()
 
   app.on('activate', () => {

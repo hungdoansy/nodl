@@ -42,6 +42,36 @@ const api: ElectronAPI = {
     return ipcRenderer.invoke(IPC.LOAD_SETTINGS)
   },
 
+  onMenuNewTab(callback: () => void) {
+    const handler = () => callback()
+    ipcRenderer.on(IPC.MENU_NEW_TAB, handler)
+    return () => { ipcRenderer.removeListener(IPC.MENU_NEW_TAB, handler) }
+  },
+
+  onMenuCloseTab(callback: () => void) {
+    const handler = () => callback()
+    ipcRenderer.on(IPC.MENU_CLOSE_TAB, handler)
+    return () => { ipcRenderer.removeListener(IPC.MENU_CLOSE_TAB, handler) }
+  },
+
+  onMenuRunCode(callback: () => void) {
+    const handler = () => callback()
+    ipcRenderer.on(IPC.MENU_RUN_CODE, handler)
+    return () => { ipcRenderer.removeListener(IPC.MENU_RUN_CODE, handler) }
+  },
+
+  onMenuToggleSettings(callback: () => void) {
+    const handler = () => callback()
+    ipcRenderer.on(IPC.MENU_TOGGLE_SETTINGS, handler)
+    return () => { ipcRenderer.removeListener(IPC.MENU_TOGGLE_SETTINGS, handler) }
+  },
+
+  onMenuToggleTheme(callback: () => void) {
+    const handler = () => callback()
+    ipcRenderer.on(IPC.MENU_TOGGLE_THEME, handler)
+    return () => { ipcRenderer.removeListener(IPC.MENU_TOGGLE_THEME, handler) }
+  },
+
   installPackage(name: string): Promise<PackageOperationResult> {
     return ipcRenderer.invoke(IPC.INSTALL_PACKAGE, name)
   },

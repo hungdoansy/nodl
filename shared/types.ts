@@ -8,6 +8,11 @@ export const IPC = {
   LOAD_STATE: 'ipc:load-state',
   SAVE_SETTINGS: 'ipc:save-settings',
   LOAD_SETTINGS: 'ipc:load-settings',
+  MENU_NEW_TAB: 'ipc:menu-new-tab',
+  MENU_CLOSE_TAB: 'ipc:menu-close-tab',
+  MENU_RUN_CODE: 'ipc:menu-run-code',
+  MENU_TOGGLE_SETTINGS: 'ipc:menu-toggle-settings',
+  MENU_TOGGLE_THEME: 'ipc:menu-toggle-theme',
   INSTALL_PACKAGE: 'ipc:install-package',
   REMOVE_PACKAGE: 'ipc:remove-package',
   LIST_PACKAGES: 'ipc:list-packages',
@@ -121,6 +126,11 @@ export interface ElectronAPI {
   loadState: () => Promise<PersistedState | null>
   saveSettings: (settings: AppSettings) => void
   loadSettings: () => Promise<AppSettings | null>
+  onMenuNewTab: (callback: () => void) => () => void
+  onMenuCloseTab: (callback: () => void) => () => void
+  onMenuRunCode: (callback: () => void) => () => void
+  onMenuToggleSettings: (callback: () => void) => () => void
+  onMenuToggleTheme: (callback: () => void) => () => void
   installPackage: (name: string) => Promise<PackageOperationResult>
   removePackage: (name: string) => Promise<PackageOperationResult>
   listPackages: () => Promise<InstalledPackage[]>

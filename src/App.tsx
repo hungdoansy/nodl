@@ -4,10 +4,14 @@ import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
 import { usePersistence } from './hooks/usePersistence'
 import { useTheme } from './hooks/useTheme'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useMenuEvents } from './hooks/useMenuEvents'
 
 export default function App() {
   usePersistence()
   useTheme()
+  useKeyboardShortcuts()
+  useMenuEvents()
 
   return (
     <div className="flex flex-col h-screen">

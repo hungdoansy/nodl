@@ -343,7 +343,7 @@ Renderer                    Main Process                Child Process
    - Toggle button in header (sun/moon icon)
    - Native title bar color matches theme
 
-3. **Keyboard shortcuts**
+3. **Keyboard shortcuts** ✅
    - `Cmd/Ctrl + Enter`: Run code
    - `Cmd/Ctrl + S`: Force save (prevents default, triggers manual persist)
    - `Cmd/Ctrl + N`: New tab

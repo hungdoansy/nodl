@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { TabBar } from './TabBar'
 import { SettingsDialog } from '../Settings/SettingsDialog'
 import { useSettingsStore } from '../../store/settings'
+import { useUIStore } from '../../store/ui'
 import type { ThemeMode } from '../../../shared/types'
 
 const themeIcons: Record<ThemeMode, string> = {
@@ -17,7 +17,9 @@ const nextTheme: Record<ThemeMode, ThemeMode> = {
 }
 
 export function Header() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsOpen = useUIStore((s) => s.settingsOpen)
+  const openSettings = useUIStore((s) => s.openSettings)
+  const closeSettings = useUIStore((s) => s.closeSettings)
   const theme = useSettingsStore((s) => s.theme)
   const setTheme = useSettingsStore((s) => s.setTheme)
 
@@ -51,7 +53,7 @@ export function Header() {
             {themeIcons[theme]}
           </button>
           <button
-            onClick={() => setSettingsOpen(true)}
+            onClick={openSettings}
             className="p-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors rounded hover:bg-zinc-700"
             title="Settings (Cmd+,)"
           >
@@ -59,7 +61,7 @@ export function Header() {
           </button>
         </div>
       </header>
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsDialog open={settingsOpen} onClose={closeSettings} />
     </>
   )
 }
