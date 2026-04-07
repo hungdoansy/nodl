@@ -6,7 +6,7 @@ import { createRunner, setNodeModulesPath } from './executor/runner'
 import { transpile } from './executor/transpiler'
 import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath } from './executor/package-manager'
 import { IPC } from '../../shared/types'
-import type { RunCodePayload, PersistedState } from '../../shared/types'
+import type { RunCodePayload, PersistedState, AppSettings } from '../../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -70,6 +70,37 @@ ipcMain.on(IPC.SAVE_STATE, (_event, state: PersistedState) => {
 
 ipcMain.handle(IPC.LOAD_STATE, () => {
   return loadPersistedState()
+})
+
+// --- Settings persistence ---
+const settingsFilePath = join(userDataPath, 'nodl-settings.json')
+
+function loadSettings(): AppSettings | null {
+  try {
+    if (existsSync(settingsFilePath)) {
+      const data = readFileSync(settingsFilePath, 'utf-8')
+      return JSON.parse(data) as AppSettings
+    }
+  } catch {
+    // Corrupt file — return null
+  }
+  return null
+}
+
+function saveSettings(settings: AppSettings): void {
+  try {
+    writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2), 'utf-8')
+  } catch {
+    // Silently fail
+  }
+}
+
+ipcMain.on(IPC.SAVE_SETTINGS, (_event, settings: AppSettings) => {
+  saveSettings(settings)
+})
+
+ipcMain.handle(IPC.LOAD_SETTINGS, () => {
+  return loadSettings()
 })
 
 // --- Package management ---

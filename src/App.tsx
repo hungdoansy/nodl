@@ -3,9 +3,11 @@ import { Header } from './components/Header/Header'
 import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
 import { usePersistence } from './hooks/usePersistence'
+import { useTheme } from './hooks/useTheme'
 
 export default function App() {
   usePersistence()
+  useTheme()
 
   return (
     <div className="flex flex-col h-screen">

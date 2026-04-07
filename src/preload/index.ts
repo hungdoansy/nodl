@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../../shared/types'
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, PackageOperationResult, InstalledPackage, PackageSearchResult
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult
 } from '../../shared/types'
 
 const api: ElectronAPI = {
@@ -32,6 +32,14 @@ const api: ElectronAPI = {
 
   loadState(): Promise<PersistedState | null> {
     return ipcRenderer.invoke(IPC.LOAD_STATE)
+  },
+
+  saveSettings(settings: AppSettings) {
+    ipcRenderer.send(IPC.SAVE_SETTINGS, settings)
+  },
+
+  loadSettings(): Promise<AppSettings | null> {
+    return ipcRenderer.invoke(IPC.LOAD_SETTINGS)
   },
 
   installPackage(name: string): Promise<PackageOperationResult> {

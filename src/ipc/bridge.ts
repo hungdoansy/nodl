@@ -1,6 +1,6 @@
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, PackageOperationResult, InstalledPackage, PackageSearchResult
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult
 } from '../../shared/types'
 
 function getAPI(): ElectronAPI | null {
@@ -29,6 +29,14 @@ export function saveState(state: PersistedState): void {
 
 export async function loadState(): Promise<PersistedState | null> {
   return (await getAPI()?.loadState()) ?? null
+}
+
+export function saveSettings(settings: AppSettings): void {
+  getAPI()?.saveSettings(settings)
+}
+
+export async function loadSettings(): Promise<AppSettings | null> {
+  return (await getAPI()?.loadSettings()) ?? null
 }
 
 export async function installPackage(name: string): Promise<PackageOperationResult> {

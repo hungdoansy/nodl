@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { useTabsStore } from '../../store/tabs'
+import { useSettingsStore } from '../../store/settings'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useAutoRun } from '../../hooks/useAutoRun'
+import { useTheme } from '../../hooks/useTheme'
 
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -10,9 +11,17 @@ export function EditorPane() {
   const setLanguage = useTabsStore((s) => s.setLanguage)
   const tab = activeTab()
   const { run, isRunning } = useCodeExecution()
-  const [autoRun, setAutoRun] = useState(false)
 
-  useAutoRun(run, autoRun, 300)
+  const fontSize = useSettingsStore((s) => s.fontSize)
+  const tabSize = useSettingsStore((s) => s.tabSize)
+  const wordWrap = useSettingsStore((s) => s.wordWrap)
+  const minimap = useSettingsStore((s) => s.minimap)
+  const autoRunEnabled = useSettingsStore((s) => s.autoRunEnabled)
+  const autoRunDelay = useSettingsStore((s) => s.autoRunDelay)
+  const setAutoRunEnabled = useSettingsStore((s) => s.setSetting)
+  const resolvedTheme = useTheme()
+
+  useAutoRun(run, autoRunEnabled, autoRunDelay)
 
   return (
     <div className="flex flex-col h-full">
@@ -26,15 +35,15 @@ export function EditorPane() {
           ▶ Run
         </button>
         <button
-          onClick={() => setAutoRun(!autoRun)}
+          onClick={() => setAutoRunEnabled('autoRunEnabled', !autoRunEnabled)}
           className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-            autoRun
+            autoRunEnabled
               ? 'bg-amber-600 hover:bg-amber-500 text-white'
               : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300'
           }`}
-          title="Auto-run on keystroke (300ms debounce)"
+          title={`Auto-run on keystroke (${autoRunDelay}ms debounce)`}
         >
-          Auto {autoRun ? 'ON' : 'OFF'}
+          Auto {autoRunEnabled ? 'ON' : 'OFF'}
         </button>
         <button
           onClick={() => setLanguage(tab.language === 'javascript' ? 'typescript' : 'javascript')}
@@ -49,17 +58,17 @@ export function EditorPane() {
           key={tab.id}
           height="100%"
           language={tab.language}
-          theme="vs-dark"
+          theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
           value={tab.code}
           onChange={(value) => updateCode(value ?? '')}
           options={{
-            fontSize: 14,
+            fontSize,
             fontFamily: 'Menlo, Monaco, Consolas, monospace',
-            minimap: { enabled: false },
+            minimap: { enabled: minimap },
             padding: { top: 12 },
             scrollBeyondLastLine: false,
-            wordWrap: 'on',
-            tabSize: 2,
+            wordWrap: wordWrap ? 'on' : 'off',
+            tabSize,
             automaticLayout: true
           }}
           onMount={(editor) => {

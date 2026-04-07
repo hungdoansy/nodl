@@ -6,11 +6,41 @@ export const IPC = {
   EXECUTION_DONE: 'ipc:execution-done',
   SAVE_STATE: 'ipc:save-state',
   LOAD_STATE: 'ipc:load-state',
+  SAVE_SETTINGS: 'ipc:save-settings',
+  LOAD_SETTINGS: 'ipc:load-settings',
   INSTALL_PACKAGE: 'ipc:install-package',
   REMOVE_PACKAGE: 'ipc:remove-package',
   LIST_PACKAGES: 'ipc:list-packages',
   SEARCH_PACKAGES: 'ipc:search-packages'
 } as const
+
+/** App settings */
+export type ThemeMode = 'dark' | 'light' | 'system'
+
+export interface AppSettings {
+  // Editor
+  fontSize: number
+  tabSize: number
+  wordWrap: boolean
+  minimap: boolean
+  // Execution
+  autoRunEnabled: boolean
+  autoRunDelay: number
+  executionTimeout: number
+  // Appearance
+  theme: ThemeMode
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  fontSize: 14,
+  tabSize: 2,
+  wordWrap: true,
+  minimap: false,
+  autoRunEnabled: false,
+  autoRunDelay: 300,
+  executionTimeout: 5,
+  theme: 'dark'
+}
 
 /** Installed package info */
 export interface InstalledPackage {
@@ -89,6 +119,8 @@ export interface ElectronAPI {
   onExecutionDone: (callback: (result: ExecutionResult) => void) => () => void
   saveState: (state: PersistedState) => void
   loadState: () => Promise<PersistedState | null>
+  saveSettings: (settings: AppSettings) => void
+  loadSettings: () => Promise<AppSettings | null>
   installPackage: (name: string) => Promise<PackageOperationResult>
   removePackage: (name: string) => Promise<PackageOperationResult>
   listPackages: () => Promise<InstalledPackage[]>

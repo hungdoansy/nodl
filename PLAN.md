@@ -327,7 +327,7 @@ Renderer                    Main Process                Child Process
 
 ### Tasks
 
-1. **Settings dialog**
+1. **Settings dialog** ✅
    - `SettingsDialog.tsx`: modal with sections:
      - **Editor**: font size (10–24), tab size (2/4), word wrap on/off, minimap on/off
      - **Execution**: auto-run on/off, auto-run delay (100–2000ms slider), execution timeout (1–30s)
@@ -335,7 +335,7 @@ Renderer                    Main Process                Child Process
    - Changes apply immediately (live preview)
    - Persisted via electron-store
 
-2. **Theming**
+2. **Theming** ✅
    - CSS variables for app chrome colors
    - Two palettes: dark (default) and light
    - Monaco theme synced: `vs-dark` ↔ `vs` (light)
