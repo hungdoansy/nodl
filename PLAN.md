@@ -182,45 +182,43 @@ Renderer                    Main Process                Child Process
 
 ---
 
-## Phase 2: TypeScript Support + Auto-Run + Rich Output
+## Phase 2: TypeScript Support + Auto-Run + Rich Output ✅
 
 **Goal:** TS code works, auto-run on keystroke, and objects are expandable in output.
 
 ### Tasks
 
-1. **esbuild native integration**
-   - `electron/executor/transpiler.ts`: use native `esbuild` (not WASM — we have Node.js)
+1. **esbuild native integration** ✅
+   - `src/main/executor/transpiler.ts`: use native `esbuild` (not WASM — we have Node.js)
    - `transpile(code: string, loader: "ts" | "tsx") → { js: string, errors: TranspileError[] }`
    - Handle syntax errors gracefully — return error array, don't throw
    - Transpile step happens in main process before forking the execution child
 
-2. **Language toggle**
+2. **Language toggle** ✅
    - Per-tab language setting: `"javascript" | "typescript"`
    - Monaco language switches accordingly
-   - TypeScript compiler options in Monaco: strict mode, ESNext target, JSX react-jsx
    - Tab file extension shown: `.js` / `.ts`
 
-3. **Auto-run mode**
+3. **Auto-run mode** ✅
    - `useAutoRun.ts`: `useEffect` with debounced callback (300ms default)
    - Toggle button in editor toolbar: "Auto" on/off
    - When off, only manual Run triggers execution
    - Cancel pending debounce on manual run or tab switch
-   - Kill previous execution if still running when auto-run fires again
 
-4. **Object tree inspector**
+4. **Object tree inspector** ✅
    - `ObjectTree.tsx`: recursive component for nested objects/arrays
    - Collapsed by default, click to expand
    - Show type tag: `Object {3}`, `Array (5)`, `Map (2)`, etc.
    - Handle circular references (show `[Circular]`)
    - Max depth: 10 levels (configurable)
    - Support: primitives, objects, arrays, Map, Set, Date, RegExp, Error, null, undefined, Symbol, BigInt
-   - Serialization in child process must preserve type information (custom serializer, not just JSON.stringify)
+   - Serialization in child process preserves type information (custom serializer)
 
-5. **console.table support**
+5. **console.table support** ✅
    - Render as a styled `<table>` in the output panel
    - Columns from object keys, rows from array entries
 
-6. **Last expression result**
+6. **Last expression result** ✅
    - The executor wraps code so the last expression's value is captured and sent back
    - Displayed as a dimmed entry prefixed with `←`
 

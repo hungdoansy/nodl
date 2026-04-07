@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { createRunner } from './executor/runner'
+import { transpile } from './executor/transpiler'
 import { IPC } from '../../shared/types'
 import type { RunCodePayload } from '../../shared/types'
 
@@ -44,7 +45,30 @@ ipcMain.on(IPC.RUN_CODE, (_event, payload: RunCodePayload) => {
   runner.stop() // kill any running execution
   runner = createRunner()
 
-  runner.run(payload, {
+  // Transpile TS to JS if needed
+  let codeToRun = payload.code
+  if (payload.language === 'typescript') {
+    const result = transpile(payload.code, 'ts')
+    if (result.errors.length > 0) {
+      for (const err of result.errors) {
+        mainWindow.webContents.send(IPC.OUTPUT_ENTRY, {
+          id: `transpile-err-${Date.now()}-${err.line}`,
+          method: 'error',
+          args: [`TypeScript error (line ${err.line}): ${err.message}`],
+          timestamp: Date.now()
+        })
+      }
+      mainWindow.webContents.send(IPC.EXECUTION_DONE, {
+        success: false,
+        duration: 0,
+        error: 'Transpilation failed'
+      })
+      return
+    }
+    codeToRun = result.js
+  }
+
+  runner.run({ ...payload, code: codeToRun }, {
     onOutput(entry) {
       mainWindow?.webContents.send(IPC.OUTPUT_ENTRY, entry)
     },

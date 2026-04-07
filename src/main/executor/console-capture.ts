@@ -6,7 +6,7 @@ function generateId(): string {
   return `entry-${Date.now()}-${counter++}`
 }
 
-function serializeArg(arg: unknown, seen = new WeakSet()): unknown {
+export function serializeArg(arg: unknown, seen = new WeakSet()): unknown {
   if (arg === null || arg === undefined) return arg
   if (typeof arg === 'function') return `[Function: ${arg.name || 'anonymous'}]`
   if (typeof arg === 'symbol') return arg.toString()

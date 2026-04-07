@@ -1,10 +1,15 @@
+import { useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editor'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
+import { useAutoRun } from '../../hooks/useAutoRun'
 
 export function EditorPane() {
-  const { code, setCode, language } = useEditorStore()
+  const { code, setCode, language, setLanguage } = useEditorStore()
   const { run, isRunning } = useCodeExecution()
+  const [autoRun, setAutoRun] = useState(false)
+
+  useAutoRun(run, autoRun, 300)
 
   return (
     <div className="flex flex-col h-full">
@@ -17,9 +22,24 @@ export function EditorPane() {
         >
           ▶ Run
         </button>
-        <span className="text-xs text-zinc-500 ml-auto">
-          {language === 'typescript' ? 'TypeScript' : 'JavaScript'}
-        </span>
+        <button
+          onClick={() => setAutoRun(!autoRun)}
+          className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+            autoRun
+              ? 'bg-amber-600 hover:bg-amber-500 text-white'
+              : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300'
+          }`}
+          title="Auto-run on keystroke (300ms debounce)"
+        >
+          Auto {autoRun ? 'ON' : 'OFF'}
+        </button>
+        <button
+          onClick={() => setLanguage(language === 'javascript' ? 'typescript' : 'javascript')}
+          className="px-2 py-1 text-xs font-medium rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors ml-auto"
+          title="Toggle language"
+        >
+          {language === 'typescript' ? '.ts' : '.js'}
+        </button>
       </div>
       <div className="flex-1">
         <Editor
@@ -39,7 +59,6 @@ export function EditorPane() {
             automaticLayout: true
           }}
           onMount={(editor) => {
-            // Cmd/Ctrl+Enter to run
             editor.addCommand(
               // eslint-disable-next-line no-bitwise
               2048 | 3, // KeyMod.CtrlCmd | KeyCode.Enter

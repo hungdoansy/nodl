@@ -1,4 +1,6 @@
 import type { OutputEntry } from '../../../shared/types'
+import { ObjectTree } from './ObjectTree'
+import { ConsoleTable } from './ConsoleTable'
 
 const METHOD_STYLES: Record<string, string> = {
   log: 'text-zinc-200',
@@ -9,22 +11,23 @@ const METHOD_STYLES: Record<string, string> = {
   table: 'text-zinc-200'
 }
 
-function formatArg(arg: unknown): string {
+function isLastExpression(arg: unknown): arg is { __type: 'LastExpression'; value: unknown } {
+  return typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'LastExpression'
+}
+
+function isPrimitive(arg: unknown): boolean {
+  return arg === null || arg === undefined || typeof arg !== 'object'
+}
+
+function formatPrimitive(arg: unknown): string {
   if (arg === null) return 'null'
   if (arg === undefined) return 'undefined'
   if (typeof arg === 'string') return arg
-  if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg)
-  if (typeof arg === 'object' && arg !== null) {
-    const typed = arg as { __type?: string; message?: string; stack?: string; value?: string }
-    if (typed.__type === 'Error') return `${typed.message}\n${typed.stack ?? ''}`
-    if (typed.__type === 'Date') return typed.value ?? ''
-    if (typed.__type === 'RegExp') return typed.value ?? ''
-  }
-  try {
-    return JSON.stringify(arg, null, 2)
-  } catch {
-    return String(arg)
-  }
+  return String(arg)
+}
+
+function isErrorType(arg: unknown): arg is { __type: 'Error'; message: string; stack?: string } {
+  return typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'Error'
 }
 
 interface Props {
@@ -32,13 +35,43 @@ interface Props {
 }
 
 export function ConsoleEntryComponent({ entry }: Props) {
+  // Handle console.table
+  if (entry.method === 'table' && entry.args.length > 0) {
+    return (
+      <div className="px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed">
+        <ConsoleTable data={entry.args[0]} />
+      </div>
+    )
+  }
+
+  // Handle last expression result
+  const firstArg = entry.args[0]
+  if (isLastExpression(firstArg)) {
+    return (
+      <div className="px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed text-zinc-500">
+        <span className="mr-1">←</span>
+        {isPrimitive(firstArg.value) ? (
+          <span>{formatPrimitive(firstArg.value)}</span>
+        ) : (
+          <ObjectTree data={firstArg.value} />
+        )}
+      </div>
+    )
+  }
+
   const style = METHOD_STYLES[entry.method] ?? 'text-zinc-200'
 
   return (
     <div className={`px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed ${style}`}>
       {entry.args.map((arg, i) => (
         <span key={i} className={i > 0 ? 'ml-2' : ''}>
-          {formatArg(arg)}
+          {isErrorType(arg) ? (
+            <span>{arg.message}{arg.stack ? `\n${arg.stack}` : ''}</span>
+          ) : isPrimitive(arg) ? (
+            <span>{formatPrimitive(arg)}</span>
+          ) : (
+            <ObjectTree data={arg} />
+          )}
         </span>
       ))}
     </div>
