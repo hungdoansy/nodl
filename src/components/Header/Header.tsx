@@ -1,6 +1,5 @@
-import { Settings, Sun, Moon, Monitor } from 'lucide-react'
+import { Sun, Moon, Monitor, PanelLeft, PanelLeftClose } from 'lucide-react'
 import { SettingsDialog } from '../Settings/SettingsDialog'
-import { Logo } from '../Logo'
 import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
 import type { ThemeMode } from '../../../shared/types'
@@ -12,7 +11,7 @@ const nextTheme: Record<ThemeMode, ThemeMode> = {
 }
 
 const ThemeIcon = ({ theme }: { theme: ThemeMode }) => {
-  const size = 13
+  const size = 14
   if (theme === 'light') return <Sun size={size} />
   if (theme === 'system') return <Monitor size={size} />
   return <Moon size={size} />
@@ -20,53 +19,62 @@ const ThemeIcon = ({ theme }: { theme: ThemeMode }) => {
 
 export function Header() {
   const settingsOpen = useUIStore((s) => s.settingsOpen)
-  const openSettings = useUIStore((s) => s.openSettings)
   const closeSettings = useUIStore((s) => s.closeSettings)
+  const collapsed = useUIStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const theme = useSettingsStore((s) => s.theme)
   const setTheme = useSettingsStore((s) => s.setTheme)
 
   return (
     <>
       <header
-        className="flex items-center h-[34px] select-none"
+        className="flex items-center h-[38px] select-none"
         style={{
           WebkitAppRegion: 'drag',
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
         } as React.CSSProperties}
       >
-        <div className="w-[70px] shrink-0" />
+        {/* Left: traffic lights spacer + sidebar toggle */}
+        <div
+          className="flex items-center shrink-0"
+          style={{ width: 70, paddingLeft: 70, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <button
+            onClick={toggleSidebar}
+            className="toolbar-btn"
+            title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+          >
+            {collapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
+          </button>
+        </div>
 
-        <div className="flex-1 flex items-center justify-center gap-2">
-          <Logo size={15} />
+        {/* Center: title */}
+        <div className="flex-1 flex items-center justify-center gap-1.5">
           <span style={{
-            fontFamily: 'var(--font-mono)',
-            color: 'var(--accent)',
-            fontSize: 11,
+            fontFamily: 'var(--font-ui)',
+            color: 'var(--text-primary)',
+            fontSize: 13,
             fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
           }}>
             nodl
           </span>
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 9, fontFamily: 'var(--font-mono)' }}>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
             v0.1
           </span>
         </div>
 
+        {/* Right: theme toggle */}
         <div
-          className="flex items-center gap-0.5 px-2 shrink-0"
+          className="flex items-center shrink-0 px-3"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <button
             onClick={() => setTheme(nextTheme[theme])}
-            className="btn-ghost"
+            className="toolbar-btn"
             title={`Theme: ${theme}`}
           >
             <ThemeIcon theme={theme} />
-          </button>
-          <button onClick={openSettings} className="btn-ghost" title="Settings">
-            <Settings size={13} />
           </button>
         </div>
       </header>

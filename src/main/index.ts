@@ -70,7 +70,7 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false
     },
-    backgroundColor: '#18181b' // zinc-900
+    backgroundColor: '#171717'
   })
 
   if (savedState.isMaximized) {

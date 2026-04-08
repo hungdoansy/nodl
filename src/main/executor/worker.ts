@@ -17,6 +17,76 @@ function sendConsoleEntry(entry: OutputEntry): void {
   send({ type: 'console', entry })
 }
 
+// --- Timer tracking for async drain ---
+const origSetTimeout = globalThis.setTimeout
+const origClearTimeout = globalThis.clearTimeout
+const origSetInterval = globalThis.setInterval
+const origClearInterval = globalThis.clearInterval
+
+let pendingTimers = 0
+const trackedTimers = new Set<ReturnType<typeof setTimeout>>()
+
+// Intercept setTimeout so we can track pending async work
+// @ts-expect-error — override global
+globalThis.setTimeout = (fn: (...args: unknown[]) => void, ms?: number, ...args: unknown[]) => {
+  pendingTimers++
+  const id = origSetTimeout((...a: unknown[]) => {
+    pendingTimers--
+    trackedTimers.delete(id)
+    fn(...a)
+  }, ms, ...args)
+  trackedTimers.add(id)
+  return id
+}
+
+// @ts-expect-error — override global
+globalThis.clearTimeout = (id: ReturnType<typeof setTimeout>) => {
+  if (trackedTimers.has(id)) {
+    pendingTimers--
+    trackedTimers.delete(id)
+  }
+  origClearTimeout(id)
+}
+
+// @ts-expect-error — override global
+globalThis.setInterval = (fn: (...args: unknown[]) => void, ms?: number, ...args: unknown[]) => {
+  pendingTimers++
+  const id = origSetInterval(fn, ms, ...args)
+  trackedTimers.add(id)
+  return id
+}
+
+// @ts-expect-error — override global
+globalThis.clearInterval = (id: ReturnType<typeof setInterval>) => {
+  if (trackedTimers.has(id)) {
+    pendingTimers--
+    trackedTimers.delete(id)
+  }
+  origClearInterval(id)
+}
+
+/**
+ * Wait for all pending timers and microtasks to drain.
+ * Polls until nothing is pending (or max wait reached).
+ */
+function waitForAsyncDrain(maxWaitMs = 5000): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const startTime = Date.now()
+
+    function check(): void {
+      if (pendingTimers <= 0 || Date.now() - startTime > maxWaitMs) {
+        // One final microtask flush
+        origSetTimeout(resolve, 0)
+      } else {
+        origSetTimeout(check, 50)
+      }
+    }
+
+    // Start checking after a tick to let initial microtasks schedule timers
+    origSetTimeout(check, 10)
+  })
+}
+
 process.on('message', async (msg: { code: string; language: string }) => {
   const lineTracker = { value: 0 }
 
@@ -25,13 +95,15 @@ process.on('message', async (msg: { code: string; language: string }) => {
   })
 
   function exprReporter(line: number, value: unknown): unknown {
-    sendConsoleEntry({
-      id: `expr-${Date.now()}-${idCounter++}`,
-      method: 'log',
-      args: [{ __type: 'LastExpression', value: serializeArg(value) }],
-      timestamp: Date.now(),
-      line
-    })
+    if (value !== undefined) {
+      sendConsoleEntry({
+        id: `expr-${Date.now()}-${idCounter++}`,
+        method: 'log',
+        args: [{ __type: 'LastExpression', value: serializeArg(value) }],
+        timestamp: Date.now(),
+        line
+      })
+    }
     return value
   }
 
@@ -48,6 +120,9 @@ process.on('message', async (msg: { code: string; language: string }) => {
       wrappedCode
     )
     await fn(capturedConsole, require, exprReporter, lineTracker)
+
+    // Wait for pending setTimeout/setInterval/Promise chains to complete
+    await waitForAsyncDrain()
 
     send({
       type: 'result',

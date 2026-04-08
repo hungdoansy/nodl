@@ -48,16 +48,21 @@ export function PackageDialog({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 flex items-start justify-center pt-16 z-50"
-      style={{ background: 'rgba(0,0,0,0.6)' }}
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
         className="w-[460px] max-h-[400px] flex flex-col animate-slide-down"
-        style={{ background: 'var(--bg-elevated)', boxShadow: 'var(--shadow-dialog)', border: '1px solid var(--border-default)' }}
+        style={{
+          background: 'var(--bg-elevated)',
+          boxShadow: 'var(--shadow-dialog)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <Search size={13} style={{ color: 'var(--text-tertiary)' }} />
+        <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <Search size={14} style={{ color: 'var(--text-tertiary)' }} />
           <input
             ref={inputRef}
             value={query}
@@ -65,42 +70,42 @@ export function PackageDialog({ open, onClose }: Props) {
             placeholder="Search npm packages..."
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)',
+              fontSize: 13, color: 'var(--text-primary)',
             }}
           />
           <button onClick={onClose} className="btn-ghost" style={{ padding: 2 }}>
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {searching && (
-            <div style={{ padding: '12px', fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-              searching<span className="animate-cursor">_</span>
+            <div style={{ padding: '14px 16px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+              Searching...
             </div>
           )}
           {!searching && results.length === 0 && query && (
-            <div style={{ padding: '12px', fontSize: 11, color: 'var(--text-tertiary)' }}>No results</div>
+            <div style={{ padding: '14px 16px', fontSize: 12, color: 'var(--text-tertiary)' }}>No results</div>
           )}
           {results.map((pkg) => (
             <div
               key={pkg.name}
-              className="flex items-center justify-between px-3 py-2"
+              className="flex items-center justify-between px-4 py-2.5"
               style={{ borderBottom: '1px solid var(--border-subtle)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
               <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 500 }} className="truncate">{pkg.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }} className="truncate">{pkg.description}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{pkg.version}</div>
+                <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 500 }} className="truncate">{pkg.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }} className="truncate">{pkg.description}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{pkg.version}</div>
               </div>
               <button
                 onClick={() => install(pkg.name)}
                 disabled={installing !== null}
                 className="btn btn-primary"
-                style={{ padding: '3px 8px', flexShrink: 0 }}
+                style={{ padding: '4px 10px', flexShrink: 0 }}
               >
-                <Download size={10} />
+                <Download size={11} />
                 {installing === pkg.name ? 'Installing' : 'Install'}
               </button>
             </div>

@@ -6,15 +6,15 @@ interface ObjectTreeProps {
   maxDepth?: number
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  string: 'text-green-400',
-  number: 'text-blue-400',
-  boolean: 'text-purple-400',
-  null: 'text-zinc-500',
-  undefined: 'text-zinc-500',
-  function: 'text-yellow-400',
-  symbol: 'text-yellow-400',
-  bigint: 'text-blue-400'
+const TYPE_STYLES: Record<string, React.CSSProperties> = {
+  string: { color: '#a5d6a7' },
+  number: { color: '#90caf9' },
+  boolean: { color: '#ce93d8' },
+  null: { color: 'var(--text-tertiary)' },
+  undefined: { color: 'var(--text-tertiary)' },
+  function: { color: '#ffe082' },
+  symbol: { color: '#ffe082' },
+  bigint: { color: '#90caf9' },
 }
 
 function getTypeTag(data: unknown): string | null {
@@ -39,17 +39,17 @@ function getTypeTag(data: unknown): string | null {
 }
 
 function renderPrimitive(data: unknown): JSX.Element {
-  if (data === null) return <span className={TYPE_COLORS.null}>null</span>
-  if (data === undefined) return <span className={TYPE_COLORS.undefined}>undefined</span>
-  if (typeof data === 'string') return <span className={TYPE_COLORS.string}>"{data}"</span>
-  if (typeof data === 'number') return <span className={TYPE_COLORS.number}>{String(data)}</span>
-  if (typeof data === 'boolean') return <span className={TYPE_COLORS.boolean}>{String(data)}</span>
+  if (data === null) return <span style={TYPE_STYLES.null}>null</span>
+  if (data === undefined) return <span style={TYPE_STYLES.undefined}>undefined</span>
+  if (typeof data === 'string') return <span style={TYPE_STYLES.string}>"{data}"</span>
+  if (typeof data === 'number') return <span style={TYPE_STYLES.number}>{String(data)}</span>
+  if (typeof data === 'boolean') return <span style={TYPE_STYLES.boolean}>{String(data)}</span>
   if (typeof data === 'string' && data.startsWith('[Function:'))
-    return <span className={TYPE_COLORS.function}>{data}</span>
+    return <span style={TYPE_STYLES.function}>{data}</span>
   if (typeof data === 'string' && data.startsWith('Symbol('))
-    return <span className={TYPE_COLORS.symbol}>{data}</span>
+    return <span style={TYPE_STYLES.symbol}>{data}</span>
   if (typeof data === 'string' && data.endsWith('n'))
-    return <span className={TYPE_COLORS.bigint}>{data}</span>
+    return <span style={TYPE_STYLES.bigint}>{data}</span>
   return <span>{String(data)}</span>
 }
 
@@ -91,14 +91,14 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   const [expanded, setExpanded] = useState(false)
 
   if (data === '[Circular]') {
-    return <span className="text-zinc-500 italic">[Circular]</span>
+    return <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>[Circular]</span>
   }
 
   // Special serialized types with direct display
   if (typeof data === 'object' && data !== null) {
     const typed = data as { __type?: string; value?: string; message?: string; stack?: string }
-    if (typed.__type === 'Date') return <span className="text-blue-300">{typed.value}</span>
-    if (typed.__type === 'RegExp') return <span className="text-red-300">{typed.value}</span>
+    if (typed.__type === 'Date') return <span style={TYPE_STYLES.number}>{typed.value}</span>
+    if (typed.__type === 'RegExp') return <span style={{ color: '#ef9a9a' }}>{typed.value}</span>
   }
 
   if (!isExpandable(data)) {
@@ -109,17 +109,19 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   const entries = getEntries(data)
 
   if (depth >= maxDepth) {
-    return <span className="text-zinc-500">{tag}</span>
+    return <span style={{ color: 'var(--text-tertiary)' }}>{tag}</span>
   }
 
   if (!expanded) {
     return (
       <span
-        className="cursor-pointer hover:bg-zinc-800 rounded px-0.5"
+        style={{ cursor: 'pointer', borderRadius: 3, padding: '0 2px' }}
         onClick={() => setExpanded(true)}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
       >
-        <span className="text-zinc-500 mr-1">▶</span>
-        <span className="text-zinc-400">{tag}</span>
+        <span style={{ color: 'var(--text-tertiary)', marginRight: 4, fontSize: '0.8em' }}>&#9654;</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{tag}</span>
       </span>
     )
   }
@@ -127,16 +129,18 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   return (
     <div>
       <span
-        className="cursor-pointer hover:bg-zinc-800 rounded px-0.5"
+        style={{ cursor: 'pointer', borderRadius: 3, padding: '0 2px' }}
         onClick={() => setExpanded(false)}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
       >
-        <span className="text-zinc-500 mr-1">▼</span>
-        <span className="text-zinc-400">{tag}</span>
+        <span style={{ color: 'var(--text-tertiary)', marginRight: 4, fontSize: '0.8em' }}>&#9660;</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{tag}</span>
       </span>
-      <div className="ml-4 border-l border-zinc-700 pl-2">
+      <div style={{ marginLeft: 16, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8 }}>
         {entries.map(([key, value]) => (
-          <div key={key} className="flex items-start gap-1">
-            <span className="text-purple-300 shrink-0">{key}:</span>
+          <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+            <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{key}:</span>
             <ObjectTree data={value} depth={depth + 1} maxDepth={maxDepth} />
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { Play, Zap } from 'lucide-react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -8,6 +8,8 @@ import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useAutoRun } from '../../hooks/useAutoRun'
 import { useTheme } from '../../hooks/useTheme'
 import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
+import { useScrollSync } from '../../store/scroll-sync'
+import { useUIStore } from '../../store/ui'
 
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -23,8 +25,10 @@ export function EditorPane() {
   const autoRunDelay = useSettingsStore((s) => s.autoRunDelay)
   const setSetting = useSettingsStore((s) => s.setSetting)
   const resolvedTheme = useTheme()
+  const outputMode = useUIStore((s) => s.outputMode)
 
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
+  const ignoreScrollRef = useRef(false)
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
@@ -32,27 +36,42 @@ export function EditorPane() {
   const handleMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
     editor.addCommand(2048 | 3, () => run()) // eslint-disable-line no-bitwise
+
+    // Broadcast scroll position to output pane
+    editor.onDidScrollChange((e) => {
+      if (ignoreScrollRef.current) return
+      useScrollSync.getState().setScrollTop(e.scrollTop, 'editor')
+    })
   }, [run])
+
+  // Listen for output-initiated scroll and sync to editor
+  useEffect(() => {
+    if (outputMode !== 'aligned') return
+    const unsub = useScrollSync.subscribe((state) => {
+      if (state.source === 'output' && editorRef.current) {
+        ignoreScrollRef.current = true
+        editorRef.current.setScrollTop(state.scrollTop)
+        requestAnimationFrame(() => { ignoreScrollRef.current = false })
+      }
+    })
+    return unsub
+  }, [outputMode])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
-      <div className="toolbar flex items-center gap-1.5 px-3" style={{ height: 33 }}>
-        <button onClick={run} disabled={isRunning} className="btn btn-primary" title="Run (Cmd+Enter)">
-          <Play size={10} />
-          Run
+      <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36 }}>
+        <button onClick={run} disabled={isRunning} className="toolbar-btn primary" title="Run (Cmd+Enter)">
+          <Play size={14} />
         </button>
         <button
           onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
-          className="btn"
-          style={autoRunEnabled ? {
-            borderColor: 'rgba(167, 139, 250, 0.3)',
-            color: 'var(--accent)',
-            background: 'var(--accent-dim)',
-          } : undefined}
-          title={`Auto-run (${autoRunDelay}ms)`}
+          className={`toolbar-btn ${autoRunEnabled ? 'active' : ''}`}
+          title={autoRunEnabled ? `Auto-run on (${autoRunDelay}ms)` : 'Auto-run off'}
         >
-          <Zap size={10} />
-          Auto
+          {autoRunEnabled
+            ? <Zap size={14} fill="currentColor" />
+            : <Zap size={14} />
+          }
         </button>
       </div>
       <div className="flex-1">
@@ -68,8 +87,9 @@ export function EditorPane() {
             fontFamily: "var(--font-mono)",
             lineHeight: Math.round(fontSize * 1.5),
             minimap: { enabled: minimap },
-            padding: { top: 12 },
+            padding: { top: 12, bottom: 4 },
             scrollBeyondLastLine: false,
+            stickyScroll: { enabled: false },
             wordWrap: wordWrap ? 'on' : 'off',
             tabSize,
             automaticLayout: true,

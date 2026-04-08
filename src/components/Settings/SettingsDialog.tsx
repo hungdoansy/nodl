@@ -29,7 +29,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+        style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
         onClick={onClose}
       />
       <div
@@ -37,20 +37,21 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         style={{
           background: 'var(--bg-elevated)',
           boxShadow: 'var(--shadow-dialog)',
+          borderRadius: 'var(--radius-lg)',
           maxHeight: '70vh',
           overflowY: 'auto',
         }}
       >
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <h2 style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}>
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>
             Settings
           </h2>
           <button onClick={onClose} className="btn-ghost" style={{ padding: 3 }}>
-            <X size={14} />
+            <X size={15} />
           </button>
         </div>
 
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <Section title="Editor">
             <SliderRow label="Font Size" value={settings.fontSize} min={10} max={24} step={1}
               onChange={(v) => settings.setSetting('fontSize', v)} />
@@ -82,9 +83,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setTheme(v as ThemeMode)} />
           </Section>
 
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
             <button onClick={settings.resetToDefaults} className="btn">
-              <RotateCcw size={10} />
+              <RotateCcw size={11} />
               Reset Defaults
             </button>
           </div>
@@ -98,12 +99,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div>
       <h3 style={{
-        color: 'var(--text-secondary)', fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8,
+        color: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500,
+        marginBottom: 10,
       }}>
         {title}
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </div>
   )
 }
@@ -117,16 +118,16 @@ function SliderRow({
   const pct = ((value - min) / (max - min)) * 100
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ position: 'relative', width: 80, height: 14, display: 'flex', alignItems: 'center' }}>
           <div style={{
             position: 'absolute', height: 3, left: 0, right: 0,
-            background: 'var(--border-default)',
+            background: 'var(--border-default)', borderRadius: 2,
           }} />
           <div style={{
             position: 'absolute', height: 3, left: 0, width: `${pct}%`,
-            background: 'var(--accent)',
+            background: 'var(--accent)', borderRadius: 2,
           }} />
           <input
             type="range" min={min} max={max} step={step} value={value}
@@ -135,7 +136,7 @@ function SliderRow({
           />
         </div>
         <span style={{
-          color: 'var(--accent)', fontSize: 11, width: 40, textAlign: 'right',
+          color: 'var(--text-primary)', fontSize: 12, width: 40, textAlign: 'right',
           fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
         }}>
           {value}{unit ?? ''}
@@ -152,22 +153,21 @@ function ToggleRow({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
       <button
         onClick={() => onChange(!checked)}
-        className="btn"
-        style={checked ? {
-          borderColor: 'rgba(167, 139, 250, 0.3)',
-          color: 'var(--accent)',
-          background: 'var(--accent-dim)',
-          padding: '2px 10px',
-          fontSize: 10,
-        } : {
-          padding: '2px 10px',
-          fontSize: 10,
+        style={{
+          width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+          background: checked ? 'var(--accent)' : 'var(--border-default)',
+          position: 'relative', transition: 'background 150ms',
         }}
       >
-        {checked ? 'On' : 'Off'}
+        <span style={{
+          position: 'absolute', top: 2, left: checked ? 18 : 2,
+          width: 16, height: 16, borderRadius: '50%',
+          background: 'white', transition: 'left 150ms var(--ease)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }} />
       </button>
     </div>
   )
@@ -181,16 +181,17 @@ function SelectRow({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          fontSize: 11, fontFamily: 'var(--font-ui)',
-          padding: '3px 8px',
-          background: 'var(--bg-primary)',
+          fontSize: 12,
+          padding: '4px 8px',
+          background: 'var(--bg-input)',
           color: 'var(--text-primary)',
           border: '1px solid var(--border-default)',
+          borderRadius: 'var(--radius-sm)',
           outline: 'none',
         }}
       >
