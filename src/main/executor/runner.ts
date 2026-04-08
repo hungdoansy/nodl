@@ -1,8 +1,19 @@
 import { fork, type ChildProcess } from 'child_process'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import type { OutputEntry, ExecutionResult, RunCodePayload, WorkerMessage } from '../../../shared/types'
 
-const WORKER_PATH = join(__dirname, 'worker.js')
+// In dev, electron-vite wipes out/main/ on rebuild, so we build worker.js
+// to out/worker/ instead. In production build, it's copied alongside main.
+function resolveWorkerPath(): string {
+  // Try out/worker/ first (dev-safe location)
+  const devPath = join(__dirname, '..', 'worker', 'worker.js')
+  if (existsSync(devPath)) return devPath
+  // Fallback: same dir as main (production build)
+  return join(__dirname, 'worker.js')
+}
+
+const WORKER_PATH = resolveWorkerPath()
 const DEFAULT_TIMEOUT = 5000
 
 let nodeModulesPath = ''
@@ -48,6 +59,11 @@ export function createRunner(): Runner {
           ...process.env,
           NODE_PATH: nodeModulesPath || process.env.NODE_PATH || ''
         }
+      })
+
+      // Forward worker stderr to main process stderr for debugging
+      child.stderr?.on('data', (data: Buffer) => {
+        console.error('[worker]', data.toString().trim())
       })
 
       child.on('message', (msg: WorkerMessage) => {

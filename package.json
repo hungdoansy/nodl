@@ -11,9 +11,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/main/executor/worker.ts'],bundle:true,platform:'node',format:'cjs',outfile:'out/main/worker.js',external:['electron']})\"",
+    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/main/executor/worker.ts'],bundle:true,platform:'node',format:'cjs',outfile:'out/worker/worker.js',external:['electron']})\"",
     "dev": "pnpm run build:worker && electron-vite dev",
-    "build": "electron-vite build && pnpm run build:worker",
+    "build": "electron-vite build && pnpm run build:worker && cp out/worker/worker.js out/main/worker.js",
     "preview": "electron-vite preview",
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",

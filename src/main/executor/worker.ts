@@ -7,6 +7,8 @@ import { createConsoleCapturer } from './console-capture'
 import { serializeArg } from './console-capture'
 import type { OutputEntry, WorkerMessage } from '../../../shared/types'
 
+let idCounter = 0
+
 function send(msg: WorkerMessage): void {
   process.send?.(msg)
 }
@@ -67,7 +69,7 @@ process.on('message', async (msg: { code: string; language: string }) => {
     // Send last expression result if it's not undefined
     if (result !== undefined) {
       sendConsoleEntry({
-        id: `last-expr-${Date.now()}`,
+        id: `last-expr-${Date.now()}-${idCounter++}`,
         method: 'log',
         args: [{ __type: 'LastExpression', value: serializeArg(result) }],
         timestamp: Date.now()
@@ -86,7 +88,7 @@ process.on('message', async (msg: { code: string; language: string }) => {
     const error = err instanceof Error ? err : new Error(String(err))
 
     sendConsoleEntry({
-      id: `error-${Date.now()}`,
+      id: `error-${Date.now()}-${idCounter++}`,
       method: 'error',
       args: [error.message, error.stack || ''],
       timestamp: Date.now()
