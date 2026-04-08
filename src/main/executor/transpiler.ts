@@ -21,8 +21,12 @@ export function transpile(code: string, loader: 'ts' | 'tsx' = 'ts'): TranspileR
       sourcemap: false
     })
 
+    // Strip esbuild's /* @__PURE__ */ annotations — they break the
+    // worker's expression detection which skips lines starting with /*
+    const js = result.code.replace(/\/\* @__PURE__ \*\/ /g, '')
+
     return {
-      js: result.code,
+      js,
       errors: result.warnings.map(messageToError)
     }
   } catch (err: unknown) {

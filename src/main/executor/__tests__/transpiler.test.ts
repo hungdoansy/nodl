@@ -84,4 +84,17 @@ describe('transpiler', () => {
     expect(result.errors).toHaveLength(0)
     expect(result.js).not.toContain('import type')
   })
+
+  it('strips @__PURE__ annotations from output', () => {
+    const result = transpile('new Date()')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toContain('@__PURE__')
+    expect(result.js).toContain('new Date()')
+  })
+
+  it('strips @__PURE__ from constructor calls', () => {
+    const result = transpile('new Map()')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toContain('@__PURE__')
+  })
 })

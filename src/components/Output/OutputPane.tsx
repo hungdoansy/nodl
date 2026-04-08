@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { Square, Trash2 } from 'lucide-react'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useTabsStore } from '../../store/tabs'
@@ -21,6 +21,8 @@ function groupByLine(entries: OutputEntry[]): { lined: Map<number, OutputEntry[]
   return { lined, unlined }
 }
 
+const STOP_BUTTON_DELAY = 3000
+
 export function OutputPane() {
   const { entries, isRunning, lastResult, stop, clear } = useCodeExecution()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -28,6 +30,28 @@ export function OutputPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
   const tab = activeTab()
   const totalLines = useMemo(() => tab.code.split('\n').length, [tab.code])
+
+  // Only show stop button after 3 seconds of running
+  const [showStop, setShowStop] = useState(false)
+  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (isRunning) {
+      stopTimerRef.current = setTimeout(() => setShowStop(true), STOP_BUTTON_DELAY)
+    } else {
+      setShowStop(false)
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current)
+        stopTimerRef.current = null
+      }
+    }
+    return () => {
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current)
+        stopTimerRef.current = null
+      }
+    }
+  }, [isRunning])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -48,8 +72,8 @@ export function OutputPane() {
           Output
         </span>
 
-        {isRunning && (
-          <button onClick={stop} className="btn btn-danger" style={{ padding: '2px 8px' }}>
+        {showStop && isRunning && (
+          <button onClick={stop} className="btn btn-danger animate-fade-in" style={{ padding: '2px 8px' }}>
             <Square size={9} />
             Stop
           </button>
@@ -65,7 +89,7 @@ export function OutputPane() {
 
       {/* Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* Empty + not running */}
+        {/* Empty state — only when no previous output AND not running */}
         {!hasOutput && !isRunning && (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
@@ -77,16 +101,16 @@ export function OutputPane() {
           </div>
         )}
 
-        {/* Empty + running — terminal cursor loader */}
+        {/* Running with no output yet — terminal cursor */}
         {!hasOutput && isRunning && (
-          <div className="flex items-center h-full px-4" style={{ paddingTop: editorPaddingTop }}>
+          <div className="flex items-center px-4" style={{ paddingTop: editorPaddingTop, height: lineHeight }}>
             <span style={{ color: 'var(--accent)', fontSize, fontFamily: 'var(--font-mono)' }}>
               <span className="animate-cursor">_</span>
             </span>
           </div>
         )}
 
-        {/* Line-aligned output */}
+        {/* Line-aligned output — shown whether running or not */}
         {hasOutput && (
           <div className="relative" style={{ paddingTop: editorPaddingTop }}>
             {Array.from({ length: totalLines }, (_, i) => {
