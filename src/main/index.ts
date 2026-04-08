@@ -7,7 +7,8 @@ import { transpile } from './executor/transpiler'
 import { instrumentCode } from './executor/instrument'
 import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath } from './executor/package-manager'
 import { IPC } from '../../shared/types'
-import type { RunCodePayload, PersistedState, AppSettings } from '../../shared/types'
+import { net } from 'electron'
+import type { RunCodePayload, PersistedState, AppSettings, UpdateInfo } from '../../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -172,6 +173,29 @@ ipcMain.handle(IPC.LIST_PACKAGES, () => {
 
 ipcMain.handle(IPC.SEARCH_PACKAGES, (_event, query: string) => {
   return searchPackages(query)
+})
+
+// --- Update check ---
+const GITHUB_REPO = 'hungdoansy/nodl'
+const CURRENT_VERSION = app.getVersion()
+
+ipcMain.handle(IPC.CHECK_FOR_UPDATES, async (): Promise<UpdateInfo> => {
+  try {
+    const response = await net.fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'nodl' }
+    })
+    if (!response.ok) return { available: false, version: CURRENT_VERSION, url: '' }
+    const data = await response.json() as { tag_name: string; html_url: string }
+    const latest = data.tag_name.replace(/^v/, '')
+    const available = latest !== CURRENT_VERSION && latest > CURRENT_VERSION
+    return { available, version: latest, url: data.html_url }
+  } catch {
+    return { available: false, version: CURRENT_VERSION, url: '' }
+  }
+})
+
+ipcMain.on(IPC.OPEN_EXTERNAL, (_event, url: string) => {
+  shell.openExternal(url)
 })
 
 // --- Code execution ---

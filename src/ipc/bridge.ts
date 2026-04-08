@@ -1,6 +1,6 @@
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo
 } from '../../shared/types'
 
 function getAPI(): ElectronAPI | null {
@@ -73,4 +73,12 @@ export async function listPackages(): Promise<InstalledPackage[]> {
 
 export async function searchPackages(query: string): Promise<PackageSearchResult[]> {
   return (await getAPI()?.searchPackages(query)) ?? []
+}
+
+export async function checkForUpdates(): Promise<UpdateInfo> {
+  return (await getAPI()?.checkForUpdates()) ?? { available: false, version: '', url: '' }
+}
+
+export function openExternal(url: string): void {
+  getAPI()?.openExternal(url)
 }

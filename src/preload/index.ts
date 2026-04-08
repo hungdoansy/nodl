@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../../shared/types'
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo
 } from '../../shared/types'
 
 const api: ElectronAPI = {
@@ -86,6 +86,14 @@ const api: ElectronAPI = {
 
   searchPackages(query: string): Promise<PackageSearchResult[]> {
     return ipcRenderer.invoke(IPC.SEARCH_PACKAGES, query)
+  },
+
+  checkForUpdates(): Promise<UpdateInfo> {
+    return ipcRenderer.invoke(IPC.CHECK_FOR_UPDATES)
+  },
+
+  openExternal(url: string) {
+    ipcRenderer.send(IPC.OPEN_EXTERNAL, url)
   }
 }
 

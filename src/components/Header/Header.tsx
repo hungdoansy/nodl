@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Sun, Moon, Monitor, PanelLeft, PanelLeftClose } from 'lucide-react'
 import { SettingsDialog } from '../Settings/SettingsDialog'
+import { UpdateDialog } from './UpdateDialog'
 import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
+import { useUpdateCheck } from '../../hooks/useUpdateCheck'
 import type { ThemeMode } from '../../../shared/types'
 
 const nextTheme: Record<ThemeMode, ThemeMode> = {
@@ -17,6 +20,8 @@ const ThemeIcon = ({ theme }: { theme: ThemeMode }) => {
   return <Moon size={size} />
 }
 
+const isMac = window.navigator.platform.includes('Mac')
+
 export function Header() {
   const settingsOpen = useUIStore((s) => s.settingsOpen)
   const closeSettings = useUIStore((s) => s.closeSettings)
@@ -24,6 +29,8 @@ export function Header() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const theme = useSettingsStore((s) => s.theme)
   const setTheme = useSettingsStore((s) => s.setTheme)
+  const update = useUpdateCheck()
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false)
 
   return (
     <>
@@ -35,11 +42,11 @@ export function Header() {
           borderBottom: '1px solid var(--border-subtle)',
         } as React.CSSProperties}
       >
-        {/* Left: traffic lights spacer + sidebar toggle */}
-        <div className="w-[70px] shrink-0" />
+        {/* Left: traffic lights spacer (macOS only) + sidebar toggle */}
+        {isMac && <div className="w-[70px] shrink-0" />}
         <div
-          className="flex items-center shrink-0 pl-1"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          className="flex items-center shrink-0"
+          style={{ WebkitAppRegion: 'no-drag', paddingLeft: isMac ? 4 : 8 } as React.CSSProperties}
         >
           <button
             onClick={toggleSidebar}
@@ -65,11 +72,40 @@ export function Header() {
           </span>
         </div>
 
-        {/* Right: theme toggle */}
+        {/* Right: update + theme toggle */}
         <div
-          className="flex items-center shrink-0 px-3"
+          className="flex items-center gap-0.5 shrink-0 px-3"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
+          {update.available && (
+            <button
+              onClick={() => setUpdateDialogOpen(true)}
+              className="animate-fade-in"
+              title="Download latest version"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '3px 10px',
+                fontSize: 11, fontWeight: 500,
+                color: 'var(--accent-bright)',
+                background: 'var(--accent-dim)',
+                border: '1px solid rgba(167, 139, 250, 0.2)',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                transition: 'background 150ms ease, border-color 150ms ease',
+                userSelect: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(167, 139, 250, 0.16)'
+                e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.35)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--accent-dim)'
+                e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.2)'
+              }}
+            >
+              v{update.version} available
+            </button>
+          )}
           <button
             onClick={() => setTheme(nextTheme[theme])}
             className="toolbar-btn"
@@ -80,6 +116,7 @@ export function Header() {
         </div>
       </header>
       <SettingsDialog open={settingsOpen} onClose={closeSettings} />
+      <UpdateDialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)} update={update} />
     </>
   )
 }

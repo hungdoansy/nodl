@@ -16,8 +16,16 @@ export const IPC = {
   INSTALL_PACKAGE: 'ipc:install-package',
   REMOVE_PACKAGE: 'ipc:remove-package',
   LIST_PACKAGES: 'ipc:list-packages',
-  SEARCH_PACKAGES: 'ipc:search-packages'
+  SEARCH_PACKAGES: 'ipc:search-packages',
+  CHECK_FOR_UPDATES: 'ipc:check-for-updates',
+  OPEN_EXTERNAL: 'ipc:open-external'
 } as const
+
+export interface UpdateInfo {
+  available: boolean
+  version: string
+  url: string
+}
 
 /** App settings */
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -137,6 +145,8 @@ export interface ElectronAPI {
   removePackage: (name: string) => Promise<PackageOperationResult>
   listPackages: () => Promise<InstalledPackage[]>
   searchPackages: (query: string) => Promise<PackageSearchResult[]>
+  checkForUpdates: () => Promise<UpdateInfo>
+  openExternal: (url: string) => void
 }
 
 declare global {
