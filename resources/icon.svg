@@ -1,19 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#18181b"/>
-      <stop offset="100%" style="stop-color:#27272a"/>
+      <stop offset="0%" style="stop-color:#1e1e1e"/>
+      <stop offset="100%" style="stop-color:#2d2d2d"/>
     </linearGradient>
     <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10b981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
+      <stop offset="0%" style="stop-color:#c4b5fd"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
     </linearGradient>
   </defs>
+  <!-- Background rounded square -->
   <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
-  <text x="512" y="580" text-anchor="middle" font-family="SF Mono, Menlo, Monaco, monospace" font-weight="700" font-size="380" fill="url(#accent)">n</text>
-  <rect x="200" y="700" width="624" height="6" rx="3" fill="#3f3f46"/>
-  <rect x="200" y="700" width="280" height="6" rx="3" fill="#10b981" opacity="0.7"/>
-  <circle cx="770" cy="310" r="8" fill="#10b981" opacity="0.5"/>
-  <circle cx="810" cy="310" r="8" fill="#f59e0b" opacity="0.5"/>
-  <circle cx="850" cy="310" r="8" fill="#ef4444" opacity="0.5"/>
+  <!-- Subtle border -->
+  <rect x="4" y="4" width="1016" height="1016" rx="218" fill="none" stroke="#a78bfa" stroke-opacity="0.12" stroke-width="4"/>
+  <!-- Letter n -->
+  <text x="512" y="600" text-anchor="middle" font-family="SF Mono, Menlo, Monaco, monospace" font-weight="700" font-size="440" fill="url(#accent)">n</text>
+  <!-- Cursor line -->
+  <rect x="680" y="280" width="4" height="380" rx="2" fill="#a78bfa" opacity="0.5"/>
 </svg>

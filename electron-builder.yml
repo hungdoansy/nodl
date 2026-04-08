@@ -1,6 +1,6 @@
 appId: com.hungdoansy.nodl
 productName: nodl
-copyright: Copyright © 2024-2026 hungdoansy
+copyright: Copyright © 2025 Hung Doan
 
 directories:
   buildResources: resources
@@ -74,5 +74,5 @@ linux:
   category: Development
   artifactName: "${productName}-${version}-linux-${arch}.${ext}"
   maintainer: hungdoansy
-  synopsis: A JavaScript/TypeScript scratchpad desktop app
-  description: nodl is a fast, lightweight desktop app for writing and running JavaScript/TypeScript code snippets with instant output.
+  synopsis: A fast JS/TS code scratchpad
+  description: nodl is a fast, lightweight desktop scratchpad for writing and running JavaScript/TypeScript code with instant inline output.

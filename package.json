@@ -1,10 +1,19 @@
 {
   "name": "nodl",
-  "version": "0.1.0",
-  "description": "A JavaScript/TypeScript scratchpad desktop app",
+  "version": "1.0.0",
+  "description": "A fast, lightweight desktop scratchpad for writing and running JavaScript/TypeScript code with instant inline output",
   "main": "./out/main/index.js",
-  "author": "hungdoansy",
+  "author": {
+    "name": "Hung Doan",
+    "email": "hungdoansy@gmail.com",
+    "url": "https://github.com/hungdoansy"
+  },
+  "license": "MIT",
   "homepage": "https://github.com/hungdoansy/nodl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hungdoansy/nodl.git"
+  },
   "packageManager": "pnpm@9.15.9",
   "type": "module",
   "engines": {
@@ -20,8 +29,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "pack": "electron-vite build && electron-builder --dir",
-    "dist": "electron-vite build && electron-builder"
+    "pack": "pnpm run build && electron-builder --dir",
+    "dist": "pnpm run build && electron-builder"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
