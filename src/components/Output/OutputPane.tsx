@@ -47,7 +47,7 @@ export function OutputPane() {
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       {/* Toolbar */}
       <div className="toolbar flex items-center gap-2 px-3 py-1">
-        <span style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           <span style={{ color: 'var(--accent)', opacity: 0.4 }}>&gt;</span> output
         </span>
 
@@ -71,13 +71,13 @@ export function OutputPane() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {entries.length === 0 && !isRunning && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <div style={{ color: 'var(--text-muted)', opacity: 0.3, fontSize: 32, fontWeight: 300 }}>
+            <div style={{ color: 'var(--text-tertiary)', opacity: 0.3, fontSize: 32, fontWeight: 300 }}>
               {'{ }'}
             </div>
-            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
               awaiting input...
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 10, opacity: 0.4 }}>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: 10, opacity: 0.4 }}>
               <span style={{ color: 'var(--accent)', opacity: 0.6 }}>[</span>
               {' '}cmd+enter{' '}
               <span style={{ color: 'var(--accent)', opacity: 0.6 }}>]</span>
@@ -85,7 +85,7 @@ export function OutputPane() {
           </div>
         )}
         {entries.length === 0 && isRunning && (
-          <div className="flex items-center justify-center h-full gap-2" style={{ color: 'var(--text-muted)' }}>
+          <div className="flex items-center justify-center h-full gap-2" style={{ color: 'var(--text-tertiary)' }}>
             <span className="animate-blink" style={{ color: 'var(--accent)' }}>●</span>
             <span style={{ fontSize: 11 }}>executing...</span>
           </div>
@@ -127,7 +127,7 @@ export function OutputPane() {
             borderTop: '1px solid var(--border-default)',
             background: 'var(--bg-surface)',
             fontSize: 10,
-            color: lastResult.success ? 'var(--text-muted)' : 'var(--danger)',
+            color: lastResult.success ? 'var(--text-tertiary)' : 'var(--danger)',
             letterSpacing: '0.04em',
           }}
         >

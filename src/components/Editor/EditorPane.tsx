@@ -63,7 +63,7 @@ export function EditorPane() {
 
         <div className="flex-1" />
 
-        <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>
+        <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>
           ─── {tab.language === 'typescript' ? 'TS' : 'JS'} ───
         </span>
 

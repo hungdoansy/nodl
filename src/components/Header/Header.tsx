@@ -4,16 +4,16 @@ import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
 import type { ThemeMode } from '../../../shared/types'
 
-const themeLabels: Record<ThemeMode, string> = {
-  dark: 'DRK',
-  light: 'LGT',
-  system: 'SYS'
-}
-
 const nextTheme: Record<ThemeMode, ThemeMode> = {
   dark: 'light',
   light: 'system',
   system: 'dark'
+}
+
+const themeLabel: Record<ThemeMode, string> = {
+  dark: 'dark',
+  light: 'light',
+  system: 'sys'
 }
 
 export function Header() {
@@ -26,51 +26,49 @@ export function Header() {
   return (
     <>
       <header
-        className="flex items-center h-[36px] select-none"
+        className="flex items-center h-[34px] select-none"
         style={{
           WebkitAppRegion: 'drag',
           background: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border-default)',
+          borderBottom: '1px solid var(--border-subtle)',
         } as React.CSSProperties}
       >
-        {/* macOS traffic lights spacer */}
         <div className="w-[70px] shrink-0" />
 
-        {/* Center: logo + name */}
         <div className="flex-1 flex items-center justify-center gap-2">
-          <Logo size={16} />
-          <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <Logo size={15} />
+          <span style={{
+            color: 'var(--accent)',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+          }}>
             nodl
           </span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>
-            //&nbsp;v0.1.0
-          </span>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>v0.1</span>
         </div>
 
-        {/* Right controls */}
         <div
-          className="flex items-center gap-1 px-2 shrink-0"
+          className="flex items-center gap-0.5 px-2 shrink-0"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <button
             onClick={() => setTheme(nextTheme[theme])}
             className="btn-ghost"
-            style={{ fontSize: 10, letterSpacing: '0.06em' }}
+            style={{ fontSize: 9, letterSpacing: '0.06em' }}
             title={`Theme: ${theme}`}
           >
-            <span style={{ color: 'var(--accent)', opacity: 0.6 }}>[</span>
-            {themeLabels[theme]}
-            <span style={{ color: 'var(--accent)', opacity: 0.6 }}>]</span>
+            {themeLabel[theme]}
           </button>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>·</span>
           <button
             onClick={openSettings}
             className="btn-ghost"
-            style={{ fontSize: 10, letterSpacing: '0.06em' }}
+            style={{ fontSize: 9, letterSpacing: '0.06em' }}
             title="Settings"
           >
-            <span style={{ color: 'var(--accent)', opacity: 0.6 }}>[</span>
-            CFG
-            <span style={{ color: 'var(--accent)', opacity: 0.6 }}>]</span>
+            config
           </button>
         </div>
       </header>

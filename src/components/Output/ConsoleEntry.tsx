@@ -7,7 +7,7 @@ const METHOD_COLORS: Record<string, string> = {
   info: 'var(--info)',
   warn: 'var(--warn)',
   error: 'var(--danger)',
-  debug: 'var(--text-muted)',
+  debug: 'var(--text-tertiary)',
   table: 'var(--text-primary)'
 }
 
@@ -65,7 +65,7 @@ export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
   const firstArg = entry.args[0]
   if (isLastExpression(firstArg)) {
     return (
-      <div style={{ ...fontStyle, color: 'var(--text-muted)' }}>
+      <div style={{ ...fontStyle, color: 'var(--text-tertiary)' }}>
         <span style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 6 }}>{'<-'}</span>
         {isPrimitive(firstArg.value) ? (
           <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>

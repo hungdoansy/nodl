@@ -94,7 +94,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div>
       <h3 style={{
-        color: 'var(--text-muted)', fontSize: 10, fontWeight: 600,
+        color: 'var(--text-tertiary)', fontSize: 10, fontWeight: 600,
         letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
       }}>
         <span style={{ color: 'var(--accent)', opacity: 0.3 }}>├──</span> {title}
@@ -142,7 +142,7 @@ function ToggleRow({
           padding: '2px 8px',
           border: `1px solid ${checked ? 'var(--accent-mid)' : 'var(--border-default)'}`,
           background: checked ? 'var(--accent-dim)' : 'transparent',
-          color: checked ? 'var(--accent)' : 'var(--text-muted)',
+          color: checked ? 'var(--accent)' : 'var(--text-tertiary)',
           cursor: 'pointer',
           letterSpacing: '0.06em',
           fontFamily: 'inherit',
