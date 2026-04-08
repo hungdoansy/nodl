@@ -28,7 +28,7 @@ export function Header() {
   return (
     <>
       <header
-        className="flex items-center h-[38px] select-none"
+        className="flex items-center h-[38px] min-h-[38px] shrink-0 select-none"
         style={{
           WebkitAppRegion: 'drag',
           background: 'var(--bg-surface)',
@@ -36,9 +36,10 @@ export function Header() {
         } as React.CSSProperties}
       >
         {/* Left: traffic lights spacer + sidebar toggle */}
+        <div className="w-[70px] shrink-0" />
         <div
-          className="flex items-center shrink-0"
-          style={{ width: 70, paddingLeft: 70, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          className="flex items-center shrink-0 pl-1"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <button
             onClick={toggleSidebar}

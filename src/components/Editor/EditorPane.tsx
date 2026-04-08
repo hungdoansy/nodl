@@ -59,7 +59,7 @@ export function EditorPane() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
-      <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36 }}>
+      <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36, minHeight: 36 }}>
         <button onClick={run} disabled={isRunning} className="toolbar-btn primary" title="Run (Cmd+Enter)">
           <Play size={14} />
         </button>

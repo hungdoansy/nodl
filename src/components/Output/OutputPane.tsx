@@ -92,7 +92,7 @@ export function OutputPane() {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       {/* Toolbar */}
-      <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36 }}>
+      <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36, minHeight: 36 }}>
         <span style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 500, paddingLeft: 6, paddingRight: 4 }}>
           Output
         </span>

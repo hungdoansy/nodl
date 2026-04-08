@@ -141,80 +141,94 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Packages section */}
-        {!collapsed && (
-          <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
-            <div
-              className="flex items-center justify-between px-3 py-2 cursor-pointer"
-              onClick={() => setPkgSectionOpen(!pkgSectionOpen)}
-            >
-              <span style={{
-                color: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}>
-                <Package size={12} />
-                Packages ({packages.length})
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setPkgDialogOpen(true) }}
-                className="btn-ghost" style={{ padding: 2 }}
-                title="Add package"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
-            {pkgSectionOpen && (
-              <div style={{ maxHeight: 120, overflowY: 'auto' }}>
-                {packages.length === 0 && (
-                  <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    No packages
-                  </div>
-                )}
-                {packages.map((pkg) => (
-                  <div
-                    key={pkg.name}
-                    className="group flex items-center justify-between"
-                    style={{ padding: '3px 12px', fontSize: 12 }}
-                  >
-                    <span style={{ color: 'var(--text-secondary)' }} className="truncate">
-                      {pkg.name}
-                      <span style={{ color: 'var(--text-tertiary)', marginLeft: 4, fontSize: 11 }}>@{pkg.version}</span>
-                    </span>
-                    <button
-                      onClick={() => remove(pkg.name)}
-                      disabled={removing !== null}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
-                      style={{ padding: 1 }}
-                    >
-                      <X size={11} style={{ color: 'var(--text-tertiary)' }} />
-                    </button>
-                  </div>
-                ))}
+        {/* Packages expanded list */}
+        {!collapsed && pkgSectionOpen && (
+          <div style={{ maxHeight: 120, overflowY: 'auto', padding: '0 6px' }}>
+            {packages.length === 0 && (
+              <div style={{ padding: '6px 8px', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                No packages
               </div>
             )}
+            {packages.map((pkg) => (
+              <div
+                key={pkg.name}
+                className="group flex items-center justify-between"
+                style={{
+                  padding: '5px 8px', fontSize: 12,
+                  borderRadius: 'var(--radius-sm)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <span style={{ color: 'var(--text-secondary)' }} className="truncate">
+                  {pkg.name}
+                  <span style={{ color: 'var(--text-tertiary)', marginLeft: 4, fontSize: 11 }}>@{pkg.version}</span>
+                </span>
+                <button
+                  onClick={() => remove(pkg.name)}
+                  disabled={removing !== null}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
+                  style={{ padding: 1 }}
+                >
+                  <X size={11} style={{ color: 'var(--text-tertiary)' }} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Bottom: settings */}
+        {/* Bottom: packages + settings — same layout as file items */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: collapsed ? '6px 4px' : '6px 8px',
           borderTop: '1px solid var(--border-subtle)',
-          justifyContent: collapsed ? 'center' : 'flex-start',
+          padding: collapsed ? '4px 4px' : '4px 6px',
         }}>
-          <button
-            onClick={openSettings}
-            className="btn-ghost"
-            title="Settings"
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={() => { if (collapsed) { setPkgDialogOpen(true) } else { setPkgSectionOpen(!pkgSectionOpen) } }}
             style={{
-              padding: collapsed ? 4 : '4px 6px',
-              display: 'flex', alignItems: 'center', gap: 6,
+              padding: collapsed ? '6px 0' : '5px 8px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 7,
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 1,
+              color: 'var(--text-secondary)',
+              transition: 'all 100ms',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
           >
-            <Settings size={14} />
-            {!collapsed && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Settings</span>}
-          </button>
+            <Package size={collapsed ? 14 : 13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+            {!collapsed && (
+              <>
+                <span style={{ fontSize: 12 }} className="truncate flex-1">Packages</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPkgDialogOpen(true) }}
+                  className="btn-ghost"
+                  style={{ padding: 1 }}
+                  title="Add package"
+                >
+                  <Plus size={12} style={{ color: 'var(--text-tertiary)' }} />
+                </button>
+              </>
+            )}
+          </div>
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={openSettings}
+            style={{
+              padding: collapsed ? '6px 0' : '5px 8px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 7,
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-secondary)',
+              transition: 'all 100ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <Settings size={collapsed ? 14 : 13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+            {!collapsed && <span style={{ fontSize: 12 }} className="truncate flex-1">Settings</span>}
+          </div>
         </div>
       </div>
       <PackageDialog open={pkgDialogOpen} onClose={() => setPkgDialogOpen(false)} />

@@ -178,6 +178,7 @@ body {
 .toolbar {
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .btn {
