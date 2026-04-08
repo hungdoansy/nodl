@@ -31,19 +31,48 @@ export function isExpression(line: string): boolean {
   for (const ch of stripped) {
     if (ch === '(' || ch === '[') depth++
     if (ch === ')' || ch === ']') depth--
-    if (depth < 0) return false // more closers than openers → continuation
+    if (depth < 0) return false
   }
   return true
 }
 
-type Delimiter = '{' | '(' | '['
+/**
+ * Brace context: determines if __line__ can be inserted inside { }
+ * - 'block': function body, if/for/while/try body, arrow body → safe
+ * - 'class': class/interface body → NOT safe (only members allowed)
+ * - 'object': object literal → NOT safe
+ * - 'switch': switch body → NOT safe (only case/default labels)
+ */
+type BraceContext = 'block' | 'class' | 'object' | 'switch'
+type StackEntry = '{' | '(' | '['  // parens/brackets are always unsafe
+
+/**
+ * Determine the brace context based on the line that opens the {
+ */
+function classifyBrace(trimmed: string, stack: (StackEntry | BraceContext)[]): BraceContext {
+  // class/interface body
+  if (/^(class|interface)\s/.test(trimmed)) return 'class'
+  if (/^export\s+(default\s+)?(class|interface)\s/.test(trimmed)) return 'class'
+  // switch body
+  if (/^switch\s*\(/.test(trimmed)) return 'switch'
+  // Object literal patterns:
+  if (/=\s*\{$/.test(trimmed)) return 'object'
+  if (/^return\s*\{$/.test(trimmed)) return 'object'
+  if (/\(\{$/.test(trimmed)) return 'object'
+  // Property value: `key: {` — if we're inside an object or class, nested { is also object
+  if (/:\s*\{$/.test(trimmed)) return 'object'
+  // If parent context is object/class, nested { is likely object property
+  const parentCtx = stack.length > 0 ? stack[stack.length - 1] : null
+  if (parentCtx === 'object') return 'object'
+  // Everything else (function body, if/for/while/try, arrow body)
+  return 'block'
+}
 
 /**
  * Scan a line and update the delimiter stack.
  * Ignores delimiters inside string literals.
- * Returns the stack so we know our context.
  */
-function updateDelimiterStack(line: string, stack: Delimiter[]): void {
+function updateStack(line: string, stack: (StackEntry | BraceContext)[], trimmed: string): void {
   let inString: string | null = null
   let escaped = false
   for (let i = 0; i < line.length; i++) {
@@ -55,21 +84,22 @@ function updateDelimiterStack(line: string, stack: Delimiter[]): void {
       continue
     }
     if (ch === '"' || ch === "'" || ch === '`') { inString = ch; continue }
-    if (ch === '{') stack.push('{')
-    else if (ch === '(') stack.push('(')
+    if (ch === '(') stack.push('(')
     else if (ch === '[') stack.push('[')
+    else if (ch === '{') stack.push(classifyBrace(trimmed, stack))
     else if (ch === '}' || ch === ')' || ch === ']') stack.pop()
   }
 }
 
 /**
- * Check if we're in a statement-safe context: either top-level
- * or the innermost open delimiter is `{` (a block body).
- * If innermost is `(` or `[`, we're inside an expression — can't insert statements.
+ * Check if we're in a statement-safe context.
+ * Safe: top-level, or inside a 'block' brace (function body, if/for/while/try).
+ * Unsafe: inside '(', '[', 'class', 'object', 'switch'.
  */
-function isStatementContext(stack: Delimiter[]): boolean {
+function isStatementContext(stack: (StackEntry | BraceContext)[]): boolean {
   if (stack.length === 0) return true
-  return stack[stack.length - 1] === '{'
+  const top = stack[stack.length - 1]
+  return top === 'block'
 }
 
 /**
@@ -85,10 +115,15 @@ function nextNonEmptyIsContinuation(lines: string[], fromIndex: number): boolean
 }
 
 /**
- * Check if a line is a chain continuation (starts with . or ?)
+ * Check if a line is a continuation of a previous expression:
+ * chain (.then), ternary (? :), optional chaining (?.)
  */
 function isChainContinuation(trimmed: string): boolean {
-  return /^[.?]/.test(trimmed)
+  // Dot chain or optional chain
+  if (/^[.?]/.test(trimmed)) return true
+  // Ternary continuation: line starts with `: ` (but not `case X:` or `default:`)
+  if (/^:\s/.test(trimmed) && !trimmed.startsWith('case ') && !trimmed.startsWith('default')) return true
+  return false
 }
 
 /**
@@ -102,7 +137,7 @@ function isChainContinuation(trimmed: string): boolean {
 export function instrumentCode(code: string): string {
   const lines = code.split('\n')
   const result: string[] = []
-  const stack: Delimiter[] = []
+  const stack: (StackEntry | BraceContext)[] = []
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
@@ -129,11 +164,11 @@ export function instrumentCode(code: string): string {
         result.push(line)
       }
     } else {
-      // Inside expression context or chain continuation — pass through
+      // Inside expression/class/object/switch context or chain continuation — pass through
       result.push(line)
     }
 
-    updateDelimiterStack(trimmed, stack)
+    updateStack(trimmed, stack, trimmed)
   }
 
   return result.join('\n')

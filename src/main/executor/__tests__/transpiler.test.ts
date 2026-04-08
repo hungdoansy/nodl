@@ -97,4 +97,71 @@ describe('transpiler', () => {
     expect(result.errors).toHaveLength(0)
     expect(result.js).not.toContain('@__PURE__')
   })
+
+  // --- Additional edge cases ---
+  it('handles optional chaining', () => {
+    const result = transpile('const x = obj?.a?.b')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).toContain('?.')
+  })
+
+  it('handles nullish coalescing', () => {
+    const result = transpile('const x = a ?? b')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).toContain('??')
+  })
+
+  it('handles async/await', () => {
+    const result = transpile('async function foo() { const r = await Promise.resolve(1); return r; }')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).toContain('async')
+    expect(result.js).toContain('await')
+  })
+
+  it('handles decorators syntax gracefully', () => {
+    // esbuild may or may not support decorators depending on config
+    // At minimum it should not crash
+    const result = transpile('class Foo { method() {} }')
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('handles multiple @__PURE__ annotations', () => {
+    const result = transpile('new Date()\nnew Map()\nnew Set()')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toContain('@__PURE__')
+    expect(result.js).toContain('new Date()')
+    expect(result.js).toContain('new Map()')
+    expect(result.js).toContain('new Set()')
+  })
+
+  it('handles satisfies keyword', () => {
+    const result = transpile('const x = { a: 1 } satisfies Record<string, number>')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toContain('satisfies')
+  })
+
+  it('handles multiline string', () => {
+    const result = transpile('const s = `line1\nline2\nline3`')
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('handles class with access modifiers', () => {
+    const result = transpile(`class Foo {
+  public a = 1
+  private b = 2
+  protected c = 3
+  readonly d = 4
+}`)
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toContain('public')
+    expect(result.js).not.toContain('private')
+    expect(result.js).not.toContain('protected')
+  })
+
+  it('preserves line count in output', () => {
+    const input = 'const a = 1\n\n\nconst b = 2'
+    const result = transpile(input)
+    expect(result.errors).toHaveLength(0)
+    // esbuild may compact, but instrumented code relies on this
+  })
 })

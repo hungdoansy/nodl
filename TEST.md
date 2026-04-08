@@ -11,17 +11,16 @@
 | `store/packages.test.ts` | 10 | Package install, remove, error handling |
 | `store/scroll-sync.test.ts` | 4 | Scroll sync state between editor and output |
 | `executor/worker-helpers.test.ts` | 45 | Expression detection, code instrumentation |
-| `executor/transpiler.test.ts` | 14 | TypeScript transpilation, error handling |
+| `executor/pipeline.test.ts` | 52 | Full pipeline: instrument → transpile → valid JS |
+| `executor/transpiler.test.ts` | 23 | TypeScript transpilation, edge cases |
 | `executor/console-capture.test.ts` | 18 | Console method capture, serialization |
 | `hooks/useErrorHighlighting.test.ts` | 12 | Error line extraction from stack traces |
 
-**Total: 147 tests across 10 test files**
+**Total: 208 tests across 11 test files**
 
-## User Input Test Cases (Instrumentation)
+## User Input Test Cases
 
-These inputs are tested via `instrumentCode` to verify the app doesn't break:
-
-### Simple Expressions
+### Simple Expressions (9 cases)
 1. `42` — number literal
 2. `"hello"` — string literal
 3. `Math.max(1, 2)` — static method call
@@ -32,59 +31,105 @@ These inputs are tested via `instrumentCode` to verify the app doesn't break:
 8. `42;` — trailing semicolon stripped
 9. `x > 0 ? "pos" : "neg"` — ternary
 
-### Declarations (should NOT be wrapped)
-10. `const x = 1`
-11. `let y = 2`
-12. `var z = 3`
-13. `const { a, b } = obj` — destructuring
-14. `const arr = await fetch("url")` — async declaration
+### Declarations (5 cases)
+10. `const x = 1` / `let y = 2` / `var z = 3`
+11. `const { a, b } = { a: 1, b: 2 }` — object destructuring
+12. `const [x, y] = [1, 2]` — array destructuring
+13. `const x: number = 42` — typed declaration (TS)
+14. `const result = await fetch("url")` — async declaration
 
-### Control Flow (should NOT be wrapped)
-15. `if (true) {}`
-16. `for (;;) {}`
-17. `while (true) {}`
-18. `throw new Error()`
-19. `return 42`
-20. `break`
-21. `continue`
+### Control Flow (7 cases)
+15. `if (true) {}` / `for (;;) {}` / `while (true) {}`
+16. `throw new Error()`
+17. `return 42` / `break` / `continue`
+18. `import foo from "bar"` / `export default foo`
+19. `if/else if/else` chain
+20. `switch` with case/default labels
+21. `try/catch/finally`
 
-### Multi-line Constructs (must not break syntax)
-22. `setTimeout(() => { ... }, 0)` — callback with closing args
-23. `Promise.resolve().then(...).then(...)` — method chains
-24. `new Promise((resolve) => { ... }).then(...)` — constructor + chain
-25. `foo(\n  arg1,\n  arg2\n)` — multi-line function args
-26. `const arr = [\n  1,\n  2\n]` — multi-line array
-27. Nested setTimeout inside setTimeout
-28. Promise.resolve().then() inside setTimeout
-29. Class with methods and get/set
+### TypeScript Features (8 cases)
+22. Interface declaration
+23. Type alias
+24. Generics: `function identity<T>(x: T): T`
+25. Enum: `enum Color { Red, Green, Blue }`
+26. Type assertions: `as string`
+27. `satisfies` keyword
+28. Class access modifiers: `public`, `private`, `protected`
+29. Type-only imports: `import type { Foo }`
 
-### Real User Code Patterns
-30. Event loop demo: sync → microtask → macro ordering
-31. Function declaration + call (`function main() { ... }; main()`)
-32. Class with private fields, methods, getters
-33. Array method chains: `.map().filter().reduce()`
-34. JSON stringify/parse + Math.random + Date
-35. Async/await at top level
+### Multi-line Constructs (16 cases)
+30. `setTimeout(() => { ... }, 0)` — callback with closing args
+31. Nested setTimeout (3 levels deep)
+32. `Promise.resolve().then().then().catch()` — method chains
+33. `new Promise((resolve) => { ... }).then(...)` — constructor + chain
+34. `foo(\n  arg1,\n  arg2\n)` — multi-line function args
+35. `const arr = [\n  1,\n  2\n]` — multi-line array
+36. Class with constructor, methods, getters
+37. Class with static methods
+38. `const config = { ... }` — multi-line object literal
+39. Nested object literals: `{ inner: { deep: true } }`
+40. Object with method shorthand: `{ greet() {} }`
+41. Array of objects: `[{ a: 1 }, { b: 2 }]`
+42. Object spread: `{ ...base, b: 2 }`
+43. Arrow returning object: `() => ({ a: 1 })`
+44. Ternary across lines: `cond\n  ? a\n  : b`
+45. Method chaining across lines: `[].map().filter().reduce()`
 
-### Continuation Lines (must be rejected by isExpression)
-36. `.then(() => {})` — dot chain
-37. `.catch(e => {})` — dot chain
-38. `}, 0)` — closing callback
-39. `})` — closing callback
-40. `])` — closing array in arg
-41. `))` — nested close
-42. `, 0)` — trailing arg
-43. `+ 1` — operator continuation
-44. `&& true` — logical continuation
-45. `|| false` — logical continuation
-46. `?? default` — nullish coalesce continuation
+### Continuation Lines Rejected (11 cases)
+46. `.then(() => {})` / `.catch()` / `.map()` — dot chain
+47. `}, 0)` / `})` / `])` / `))` — closing brackets
+48. `, 0)` / `,arg2` — comma continuation
+49. `+ 1` / `&& true` / `|| false` / `?? default` — operators
+50. `arg1,` — trailing comma
+51. `: value` — ternary continuation
+
+### Real User Code Patterns (15 cases)
+52. Event loop demo: sync → microtask → macro ordering
+53. Function declaration + call
+54. Async function with try/catch
+55. Array `.map().filter().reduce()` chains
+56. JSON stringify/parse + Math.random + Date
+57. Object spread and rest
+58. `for...of` and `for...in` loops
+59. Immediately invoked function expression (IIFE)
+60. `console.table()` with array of objects
+61. Map and Set operations
+62. RegExp match and test
+63. Symbol creation
+64. Optional chaining + nullish coalescing
+65. Tagged template literals
+66. Complex async: nested Promise + setTimeout (user's actual test)
+
+### Transpiler Edge Cases (9 cases)
+67. Optional chaining: `obj?.a?.b`
+68. Nullish coalescing: `a ?? b`
+69. Async/await transpilation
+70. Multiple `@__PURE__` annotations stripped
+71. `satisfies` keyword stripped
+72. Multiline template literal
+73. Class access modifiers stripped
+74. Empty input
+75. Syntax errors report line numbers
+
+## Bugs Found & Fixed
+
+### Cycle 2: Class/Object/Switch Bodies
+- **Bug**: `__line__` inserted inside class bodies, object literals, and switch statements
+- **Root cause**: All `{` treated as function-body blocks (statement context)
+- **Fix**: Tagged delimiter stack — `classifyBrace()` distinguishes `block`, `class`, `object`, `switch`
+- **Also fixed**: Ternary continuations (`? val` / `: val` across lines), arrow-returning-object `() => ({})`, nested object literals
 
 ## Cycle Log
 
 ### Cycle 1 (2025-04-08)
 - Added 36 new tests (111 → 147)
-- New test file: `store/scroll-sync.test.ts` (4 tests)
-- Expanded `store/ui.test.ts`: sidebar, output mode tests (+6 tests)
-- Expanded `worker-helpers.test.ts`: multi-line constructs, real user inputs (+26 tests)
-- All 147 tests passing
-- Covered: multi-line setTimeout, Promise chains, function bodies, nested callbacks, class declarations, array/object literals, continuation line rejection
+- New: `scroll-sync.test.ts`, expanded `ui.test.ts`, `worker-helpers.test.ts`
+- Covered: multi-line setTimeout, Promise chains, function bodies, continuation lines
+
+### Cycle 2 (2025-04-08)
+- Added 61 new tests (147 → 208)
+- New: `pipeline.test.ts` (52 tests) — full instrument → transpile pipeline
+- Expanded: `transpiler.test.ts` (+9 tests)
+- Found and fixed 5 pipeline bugs: class body, interface body, object literal, switch statement, nested object instrumentation
+- Fixed: ternary across lines, arrow returning object
+- Covered: 75 unique user input patterns
