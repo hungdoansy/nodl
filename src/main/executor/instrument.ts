@@ -1,8 +1,9 @@
 /** Prefixes that indicate a line is a statement, not an expression */
 const STATEMENT_PREFIXES = [
-  'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
-  'switch ', 'try ', 'import ', 'export ', 'return ', 'throw ', 'do ', 'break',
-  'continue', 'debugger'
+  'const ', 'let ', 'var ', 'function ', 'function*', 'class ', 'abstract ',
+  'if ', 'for ', 'while ', 'switch ', 'try ', 'import ', 'export ',
+  'return ', 'throw ', 'do ', 'break', 'continue', 'debugger',
+  'type ', 'interface ', 'enum ', 'declare ', 'namespace ',
 ]
 
 /**
@@ -51,8 +52,9 @@ type StackEntry = '{' | '(' | '['  // parens/brackets are always unsafe
  */
 function classifyBrace(trimmed: string, stack: (StackEntry | BraceContext)[]): BraceContext {
   // class/interface body
-  if (/^(class|interface)\s/.test(trimmed)) return 'class'
-  if (/^export\s+(default\s+)?(class|interface)\s/.test(trimmed)) return 'class'
+  if (/^(abstract\s+)?(class|interface|enum)\s/.test(trimmed)) return 'class'
+  if (/^export\s+(default\s+)?(abstract\s+)?(class|interface|enum)\s/.test(trimmed)) return 'class'
+  if (/^(const\s+)?enum\s/.test(trimmed)) return 'class'
   // switch body
   if (/^switch\s*\(/.test(trimmed)) return 'switch'
   // Object literal patterns:
@@ -72,23 +74,32 @@ function classifyBrace(trimmed: string, stack: (StackEntry | BraceContext)[]): B
  * Scan a line and update the delimiter stack.
  * Ignores delimiters inside string literals.
  */
-function updateStack(line: string, stack: (StackEntry | BraceContext)[], trimmed: string): void {
-  let inString: string | null = null
+/**
+ * Tracks whether we're inside a multiline template literal.
+ * Single/double quoted strings can't span lines, but backticks can.
+ */
+function updateStack(line: string, stack: (StackEntry | BraceContext)[], trimmed: string, inTemplate: { value: boolean }): void {
+  let inString: string | null = inTemplate.value ? '`' : null
   let escaped = false
   for (let i = 0; i < line.length; i++) {
     const ch = line[i]
     if (escaped) { escaped = false; continue }
     if (ch === '\\') { escaped = true; continue }
     if (inString) {
-      if (ch === inString) inString = null
+      if (ch === inString) { inString = null; if (ch === '`') inTemplate.value = false }
       continue
     }
-    if (ch === '"' || ch === "'" || ch === '`') { inString = ch; continue }
+    if (ch === '"' || ch === "'") { inString = ch; continue }
+    if (ch === '`') { inString = '`'; inTemplate.value = true; continue }
     if (ch === '(') stack.push('(')
     else if (ch === '[') stack.push('[')
     else if (ch === '{') stack.push(classifyBrace(trimmed, stack))
     else if (ch === '}' || ch === ')' || ch === ']') stack.pop()
   }
+  // If we end the line still inside a single/double quote, that's a syntax error
+  // in the source — but for backticks, persist across lines
+  if (inString === '`') inTemplate.value = true
+  else if (inString === null && inTemplate.value) inTemplate.value = false
 }
 
 /**
@@ -138,11 +149,19 @@ export function instrumentCode(code: string): string {
   const lines = code.split('\n')
   const result: string[] = []
   const stack: (StackEntry | BraceContext)[] = []
+  const inTemplate = { value: false }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const trimmed = line.trim()
     const lineNum = i + 1 // 1-based
+
+    // Inside a multiline template literal — pass through entirely
+    if (inTemplate.value) {
+      result.push(line)
+      updateStack(line, stack, trimmed, inTemplate)
+      continue
+    }
 
     if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
       result.push(line)
@@ -168,7 +187,7 @@ export function instrumentCode(code: string): string {
       result.push(line)
     }
 
-    updateStack(trimmed, stack, trimmed)
+    updateStack(line, stack, trimmed, inTemplate)
   }
 
   return result.join('\n')

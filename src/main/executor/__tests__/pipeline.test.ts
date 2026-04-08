@@ -452,4 +452,153 @@ delete obj.a`)
 
 main()`)
   })
+
+  // --- Edge cases found in cycle 3 ---
+  it('handles abstract class', () => {
+    expectValid(`abstract class Animal {
+  abstract speak(): string
+  move() { console.log("moving") }
+}`)
+  })
+
+  it('handles enum with string values', () => {
+    expectValid(`enum Status {
+  Active = "active",
+  Inactive = "inactive",
+}
+Status.Active`)
+  })
+
+  it('handles const enum', () => {
+    expectValid(`const enum Dir { Up, Down, Left, Right }`)
+  })
+
+  it('handles type alias', () => {
+    expectValid(`type Keys = "a" | "b"
+const obj: Record<Keys, number> = { a: 1, b: 2 }`)
+  })
+
+  it('handles conditional type', () => {
+    expectValid(`type IsString<T> = T extends string ? true : false
+const x: IsString<"hello"> = true`)
+  })
+
+  it('handles generator function', () => {
+    expectValid(`function* gen() {
+  yield 1
+  yield 2
+  yield 3
+}`)
+  })
+
+  it('handles for await...of', () => {
+    expectValid(`async function consume(stream: AsyncIterable<string>) {
+  for await (const chunk of stream) {
+    console.log(chunk)
+  }
+}`)
+  })
+
+  it('handles labeled statement', () => {
+    expectValid(`loop: for (let i = 0; i < 10; i++) {
+  if (i === 5) break loop
+  console.log(i)
+}`)
+  })
+
+  it('handles new with multi-line args', () => {
+    expectValid(`const d = new Date(
+  2024,
+  0,
+  1
+)`)
+  })
+
+  it('handles computed property', () => {
+    expectValid(`const key = "name"
+const obj = {
+  [key]: "hello",
+}`)
+  })
+
+  it('handles empty object and array', () => {
+    expectValid(`const a = {}
+const b = []`)
+  })
+
+  it('handles chained assignment', () => {
+    expectValid(`let a, b, c
+a = b = c = 42`)
+  })
+
+  it('handles logical assignment operators', () => {
+    expectValid(`let x: number | null = null
+x ??= 42`)
+  })
+
+  it('handles nested destructuring', () => {
+    expectValid(`const { a: { b } } = { a: { b: 1 } }`)
+  })
+
+  it('handles default params', () => {
+    expectValid(`function greet(name = "world") {
+  return "Hello " + name
+}
+greet()`)
+  })
+
+  it('handles rest params', () => {
+    expectValid(`function sum(...nums: number[]) {
+  return nums.reduce((a, b) => a + b, 0)
+}
+sum(1, 2, 3)`)
+  })
+
+  it('handles type guard', () => {
+    expectValid(`function isString(x: unknown): x is string {
+  return typeof x === "string"
+}`)
+  })
+
+  it('handles numeric separator', () => {
+    expectValid(`const million = 1_000_000
+million`)
+  })
+
+  it('handles optional param', () => {
+    expectValid(`function foo(x?: number) {
+  console.log(x ?? "none")
+}`)
+  })
+
+  it('handles assertion function', () => {
+    expectValid(`function assert(cond: boolean): asserts cond {
+  if (!cond) throw new Error("assertion failed")
+}`)
+  })
+
+  it('handles comma operator', () => {
+    expectValid(`const x = (1, 2, 3)`)
+  })
+
+  it('handles multiline template literal', () => {
+    expectValid('const html = `<div>\n  <p>hello</p>\n</div>`')
+  })
+
+  it('handles assignment in condition', () => {
+    expectValid(`let x: string | undefined
+if (x = "hello") {
+  console.log(x)
+}`)
+  })
+
+  it('handles object with computed + spread', () => {
+    expectValid(`const key = "dynamic"
+const base = { a: 1 }
+const obj = {
+  ...base,
+  [key]: 2,
+  static: 3,
+}`)
+  })
 })
