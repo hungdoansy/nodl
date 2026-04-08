@@ -42,16 +42,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           overflowY: 'auto',
         }}
       >
-        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <h2 style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
             Settings
           </h2>
           <button onClick={onClose} className="btn-ghost" style={{ padding: 3 }}>
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
-        <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 0 }}>
           <Section title="Editor">
             <SliderRow label="Font Size" value={settings.fontSize} min={10} max={24} step={1}
               onChange={(v) => settings.setSetting('fontSize', v)} />
@@ -73,7 +73,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setSetting('executionTimeout', v)} />
           </Section>
 
-          <Section title="Appearance">
+          <Section title="Appearance" last>
             <SelectRow label="Theme" value={settings.theme}
               options={[
                 { value: 'dark', label: 'Dark' },
@@ -83,8 +83,8 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setTheme(v as ThemeMode)} />
           </Section>
 
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
-            <button onClick={settings.resetToDefaults} className="btn">
+          <div style={{ paddingTop: 14, marginTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
+            <button onClick={settings.resetToDefaults} className="btn" style={{ fontSize: 12 }}>
               <RotateCcw size={11} />
               Reset Defaults
             </button>
@@ -95,11 +95,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, last }: { title: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div>
+    <div style={{
+      paddingBottom: last ? 0 : 14,
+      marginBottom: last ? 0 : 14,
+      borderBottom: last ? 'none' : '1px solid var(--border-subtle)',
+    }}>
       <h3 style={{
         color: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500,
+        letterSpacing: '0.03em',
         marginBottom: 10,
       }}>
         {title}
@@ -118,7 +123,7 @@ function SliderRow({
   const pct = ((value - min) / (max - min)) * 100
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ position: 'relative', width: 80, height: 14, display: 'flex', alignItems: 'center' }}>
           <div style={{
@@ -136,8 +141,8 @@ function SliderRow({
           />
         </div>
         <span style={{
-          color: 'var(--text-primary)', fontSize: 12, width: 40, textAlign: 'right',
-          fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+          color: 'var(--text-primary)', fontSize: 12, width: 36, textAlign: 'right',
+          fontVariantNumeric: 'tabular-nums',
         }}>
           {value}{unit ?? ''}
         </span>
@@ -153,7 +158,7 @@ function ToggleRow({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <button
         onClick={() => onChange(!checked)}
         style={{
@@ -181,7 +186,7 @@ function SelectRow({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <label style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
