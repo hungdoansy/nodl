@@ -54,7 +54,7 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
   if (isLastExpression(firstArg)) {
     return (
       <div style={{ ...fontStyle, color: 'var(--text-tertiary)' }}>
-        <span style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 6 }}>{'<-'}</span>
+        <span style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 6, userSelect: 'none' }}>{'<-'}</span>
         {isPrimitive(firstArg.value) ? (
           <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
         ) : (

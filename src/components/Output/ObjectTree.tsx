@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, type JSX } from 'react'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 
 interface ObjectTreeProps {
   data: unknown
   depth?: number
   maxDepth?: number
 }
+
+const meta: React.CSSProperties = { userSelect: 'none' }
 
 const TYPE_STYLES: Record<string, React.CSSProperties> = {
   string: { color: '#a5d6a7' },
@@ -87,11 +90,17 @@ function getEntries(data: unknown): [string, unknown][] {
   return Object.entries(data)
 }
 
+const chevronStyle: React.CSSProperties = {
+  color: 'var(--text-tertiary)',
+  flexShrink: 0,
+  transition: 'transform 150ms ease',
+}
+
 export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) {
   const [expanded, setExpanded] = useState(false)
 
   if (data === '[Circular]') {
-    return <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>[Circular]</span>
+    return <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic', ...meta }}>[Circular]</span>
   }
 
   // Special serialized types with direct display
@@ -109,42 +118,38 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   const entries = getEntries(data)
 
   if (depth >= maxDepth) {
-    return <span style={{ color: 'var(--text-tertiary)' }}>{tag}</span>
+    return <span style={{ color: 'var(--text-tertiary)', ...meta }}>{tag}</span>
   }
 
-  if (!expanded) {
-    return (
-      <span
-        style={{ cursor: 'pointer', borderRadius: 3, padding: '0 2px' }}
-        onClick={() => setExpanded(true)}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-      >
-        <span style={{ color: 'var(--text-tertiary)', marginRight: 4, fontSize: '0.8em' }}>&#9654;</span>
-        <span style={{ color: 'var(--text-secondary)' }}>{tag}</span>
-      </span>
-    )
+  const toggleStyle: React.CSSProperties = {
+    cursor: 'pointer', borderRadius: 3, padding: '0 2px',
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    ...meta,
   }
 
   return (
     <div>
       <span
-        style={{ cursor: 'pointer', borderRadius: 3, padding: '0 2px' }}
-        onClick={() => setExpanded(false)}
+        style={toggleStyle}
+        onClick={() => setExpanded(!expanded)}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
       >
-        <span style={{ color: 'var(--text-tertiary)', marginRight: 4, fontSize: '0.8em' }}>&#9660;</span>
+        <span style={{ ...chevronStyle, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+          <ChevronRight size={12} />
+        </span>
         <span style={{ color: 'var(--text-secondary)' }}>{tag}</span>
       </span>
-      <div style={{ marginLeft: 16, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8 }}>
-        {entries.map(([key, value]) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-            <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{key}:</span>
-            <ObjectTree data={value} depth={depth + 1} maxDepth={maxDepth} />
-          </div>
-        ))}
-      </div>
+      {expanded && (
+        <div style={{ marginLeft: 16, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8 }}>
+          {entries.map(([key, value]) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0, ...meta }}>{key}:</span>
+              <ObjectTree data={value} depth={depth + 1} maxDepth={maxDepth} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
