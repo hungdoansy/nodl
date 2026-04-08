@@ -94,15 +94,36 @@ process.on('message', async (msg: { code: string; language: string }) => {
     sendConsoleEntry({ ...entry, line: lineTracker.value || undefined })
   })
 
+  const pendingPromises: Promise<void>[] = []
+
   function exprReporter(line: number, value: unknown): unknown {
     if (value !== undefined) {
-      sendConsoleEntry({
-        id: `expr-${Date.now()}-${idCounter++}`,
-        method: 'log',
-        args: [{ __type: 'LastExpression', value: serializeArg(value) }],
-        timestamp: Date.now(),
-        line
-      })
+      // If it's a Promise, wait for it and report the resolved value
+      if (value instanceof Promise) {
+        const p = (value as Promise<unknown>).then(
+          (resolved) => {
+            if (resolved !== undefined) {
+              sendConsoleEntry({
+                id: `expr-${Date.now()}-${idCounter++}`,
+                method: 'log',
+                args: [{ __type: 'LastExpression', value: serializeArg(resolved) }],
+                timestamp: Date.now(),
+                line
+              })
+            }
+          },
+          () => { /* errors are caught by the user's own catch blocks */ }
+        )
+        pendingPromises.push(p)
+      } else {
+        sendConsoleEntry({
+          id: `expr-${Date.now()}-${idCounter++}`,
+          method: 'log',
+          args: [{ __type: 'LastExpression', value: serializeArg(value) }],
+          timestamp: Date.now(),
+          line
+        })
+      }
     }
     return value
   }
@@ -121,7 +142,12 @@ process.on('message', async (msg: { code: string; language: string }) => {
     )
     await fn(capturedConsole, require, exprReporter, lineTracker)
 
-    // Wait for pending setTimeout/setInterval/Promise chains to complete
+    // Wait for pending Promises from expression results (e.g., async function calls)
+    if (pendingPromises.length > 0) {
+      await Promise.allSettled(pendingPromises)
+    }
+
+    // Wait for pending setTimeout/setInterval chains to complete
     await waitForAsyncDrain()
 
     send({

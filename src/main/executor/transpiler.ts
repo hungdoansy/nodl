@@ -16,7 +16,6 @@ export function transpile(code: string, loader: 'ts' | 'tsx' = 'ts'): TranspileR
     const result = transformSync(code, {
       loader,
       target: 'esnext',
-      format: 'esm',
       jsx: 'automatic',
       sourcemap: false
     })

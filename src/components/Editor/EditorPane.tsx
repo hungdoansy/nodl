@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { Play, Zap } from 'lucide-react'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { useTabsStore } from '../../store/tabs'
 import { useSettingsStore } from '../../store/settings'
@@ -32,6 +32,22 @@ export function EditorPane() {
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
+
+  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      allowJs: true,
+      strict: false,
+      noEmit: true,
+      esModuleInterop: true,
+      allowSyntheticDefaultImports: true,
+    })
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+      // Suppress module-not-found errors — packages are resolved at runtime via require()
+      diagnosticCodesToIgnore: [2792, 2307, 1259, 1471, 7016],
+    })
+  }, [])
 
   const handleMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
@@ -101,6 +117,7 @@ export function EditorPane() {
             cursorSmoothCaretAnimation: 'on',
             cursorBlinking: 'smooth',
           }}
+          beforeMount={handleBeforeMount}
           onMount={handleMount}
         />
       </div>

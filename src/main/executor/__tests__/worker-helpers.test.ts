@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { isExpression, instrumentCode } from '../instrument'
+import { isExpression, instrumentCode, transformImports } from '../instrument'
 
 describe('isExpression', () => {
   it('identifies standalone numbers', () => {
@@ -421,5 +421,67 @@ new Date().toISOString()`
     expect(result).toMatch(/__expr__\(2, JSON\.parse/)
     expect(result).toMatch(/__expr__\(3, Math\.random\(\)\)/)
     expect(result).toMatch(/__expr__\(4, new Date\(\)\.toISOString\(\)\)/)
+  })
+})
+
+describe('transformImports', () => {
+  it('converts default import to require', () => {
+    const result = transformImports('import lodash from "lodash"')
+    expect(result).toContain('require("lodash")')
+    expect(result).toContain('const lodash')
+    expect(result).toContain('.default')
+  })
+
+  it('converts named imports to require', () => {
+    const result = transformImports('import { map, filter } from "lodash"')
+    expect(result).toBe('const { map, filter } = require("lodash");')
+  })
+
+  it('converts namespace import to require', () => {
+    const result = transformImports('import * as _ from "lodash"')
+    expect(result).toBe('const _ = require("lodash");')
+  })
+
+  it('converts side-effect import to require', () => {
+    expect(transformImports('import "reflect-metadata"')).toBe('require("reflect-metadata");')
+    expect(transformImports("import 'polyfill'")).toBe("require('polyfill');")
+  })
+
+  it('strips type-only imports', () => {
+    expect(transformImports('import type { Foo } from "./types"')).toBe('')
+  })
+
+  it('passes through non-import lines', () => {
+    expect(transformImports('const x = 1')).toBe('const x = 1')
+    expect(transformImports('console.log("hi")')).toBe('console.log("hi")')
+  })
+
+  it('handles single quotes', () => {
+    const result = transformImports("import lodash from 'lodash'")
+    expect(result).toContain("require('lodash')")
+  })
+
+  it('handles trailing semicolons', () => {
+    const result = transformImports('import { a } from "mod";')
+    expect(result).toBe('const { a } = require("mod");')
+  })
+})
+
+describe('instrumentCode — import transforms', () => {
+  it('transforms import in instrumented code', () => {
+    const result = instrumentCode('import lodash from "lodash"\nlodash.chunk([1,2,3], 2)')
+    expect(result).toContain('require("lodash")')
+    expect(result).not.toContain('import ')
+  })
+
+  it('transforms named import in instrumented code', () => {
+    const result = instrumentCode('import { chunk } from "lodash"')
+    expect(result).toContain('const { chunk } = require("lodash")')
+  })
+
+  it('strips type-only import in instrumented code', () => {
+    const result = instrumentCode('import type { Foo } from "./types"\nconst x = 1')
+    expect(result).not.toContain('import type')
+    expect(result).toContain('const x = 1')
   })
 })

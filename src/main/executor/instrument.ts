@@ -138,9 +138,58 @@ function isChainContinuation(trimmed: string): boolean {
 }
 
 /**
+ * Convert ESM import statements to require() calls.
+ * Needed because user code runs inside AsyncFunction (not a module).
+ */
+export function transformImports(line: string): string {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith('import ')) return line
+
+  // import "foo" or import 'foo' → require("foo")
+  const sideEffectMatch = trimmed.match(/^import\s+(['"])(.*?)\1;?\s*$/)
+  if (sideEffectMatch) return `require(${sideEffectMatch[1]}${sideEffectMatch[2]}${sideEffectMatch[1]});`
+
+  // import type ... → strip entirely (TS only, no runtime effect)
+  if (/^import\s+type\s/.test(trimmed)) return ''
+
+  // Extract the module specifier: from "..." or from '...'
+  const fromMatch = trimmed.match(/from\s+(['"])(.*?)\1;?\s*$/)
+  if (!fromMatch) return line
+  const quote = fromMatch[1]
+  const mod = fromMatch[2]
+
+  // import * as name from "mod" → const name = require("mod")
+  const starMatch = trimmed.match(/^import\s+\*\s+as\s+(\w+)\s+from/)
+  if (starMatch) return `const ${starMatch[1]} = require(${quote}${mod}${quote});`
+
+  // import { a, b } from "mod" → const { a, b } = require("mod")
+  const namedMatch = trimmed.match(/^import\s+(\{[^}]+\})\s+from/)
+  if (namedMatch) return `const ${namedMatch[1]} = require(${quote}${mod}${quote});`
+
+  // import name from "mod" → const name = require("mod").default ?? require("mod")
+  // (handles both CJS and ESM default exports)
+  const defaultMatch = trimmed.match(/^import\s+(\w+)\s+from/)
+  if (defaultMatch) {
+    const name = defaultMatch[1]
+    return `const ${name} = (() => { const _m = require(${quote}${mod}${quote}); return _m.default ?? _m; })();`
+  }
+
+  // import name, { a, b } from "mod"
+  const mixedMatch = trimmed.match(/^import\s+(\w+)\s*,\s*(\{[^}]+\})\s+from/)
+  if (mixedMatch) {
+    const defName = mixedMatch[1]
+    const named = mixedMatch[2]
+    return `const ${defName} = (() => { const _m = require(${quote}${mod}${quote}); return _m.default ?? _m; })(); const ${named} = require(${quote}${mod}${quote});`
+  }
+
+  return line
+}
+
+/**
  * Instrument code so that:
  * - Every standalone expression line reports its value via __expr__(line, value)
  * - Lines in statement context set __line__.value for console call tracking
+ * - ESM import statements are converted to require() calls
  *
  * MUST run on the ORIGINAL source code (before transpilation) so line
  * numbers match the editor.
@@ -175,8 +224,12 @@ export function instrumentCode(code: string): string {
       // Safe to insert __line__ tracking
       result.push(`__line__.value = ${lineNum};`)
 
-      // Only wrap with __expr__ at top level (stack empty) and not starting a chain
-      if (stack.length === 0 && isExpression(trimmed) && !nextNonEmptyIsContinuation(lines, i)) {
+      // Transform import statements to require() calls
+      if (trimmed.startsWith('import ')) {
+        const transformed = transformImports(trimmed)
+        result.push(transformed)
+      } else if (stack.length === 0 && isExpression(trimmed) && !nextNonEmptyIsContinuation(lines, i)) {
+        // Only wrap with __expr__ at top level (stack empty) and not starting a chain
         const expr = trimmed.replace(/;$/, '')
         result.push(`__expr__(${lineNum}, ${expr});`)
       } else {
