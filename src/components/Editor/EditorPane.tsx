@@ -40,21 +40,21 @@ export function EditorPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border-b border-zinc-700">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
         <button
           onClick={run}
           disabled={isRunning}
-          className="px-3 py-1 text-xs font-medium rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition-colors"
+          className="px-2.5 py-1 text-[11px] font-medium rounded bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 text-white transition-colors"
           title="Run (Cmd+Enter)"
         >
           ▶ Run
         </button>
         <button
           onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
-          className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+          className={`px-2 py-1 text-[11px] font-medium rounded transition-colors ${
             autoRunEnabled
-              ? 'bg-amber-600 hover:bg-amber-500 text-white'
-              : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-300'
+              ? 'bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white'
+              : 'bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-zinc-300 border border-zinc-700'
           }`}
           title={`Auto-run on keystroke (${autoRunDelay}ms debounce)`}
         >
@@ -62,7 +62,7 @@ export function EditorPane() {
         </button>
         <button
           onClick={() => setLanguage(tab.language === 'javascript' ? 'typescript' : 'javascript')}
-          className="px-2 py-1 text-xs font-medium rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors ml-auto"
+          className="px-2 py-1 text-[11px] font-medium rounded bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-zinc-300 border border-zinc-700 transition-colors ml-auto"
           title="Toggle language"
         >
           {tab.language === 'typescript' ? '.ts' : '.js'}

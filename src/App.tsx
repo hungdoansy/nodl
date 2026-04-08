@@ -1,5 +1,6 @@
 import { Panel, Group, Separator } from 'react-resizable-panels'
 import { Header } from './components/Header/Header'
+import { Sidebar } from './components/Sidebar/Sidebar'
 import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
 import { usePersistence } from './hooks/usePersistence'
@@ -16,17 +17,20 @@ export default function App() {
   useOutputListener()
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen" style={{ background: 'var(--bg-primary)' }}>
       <Header />
-      <Group direction="horizontal" className="flex-1">
-        <Panel defaultSize={50} minSize={20}>
-          <EditorPane />
-        </Panel>
-        <Separator className="w-1 bg-zinc-700 hover:bg-zinc-500 transition-colors cursor-col-resize" />
-        <Panel defaultSize={50} minSize={20}>
-          <OutputPane />
-        </Panel>
-      </Group>
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <Group direction="horizontal" className="flex-1">
+          <Panel defaultSize={50} minSize={20}>
+            <EditorPane />
+          </Panel>
+          <Separator className="cursor-col-resize" />
+          <Panel defaultSize={50} minSize={20}>
+            <OutputPane />
+          </Panel>
+        </Group>
+      </div>
     </div>
   )
 }

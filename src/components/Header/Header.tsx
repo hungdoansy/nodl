@@ -1,5 +1,5 @@
-import { TabBar } from './TabBar'
 import { SettingsDialog } from '../Settings/SettingsDialog'
+import { Logo } from '../Logo'
 import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
 import type { ThemeMode } from '../../../shared/types'
@@ -26,36 +26,38 @@ export function Header() {
   return (
     <>
       <header
-        className="flex items-center bg-zinc-800 dark:bg-zinc-800 border-b border-zinc-700 dark:border-zinc-700 select-none"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        className="flex items-center h-[38px] select-none border-b"
+        style={{
+          WebkitAppRegion: 'drag',
+          background: 'var(--bg-elevated)',
+          borderColor: 'var(--border-default)'
+        } as React.CSSProperties}
       >
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 shrink-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <span className="text-sm font-bold text-zinc-100 tracking-tight">nodl</span>
+        {/* Left spacer — balances the right buttons for centering (macOS traffic lights ~70px) */}
+        <div className="w-[70px] shrink-0" />
+
+        {/* Center: logo + app name */}
+        <div className="flex-1 flex items-center justify-center gap-1.5">
+          <Logo size={18} />
+          <span className="text-[13px] font-semibold text-zinc-100 tracking-tight">nodl</span>
         </div>
+
+        {/* Right: theme + settings */}
         <div
-          className="flex-1 overflow-hidden"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <TabBar />
-        </div>
-        <div
-          className="flex items-center gap-1 px-2 shrink-0"
+          className="flex items-center gap-0.5 px-2 shrink-0"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <button
             onClick={() => setTheme(nextTheme[theme])}
-            className="p-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors rounded hover:bg-zinc-700"
-            title={`Theme: ${theme} (click to cycle)`}
+            className="p-1.5 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 active:bg-zinc-700 transition-colors rounded"
+            title={`Theme: ${theme}`}
           >
             {themeIcons[theme]}
           </button>
           <button
             onClick={openSettings}
-            className="p-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors rounded hover:bg-zinc-700"
-            title="Settings (Cmd+,)"
+            className="p-1.5 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 active:bg-zinc-700 transition-colors rounded"
+            title="Settings"
           >
             &#9881;
           </button>

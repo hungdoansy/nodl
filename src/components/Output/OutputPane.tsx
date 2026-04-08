@@ -53,7 +53,7 @@ export function OutputPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 border-b border-zinc-700">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
         <span className="text-xs font-medium text-zinc-400">Output</span>
         {isRunning && (
           <>
@@ -98,7 +98,7 @@ export function OutputPane() {
                 <div key={`line-${lineNum}`} style={{ minHeight: lineHeight }} className="flex items-start">
                   <div className="flex-1 min-w-0">
                     {lineEntries.map((entry) => (
-                      <ConsoleEntryComponent key={entry.id} entry={entry} compact />
+                      <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} />
                     ))}
                   </div>
                 </div>
@@ -108,7 +108,7 @@ export function OutputPane() {
             {unlined.length > 0 && (
               <div className="border-t border-zinc-800/50 mt-1">
                 {unlined.map((entry) => (
-                  <ConsoleEntryComponent key={entry.id} entry={entry} />
+                  <ConsoleEntryComponent key={entry.id} entry={entry} fontSize={fontSize} />
                 ))}
               </div>
             )}
