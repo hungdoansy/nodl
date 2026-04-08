@@ -54,11 +54,15 @@ describe('useOutputStore (per-tab)', () => {
     expect(useOutputStore.getState().entries()).toHaveLength(0)
   })
 
-  it('setRunning clears active tab entries and sets isRunning', () => {
+  it('setRunning sets isRunning and defers clear until first new entry', () => {
     useOutputStore.getState().addEntry(makeEntry())
     useOutputStore.getState().setRunning()
     expect(useOutputStore.getState().isRunning).toBe(true)
-    expect(useOutputStore.getState().entries()).toHaveLength(0)
+    // Old entries still visible (no flash)
+    expect(useOutputStore.getState().entries()).toHaveLength(1)
+    // First new entry clears old ones
+    useOutputStore.getState().addEntry(makeEntry({ method: 'log' }))
+    expect(useOutputStore.getState().entries()).toHaveLength(1) // only the new one
   })
 
   it('setDone stores result for active tab and clears isRunning', () => {

@@ -10,6 +10,8 @@ interface OutputState {
   outputs: Record<string, TabOutput>
   isRunning: boolean
   activeTabId: string
+  /** Whether the next entry should clear previous output first */
+  pendingClear: boolean
 
   setActiveTabId: (id: string) => void
   addEntry: (entry: OutputEntry) => void
@@ -31,6 +33,7 @@ export const useOutputStore = create<OutputState>((set, get) => ({
   outputs: {},
   isRunning: false,
   activeTabId: '',
+  pendingClear: false,
 
   setActiveTabId: (id) => set({ activeTabId: id }),
 
@@ -38,15 +41,22 @@ export const useOutputStore = create<OutputState>((set, get) => ({
     set((state) => {
       const tabId = state.activeTabId
       const current = state.outputs[tabId] ?? emptyOutput()
+
       if (entry.method === 'clear') {
         return {
+          pendingClear: false,
           outputs: { ...state.outputs, [tabId]: { ...current, entries: [] } }
         }
       }
+
+      // If a new run started, clear old output on first new entry
+      const base = state.pendingClear ? [] : current.entries
+
       return {
+        pendingClear: false,
         outputs: {
           ...state.outputs,
-          [tabId]: { ...current, entries: [...current.entries, entry] }
+          [tabId]: { ...current, entries: [...base, entry] }
         }
       }
     }),
@@ -55,18 +65,22 @@ export const useOutputStore = create<OutputState>((set, get) => ({
     set((state) => {
       const tabId = state.activeTabId
       const current = state.outputs[tabId] ?? emptyOutput()
+      // If pendingClear is still true, nothing was output — clear now
+      const entries = state.pendingClear ? [] : current.entries
       return {
         isRunning: false,
-        outputs: { ...state.outputs, [tabId]: { ...current, lastResult: result } }
+        pendingClear: false,
+        outputs: { ...state.outputs, [tabId]: { entries, lastResult: result } }
       }
     }),
 
   setRunning: () =>
-    set((state) => {
-      const tabId = state.activeTabId
+    set(() => {
+      // Don't clear output yet — set pendingClear flag so it clears
+      // when the first new entry arrives. This prevents flash.
       return {
         isRunning: true,
-        outputs: { ...state.outputs, [tabId]: emptyOutput() }
+        pendingClear: true
       }
     }),
 
