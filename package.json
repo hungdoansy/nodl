@@ -11,8 +11,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/main/executor/worker.ts'],bundle:true,platform:'node',format:'cjs',outfile:'out/main/worker.js',external:['electron']})\"",
+    "dev": "pnpm run build:worker && electron-vite dev",
+    "build": "electron-vite build && pnpm run build:worker",
     "preview": "electron-vite preview",
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
