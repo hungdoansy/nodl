@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Sun, Moon, Monitor, PanelLeft, PanelLeftClose } from 'lucide-react'
 import { SettingsDialog } from '../Settings/SettingsDialog'
 import { UpdateDialog } from './UpdateDialog'
+import { AboutDialog } from './AboutDialog'
 import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
 import { useUpdateCheck } from '../../hooks/useUpdateCheck'
@@ -31,6 +32,7 @@ export function Header() {
   const setTheme = useSettingsStore((s) => s.setTheme)
   const update = useUpdateCheck()
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   return (
     <>
@@ -60,12 +62,18 @@ export function Header() {
         <div className="flex-1" />
 
         {/* Center: title — absolute so it stays centered regardless of left/right content */}
-        <div
+        <button
+          onClick={() => setAboutOpen(true)}
           style={{
             position: 'absolute', left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 6,
-            pointerEvents: 'none',
-          }}
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+            transition: 'background 150ms ease',
+            WebkitAppRegion: 'no-drag',
+          } as React.CSSProperties}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
           <span style={{
             fontFamily: 'var(--font-ui)',
@@ -78,7 +86,7 @@ export function Header() {
           <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
             v1.0
           </span>
-        </div>
+        </button>
 
         {/* Right: update + theme toggle */}
         <div
@@ -125,6 +133,7 @@ export function Header() {
       </header>
       <SettingsDialog open={settingsOpen} onClose={closeSettings} />
       <UpdateDialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)} update={update} />
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </>
   )
 }
