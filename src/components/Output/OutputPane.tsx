@@ -46,53 +46,48 @@ export function OutputPane() {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       {/* Toolbar */}
-      <div className="toolbar flex items-center gap-2 px-3 py-1.5">
-        <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          Output
+      <div className="toolbar flex items-center gap-2 px-3 py-1">
+        <span style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <span style={{ color: 'var(--accent)', opacity: 0.4 }}>&gt;</span> output
         </span>
 
         {isRunning && (
           <>
-            <div
-              className="w-3 h-3 rounded-full border-[1.5px] border-t-transparent animate-spin"
-              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
-            />
-            <button onClick={stop} className="btn btn-danger" style={{ padding: '3px 8px' }}>
-              Stop
+            <span className="animate-blink" style={{ color: 'var(--accent)', fontSize: 8 }}>●</span>
+            <button onClick={stop} className="btn btn-danger" style={{ padding: '2px 8px' }}>
+              HALT
             </button>
           </>
         )}
 
         <div className="flex-1" />
 
-        <button onClick={clear} className="btn btn-secondary" style={{ padding: '3px 8px' }}>
-          Clear
+        <button onClick={clear} className="btn" style={{ padding: '2px 8px' }}>
+          CLR
         </button>
       </div>
 
       {/* Output content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {entries.length === 0 && !isRunning && (
-          <div
-            className="flex flex-col items-center justify-center h-full gap-2"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="text-[12px]">Run your code to see output</span>
-            <span className="text-[10px]" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
-              Cmd+Enter
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div style={{ color: 'var(--text-muted)', opacity: 0.3, fontSize: 32, fontWeight: 300 }}>
+              {'{ }'}
+            </div>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+              awaiting input...
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10, opacity: 0.4 }}>
+              <span style={{ color: 'var(--accent)', opacity: 0.6 }}>[</span>
+              {' '}cmd+enter{' '}
+              <span style={{ color: 'var(--accent)', opacity: 0.6 }}>]</span>
             </span>
           </div>
         )}
         {entries.length === 0 && isRunning && (
           <div className="flex items-center justify-center h-full gap-2" style={{ color: 'var(--text-muted)' }}>
-            <div
-              className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
-            />
-            <span className="text-[12px]">Running...</span>
+            <span className="animate-blink" style={{ color: 'var(--accent)' }}>●</span>
+            <span style={{ fontSize: 11 }}>executing...</span>
           </div>
         )}
         {entries.length > 0 && (
@@ -114,7 +109,7 @@ export function OutputPane() {
               )
             })}
             {unlined.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 4 }}>
+              <div style={{ borderTop: '1px solid var(--border-default)', marginTop: 4 }}>
                 {unlined.map((entry) => (
                   <ConsoleEntryComponent key={entry.id} entry={entry} fontSize={fontSize} />
                 ))}
@@ -127,17 +122,19 @@ export function OutputPane() {
       {/* Status bar */}
       {lastResult && (
         <div
-          className="px-3 py-1 text-[11px]"
+          className="px-3 py-1"
           style={{
-            borderTop: '1px solid var(--border-subtle)',
+            borderTop: '1px solid var(--border-default)',
             background: 'var(--bg-surface)',
-            color: lastResult.success ? 'var(--text-muted)' : '#f87171',
+            fontSize: 10,
+            color: lastResult.success ? 'var(--text-muted)' : 'var(--danger)',
+            letterSpacing: '0.04em',
           }}
         >
-          <span style={{ color: lastResult.success ? 'var(--accent)' : '#f87171' }}>
-            {lastResult.success ? '✓' : '✗'}
+          <span style={{ color: lastResult.success ? 'var(--accent)' : 'var(--danger)' }}>
+            {lastResult.success ? '[OK]' : '[ERR]'}
           </span>
-          {' '}Ran in {lastResult.duration}ms
+          {' '}executed in {lastResult.duration}ms
         </div>
       )}
       <PackageList />

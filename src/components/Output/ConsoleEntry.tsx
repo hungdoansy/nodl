@@ -4,16 +4,18 @@ import { ConsoleTable } from './ConsoleTable'
 
 const METHOD_COLORS: Record<string, string> = {
   log: 'var(--text-primary)',
-  info: '#60a5fa',
-  warn: '#fbbf24',
-  error: '#f87171',
+  info: 'var(--info)',
+  warn: 'var(--warn)',
+  error: 'var(--danger)',
   debug: 'var(--text-muted)',
   table: 'var(--text-primary)'
 }
 
-const METHOD_BG: Record<string, string | undefined> = {
-  warn: 'rgba(251, 191, 36, 0.04)',
-  error: 'rgba(248, 113, 113, 0.04)',
+const METHOD_PREFIX: Record<string, string> = {
+  warn: '[WARN] ',
+  error: '[ERR]  ',
+  info: '[INFO] ',
+  debug: '[DBG]  ',
 }
 
 function isLastExpression(arg: unknown): arg is { __type: 'LastExpression'; value: unknown } {
@@ -42,17 +44,16 @@ interface Props {
 }
 
 export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
-  const pad = compact ? '0 8px' : '2px 12px'
+  const pad = compact ? '0 8px' : '3px 12px'
   const border = compact ? 'none' : '1px solid var(--border-subtle)'
   const fontStyle = {
     fontSize: fontSize ? `${fontSize}px` : '13px',
-    fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
-    lineHeight: 1.5,
+    fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, Monaco, monospace",
+    lineHeight: 1.45,
     padding: pad,
     borderBottom: border,
   }
 
-  // Handle console.table
   if (entry.method === 'table' && entry.args.length > 0) {
     return (
       <div style={fontStyle}>
@@ -61,12 +62,11 @@ export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
     )
   }
 
-  // Handle expression results
   const firstArg = entry.args[0]
   if (isLastExpression(firstArg)) {
     return (
       <div style={{ ...fontStyle, color: 'var(--text-muted)' }}>
-        <span style={{ color: 'var(--text-muted)', marginRight: 6, opacity: 0.5 }}>←</span>
+        <span style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 6 }}>{'<-'}</span>
         {isPrimitive(firstArg.value) ? (
           <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
         ) : (
@@ -77,10 +77,11 @@ export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
   }
 
   const color = METHOD_COLORS[entry.method] ?? 'var(--text-primary)'
-  const bg = METHOD_BG[entry.method]
+  const prefix = METHOD_PREFIX[entry.method] ?? ''
 
   return (
-    <div style={{ ...fontStyle, color, background: bg }}>
+    <div style={{ ...fontStyle, color }}>
+      {prefix && <span style={{ opacity: 0.5 }}>{prefix}</span>}
       {entry.args.map((arg, i) => (
         <span key={i} style={i > 0 ? { marginLeft: 8 } : undefined}>
           {isErrorType(arg) ? (

@@ -3,36 +3,33 @@ interface LogoProps {
 }
 
 export function Logo({ size = 20 }: LogoProps) {
-  const r = size * 0.25 // corner radius scales with size
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Glow layer */}
-      <rect width="24" height="24" rx={r} fill="url(#logo-glow)" opacity="0.4" />
-      {/* Main shape */}
-      <rect width="24" height="24" rx={r} fill="url(#logo-gradient)" />
+      {/* Outer frame — squared, terminal-style */}
+      <rect x="0.5" y="0.5" width="23" height="23" stroke="#00ffc8" strokeOpacity="0.4" strokeWidth="1" />
+      {/* Inner glow rect */}
+      <rect x="3" y="3" width="18" height="18" fill="#00ffc8" fillOpacity="0.08" />
+      {/* Corner ticks */}
+      <line x1="0" y1="6" x2="3" y2="6" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="6" y1="0" x2="6" y2="3" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="24" y1="6" x2="21" y2="6" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="18" y1="0" x2="18" y2="3" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="0" y1="18" x2="3" y2="18" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="6" y1="24" x2="6" y2="21" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="24" y1="18" x2="21" y2="18" stroke="#00ffc8" strokeOpacity="0.3" />
+      <line x1="18" y1="24" x2="18" y2="21" stroke="#00ffc8" strokeOpacity="0.3" />
       {/* Letter */}
       <text
         x="12"
-        y="17.5"
+        y="17"
         textAnchor="middle"
         fontFamily="ui-monospace, Menlo, Monaco, monospace"
-        fontWeight="800"
-        fontSize="16"
-        fill="#0c0c0e"
-        letterSpacing="-0.5"
+        fontWeight="700"
+        fontSize="14"
+        fill="#00ffc8"
       >
         n
       </text>
-      <defs>
-        <linearGradient id="logo-gradient" x1="0" y1="0" x2="24" y2="24">
-          <stop stopColor="#34d399" />
-          <stop offset="1" stopColor="#10b981" />
-        </linearGradient>
-        <radialGradient id="logo-glow" cx="0.5" cy="0.5" r="0.5">
-          <stop stopColor="#34d399" />
-          <stop offset="1" stopColor="#34d399" stopOpacity="0" />
-        </radialGradient>
-      </defs>
     </svg>
   )
 }

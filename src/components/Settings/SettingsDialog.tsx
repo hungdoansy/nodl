@@ -11,9 +11,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const settings = useSettingsStore()
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    },
+    (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() },
     [onClose]
   )
 
@@ -27,102 +25,64 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-md mx-4 overflow-hidden animate-scale-in"
+        className="relative w-full max-w-md mx-4 animate-slide-down"
         style={{
           background: 'var(--bg-elevated)',
-          borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-dialog)',
+          border: '1px solid var(--border-default)',
           maxHeight: '70vh',
           overflowY: 'auto',
         }}
       >
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-3.5"
-          style={{ borderBottom: '1px solid var(--border-subtle)' }}
-        >
-          <h2 className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Settings
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <h2 style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <span style={{ opacity: 0.4 }}>[</span> config <span style={{ opacity: 0.4 }}>]</span>
           </h2>
-          <button onClick={onClose} className="btn-ghost text-lg leading-none">
-            ×
-          </button>
+          <button onClick={onClose} className="btn-ghost" style={{ fontSize: 14 }}>×</button>
         </div>
 
-        <div className="px-5 py-4 space-y-5">
-          {/* Editor */}
-          <Section title="Editor">
-            <SliderRow
-              label="Font Size"
-              value={settings.fontSize}
-              min={10} max={24} step={1}
-              onChange={(v) => settings.setSetting('fontSize', v)}
-            />
-            <SelectRow
-              label="Tab Size"
-              value={String(settings.tabSize)}
+        <div className="px-4 py-3 space-y-4">
+          <Section title="editor">
+            <SliderRow label="font_size" value={settings.fontSize} min={10} max={24} step={1}
+              onChange={(v) => settings.setSetting('fontSize', v)} />
+            <SelectRow label="tab_size" value={String(settings.tabSize)}
               options={[{ value: '2', label: '2' }, { value: '4', label: '4' }]}
-              onChange={(v) => settings.setSetting('tabSize', Number(v))}
-            />
-            <ToggleRow
-              label="Word Wrap"
-              checked={settings.wordWrap}
-              onChange={(v) => settings.setSetting('wordWrap', v)}
-            />
-            <ToggleRow
-              label="Minimap"
-              checked={settings.minimap}
-              onChange={(v) => settings.setSetting('minimap', v)}
-            />
+              onChange={(v) => settings.setSetting('tabSize', Number(v))} />
+            <ToggleRow label="word_wrap" checked={settings.wordWrap}
+              onChange={(v) => settings.setSetting('wordWrap', v)} />
+            <ToggleRow label="minimap" checked={settings.minimap}
+              onChange={(v) => settings.setSetting('minimap', v)} />
           </Section>
 
-          {/* Execution */}
-          <Section title="Execution">
-            <ToggleRow
-              label="Auto-run"
-              checked={settings.autoRunEnabled}
-              onChange={(v) => settings.setSetting('autoRunEnabled', v)}
-            />
-            <SliderRow
-              label="Auto-run Delay"
-              value={settings.autoRunDelay}
-              min={100} max={2000} step={100} unit="ms"
-              onChange={(v) => settings.setSetting('autoRunDelay', v)}
-            />
-            <SliderRow
-              label="Timeout"
-              value={settings.executionTimeout}
-              min={1} max={30} step={1} unit="s"
-              onChange={(v) => settings.setSetting('executionTimeout', v)}
-            />
+          <Section title="execution">
+            <ToggleRow label="auto_run" checked={settings.autoRunEnabled}
+              onChange={(v) => settings.setSetting('autoRunEnabled', v)} />
+            <SliderRow label="auto_delay" value={settings.autoRunDelay} min={100} max={2000} step={100} unit="ms"
+              onChange={(v) => settings.setSetting('autoRunDelay', v)} />
+            <SliderRow label="timeout" value={settings.executionTimeout} min={1} max={30} step={1} unit="s"
+              onChange={(v) => settings.setSetting('executionTimeout', v)} />
           </Section>
 
-          {/* Appearance */}
-          <Section title="Appearance">
-            <SelectRow
-              label="Theme"
-              value={settings.theme}
+          <Section title="display">
+            <SelectRow label="theme" value={settings.theme}
               options={[
-                { value: 'dark', label: 'Dark' },
-                { value: 'light', label: 'Light' },
-                { value: 'system', label: 'System' }
+                { value: 'dark', label: 'DRK' },
+                { value: 'light', label: 'LGT' },
+                { value: 'system', label: 'SYS' }
               ]}
-              onChange={(v) => settings.setTheme(v as ThemeMode)}
-            />
+              onChange={(v) => settings.setTheme(v as ThemeMode)} />
           </Section>
 
-          {/* Reset */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
-            <button onClick={settings.resetToDefaults} className="btn btn-secondary">
-              Reset to Defaults
-            </button>
+          <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: 10 }}>
+            <button onClick={settings.resetToDefaults} className="btn">RESET DEFAULTS</button>
           </div>
         </div>
       </div>
@@ -133,13 +93,13 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3
-        className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        {title}
+      <h3 style={{
+        color: 'var(--text-muted)', fontSize: 10, fontWeight: 600,
+        letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
+      }}>
+        <span style={{ color: 'var(--accent)', opacity: 0.3 }}>├──</span> {title}
       </h3>
-      <div className="space-y-2.5">{children}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{children}</div>
     </div>
   )
 }
@@ -151,19 +111,15 @@ function SliderRow({
   onChange: (value: number) => void
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <label className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>{label}</label>
-      <div className="flex items-center gap-2">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
           type="range" min={min} max={max} step={step} value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-24"
-          style={{ accentColor: 'var(--accent)' }}
+          style={{ width: 80, accentColor: 'var(--accent)' }}
         />
-        <span
-          className="text-[11px] w-10 text-right font-mono tabular-nums"
-          style={{ color: 'var(--text-muted)' }}
-        >
+        <span style={{ color: 'var(--accent)', fontSize: 11, width: 40, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
           {value}{unit ?? ''}
         </span>
       </div>
@@ -177,19 +133,23 @@ function ToggleRow({
   label: string; checked: boolean; onChange: (value: boolean) => void
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <label className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>{label}</label>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <button
         onClick={() => onChange(!checked)}
-        className="relative w-8 h-[18px] rounded-full transition-all duration-200"
         style={{
-          background: checked ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+          fontSize: 10,
+          padding: '2px 8px',
+          border: `1px solid ${checked ? 'var(--accent-mid)' : 'var(--border-default)'}`,
+          background: checked ? 'var(--accent-dim)' : 'transparent',
+          color: checked ? 'var(--accent)' : 'var(--text-muted)',
+          cursor: 'pointer',
+          letterSpacing: '0.06em',
+          fontFamily: 'inherit',
+          transition: 'all 120ms',
         }}
       >
-        <span
-          className="absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform duration-200"
-          style={{ transform: checked ? 'translateX(14px)' : 'translateX(0)' }}
-        />
+        {checked ? '[ON]' : '[OFF]'}
       </button>
     </div>
   )
@@ -202,16 +162,19 @@ function SelectRow({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <label className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>{label}</label>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-[12px] rounded px-2 py-1 outline-none"
         style={{
-          background: 'var(--bg-hover)',
+          fontSize: 11,
+          padding: '2px 6px',
+          background: 'var(--bg-primary)',
           color: 'var(--text-primary)',
           border: '1px solid var(--border-default)',
+          fontFamily: 'inherit',
+          outline: 'none',
         }}
       >
         {options.map((opt) => (

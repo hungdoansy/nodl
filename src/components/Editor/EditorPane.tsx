@@ -33,7 +33,7 @@ export function EditorPane() {
     editorRef.current = editor
     editor.addCommand(
       // eslint-disable-next-line no-bitwise
-      2048 | 3, // KeyMod.CtrlCmd | KeyCode.Enter
+      2048 | 3,
       () => run()
     )
   }, [run])
@@ -41,45 +41,38 @@ export function EditorPane() {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       {/* Toolbar */}
-      <div
-        className="toolbar flex items-center gap-1.5 px-3 py-1.5"
-      >
-        <button
-          onClick={run}
-          disabled={isRunning}
-          className="btn btn-primary"
-          title="Run (Cmd+Enter)"
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <path d="M2 1l7 4-7 4V1z" />
-          </svg>
-          Run
+      <div className="toolbar flex items-center gap-1.5 px-3 py-1">
+        <button onClick={run} disabled={isRunning} className="btn btn-primary" title="Run // Cmd+Enter">
+          <span style={{ fontSize: 9 }}>▶</span>
+          EXEC
         </button>
 
         <button
           onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
-          className={autoRunEnabled ? 'btn btn-secondary' : 'btn btn-secondary'}
+          className="btn"
           style={autoRunEnabled ? {
-            background: 'var(--accent-dim)',
+            borderColor: 'var(--accent-mid)',
             color: 'var(--accent)',
-            borderColor: 'rgba(52, 211, 153, 0.2)'
+            background: 'var(--accent-dim)',
           } : undefined}
-          title={`Auto-run (${autoRunDelay}ms debounce)`}
+          title={`Auto-run // ${autoRunDelay}ms`}
         >
-          {autoRunEnabled && (
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
-          )}
-          Auto
+          {autoRunEnabled && <span className="animate-blink" style={{ color: 'var(--accent)', fontSize: 8 }}>●</span>}
+          AUTO
         </button>
 
         <div className="flex-1" />
 
+        <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>
+          ─── {tab.language === 'typescript' ? 'TS' : 'JS'} ───
+        </span>
+
         <button
           onClick={() => setLanguage(tab.language === 'javascript' ? 'typescript' : 'javascript')}
-          className="btn btn-secondary font-mono"
+          className="btn"
           title="Toggle language"
         >
-          {tab.language === 'typescript' ? '.ts' : '.js'}
+          {tab.language === 'typescript' ? '.TS' : '.JS'}
         </button>
       </div>
 
@@ -94,7 +87,7 @@ export function EditorPane() {
           onChange={(value) => updateCode(value ?? '')}
           options={{
             fontSize,
-            fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
+            fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
             minimap: { enabled: minimap },
             padding: { top: 12 },
             scrollBeyondLastLine: false,
