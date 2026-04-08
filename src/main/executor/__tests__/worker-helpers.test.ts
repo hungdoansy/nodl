@@ -25,9 +25,10 @@ function wrapForLastExpression(code: string): string {
     return code
   }
 
+  const lastExpr = lines[lastIdx].trimEnd().replace(/;$/, '')
   const before = lines.slice(0, lastIdx).join('\n')
   const after = lines.slice(lastIdx + 1).join('\n')
-  return `${before}\nreturn (${lines[lastIdx]})\n${after}`
+  return `${before}\nreturn (${lastExpr})\n${after}`
 }
 
 describe('wrapForLastExpression', () => {
@@ -39,6 +40,28 @@ describe('wrapForLastExpression', () => {
     const result = wrapForLastExpression('const x = 1;\nx + 2')
     expect(result).toContain('const x = 1;')
     expect(result).toContain('return (x + 2)')
+  })
+
+  it('strips trailing semicolon before wrapping', () => {
+    const result = wrapForLastExpression('console.log("hi");')
+    expect(result).toContain('return (console.log("hi"))')
+    expect(result).not.toContain(';)')
+  })
+
+  it('strips trailing semicolon in multi-line code', () => {
+    const result = wrapForLastExpression('const x = 1;\nx + 2;')
+    expect(result).toContain('return (x + 2)')
+    expect(result).not.toContain(';)')
+  })
+
+  it('handles the default sample code', () => {
+    const code = `console.log("Hello, nodl!");
+
+const sum = (a, b) => a + b;
+console.log("2 + 3 =", sum(2, 3));`
+    const result = wrapForLastExpression(code)
+    expect(result).toContain('return (console.log("2 + 3 =", sum(2, 3)))')
+    expect(result).not.toContain(';)')
   })
 
   it('does not wrap const declarations', () => {
