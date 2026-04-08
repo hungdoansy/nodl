@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
 import { createRunner, setNodeModulesPath } from './executor/runner'
 import { transpile } from './executor/transpiler'
+import { instrumentCode } from './executor/instrument'
 import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath } from './executor/package-manager'
 import { IPC } from '../../shared/types'
 import type { RunCodePayload, PersistedState, AppSettings } from '../../shared/types'
@@ -185,10 +186,13 @@ ipcMain.on(IPC.RUN_CODE, (_event, payload: RunCodePayload) => {
   runner.stop() // kill any running execution
   runner = createRunner()
 
-  // Transpile TS to JS if needed
-  let codeToRun = payload.code
+  // 1. Instrument FIRST (on original source, so line numbers match editor)
+  const instrumented = instrumentCode(payload.code)
+
+  // 2. Transpile instrumented code (TS → JS)
+  let codeToRun = instrumented
   if (payload.language === 'typescript') {
-    const result = transpile(payload.code, 'ts')
+    const result = transpile(instrumented, 'ts')
     if (result.errors.length > 0) {
       for (const err of result.errors) {
         mainWindow.webContents.send(IPC.OUTPUT_ENTRY, {

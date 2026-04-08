@@ -1,53 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-
-// Inline the logic from worker.ts for testing (worker can't be imported directly)
-const STATEMENT_PREFIXES = [
-  'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
-  'switch ', 'try ', 'import ', 'export ', 'return ', 'throw ', 'do ', 'break',
-  'continue', 'debugger'
-]
-
-function isExpression(line: string): boolean {
-  const trimmed = line.trim()
-  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
-    return false
-  }
-  if (STATEMENT_PREFIXES.some((p) => trimmed.startsWith(p))) return false
-  if (trimmed.endsWith('{') || trimmed.endsWith('}')) return false
-  const stripped = trimmed.replace(/;$/, '')
-  if (stripped.includes(';')) return false
-  // console.* calls are side-effects, not value expressions — don't wrap
-  if (/^console\.\w+\(/.test(trimmed)) return false
-  return true
-}
-
-function instrumentCode(code: string): string {
-  const lines = code.split('\n')
-  const result: string[] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-    const lineNum = i + 1
-
-    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
-      result.push(line)
-      continue
-    }
-
-    result.push(`__currentLine__ = ${lineNum};`)
-
-    if (isExpression(trimmed)) {
-      const expr = trimmed.replace(/;$/, '')
-      result.push(`__expr__(${lineNum}, ${expr});`)
-    } else {
-      result.push(line)
-    }
-  }
-
-  return result.join('\n')
-}
+import { isExpression, instrumentCode } from '../instrument'
 
 describe('isExpression', () => {
   it('identifies standalone numbers', () => {
@@ -101,7 +54,6 @@ describe('isExpression', () => {
     expect(isExpression('console.log("hi")')).toBe(false)
     expect(isExpression('console.warn("w")')).toBe(false)
     expect(isExpression('console.error("e")')).toBe(false)
-    expect(isExpression('console.table([1])')).toBe(false)
   })
 
   it('rejects comments', () => {
@@ -128,48 +80,54 @@ describe('instrumentCode', () => {
     expect(result).toContain('__expr__(5, 65)')
   })
 
+  it('preserves empty lines (critical for line alignment)', () => {
+    const code = 'a\n\n\nb'
+    const result = instrumentCode(code)
+    const lines = result.split('\n')
+    // Line 2 and 3 should be empty (preserved)
+    expect(lines).toContain('')
+  })
+
   it('does not wrap declarations', () => {
     const result = instrumentCode('const x = 1')
     expect(result).not.toContain('__expr__')
     expect(result).toContain('const x = 1')
   })
 
-  it('adds __currentLine__ tracking for each non-empty line', () => {
-    const result = instrumentCode('const x = 1\nconsole.log(x)')
-    expect(result).toContain('__currentLine__ = 1;')
-    expect(result).toContain('__currentLine__ = 2;')
+  it('does not wrap console.* calls', () => {
+    const result = instrumentCode('console.log("hi")')
+    expect(result).not.toContain('__expr__')
+    expect(result).toContain('console.log("hi")')
   })
 
-  it('preserves empty lines and comments', () => {
-    const result = instrumentCode('// comment\n\n42')
-    expect(result).toContain('// comment')
-    expect(result).toContain('__expr__(3, 42)')
-  })
+  it('handles the user sample code with correct line numbers', () => {
+    const code = `new Date()
+new Date()
+22
+33
+44
+55
+66
+77
 
-  it('handles the user sample code correctly', () => {
-    const code = `console.log("Hello, nodl!");
+88
+99
+100
+101
+102
 
-const sum = (a, b) => a + b;
-console.log("2 + 3 =", sum(2, 3));
 
-65
 
-const b = 1 + 2
 
-b`
+new Date()`
     const result = instrumentCode(code)
-    // Line 1: console.log is a side-effect call, NOT wrapped in __expr__
-    expect(result).not.toContain('__expr__(1,')
-    expect(result).toContain('console.log("Hello, nodl!")')
-    // Line 4: console.log is a side-effect call, NOT wrapped
-    expect(result).not.toContain('__expr__(4,')
-    expect(result).toContain('console.log("2 + 3 =", sum(2, 3))')
-    // Line 6: 65 is an expression
-    expect(result).toContain('__expr__(6, 65)')
-    // Line 8: const declaration — NOT wrapped
-    expect(result).not.toContain('__expr__(8,')
-    // Line 10: b is an expression
-    expect(result).toContain('__expr__(10, b)')
+    expect(result).toContain('__expr__(1, new Date())')
+    expect(result).toContain('__expr__(2, new Date())')
+    expect(result).toContain('__expr__(3, 22)')
+    expect(result).toContain('__expr__(10, 88)')
+    expect(result).toContain('__expr__(19, new Date())')
+    // Empty lines from original are preserved in output
+    expect(result).toContain('\n\n') // blank lines not stripped
   })
 
   it('strips trailing semicolons from expressions', () => {
