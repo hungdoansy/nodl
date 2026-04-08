@@ -44,6 +44,9 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
     lineHeight: lineHeight ? `${lineHeight}px` : '1.5',
     padding: compact ? '0 8px' : '2px 12px',
     borderBottom: compact ? 'none' : '1px solid var(--border-subtle)',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
   }
 
   if (entry.method === 'table' && entry.args.length > 0) {
