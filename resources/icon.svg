@@ -1,20 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1e1e1e"/>
-      <stop offset="100%" style="stop-color:#2d2d2d"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#232323"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#c4b5fd"/>
-      <stop offset="100%" style="stop-color:#a78bfa"/>
+    <linearGradient id="accent" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d8b4fe"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <!-- Background rounded square -->
-  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
-  <!-- Subtle border -->
-  <rect x="4" y="4" width="1016" height="1016" rx="218" fill="none" stroke="#a78bfa" stroke-opacity="0.12" stroke-width="4"/>
-  <!-- Letter n -->
-  <text x="512" y="600" text-anchor="middle" font-family="SF Mono, Menlo, Monaco, monospace" font-weight="700" font-size="440" fill="url(#accent)">n</text>
-  <!-- Cursor line -->
-  <rect x="680" y="280" width="4" height="380" rx="2" fill="#a78bfa" opacity="0.5"/>
+  <!-- macOS icon: 824x824 centered in 1024x1024 with transparent surround -->
+  <!-- Rounded rect background (squircle approximation) -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <!-- Subtle inner glow -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)"/>
+  <!-- Thin border -->
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="white" stroke-opacity="0.06" stroke-width="1.5"/>
+  <!-- Code bracket hints — subtle decorative elements -->
+  <text x="270" y="560" font-family="SF Mono, Menlo, Monaco, Consolas, monospace" font-weight="300" font-size="280" fill="#a78bfa" opacity="0.15">{</text>
+  <text x="640" y="560" font-family="SF Mono, Menlo, Monaco, Consolas, monospace" font-weight="300" font-size="280" fill="#a78bfa" opacity="0.15">}</text>
+  <!-- Letter n — bold, centered -->
+  <text x="512" y="590" text-anchor="middle" font-family="SF Mono, Menlo, Monaco, Consolas, monospace" font-weight="700" font-size="380" fill="url(#accent)">n</text>
+  <!-- Blinking cursor -->
+  <rect x="668" y="310" width="5" height="280" rx="2.5" fill="#a78bfa" opacity="0.6"/>
+  <!-- Bottom accent line — like a code underline -->
+  <rect x="340" y="660" width="344" height="3" rx="1.5" fill="#a78bfa" opacity="0.25"/>
 </svg>
