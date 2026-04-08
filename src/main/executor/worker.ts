@@ -17,78 +17,109 @@ function sendConsoleEntry(entry: OutputEntry): void {
   send({ type: 'console', entry })
 }
 
-/**
- * Wraps code so the last expression's value is captured.
- * We split by lines and wrap the last non-empty line in a return.
- */
-function wrapForLastExpression(code: string): string {
-  const lines = code.split('\n')
+/** Prefixes that indicate a line is a statement, not an expression */
+const STATEMENT_PREFIXES = [
+  'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
+  'switch ', 'try ', 'import ', 'export ', 'return ', 'throw ', 'do ', 'break',
+  'continue', 'debugger'
+]
 
-  // Find last non-empty, non-comment line
-  let lastIdx = -1
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const trimmed = lines[i].trim()
-    if (trimmed && !trimmed.startsWith('//')) {
-      lastIdx = i
-      break
+/**
+ * Check if a line is a standalone expression that should have its value captured.
+ */
+function isExpression(line: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+    return false
+  }
+  if (STATEMENT_PREFIXES.some((p) => trimmed.startsWith(p))) return false
+  if (trimmed.endsWith('{') || trimmed.endsWith('}')) return false
+  // Multi-statement lines (semicolons in the middle) — skip
+  const stripped = trimmed.replace(/;$/, '')
+  if (stripped.includes(';')) return false
+  // console.* calls are side-effects, not value expressions — don't wrap
+  if (/^console\.\w+\(/.test(trimmed)) return false
+  return true
+}
+
+/**
+ * Instrument code so that:
+ * - Every standalone expression line reports its value via __expr__(line, value)
+ * - console.log/warn/error/etc calls get a line number via __line__ tracking
+ */
+export function instrumentCode(code: string): string {
+  const lines = code.split('\n')
+  const result: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    const lineNum = i + 1 // 1-based
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+      result.push(line)
+      continue
+    }
+
+    // Track current line for console calls
+    result.push(`__currentLine__ = ${lineNum};`)
+
+    if (isExpression(trimmed)) {
+      // Wrap expression to capture its value
+      const expr = trimmed.replace(/;$/, '')
+      result.push(`__expr__(${lineNum}, ${expr});`)
+    } else {
+      result.push(line)
     }
   }
 
-  if (lastIdx === -1) return code
-
-  // Check if last line is a statement that can't be returned
-  const lastLine = lines[lastIdx].trim()
-  const noReturnPrefixes = [
-    'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
-    'switch ', 'try ', 'import ', 'export ', 'return ', 'throw '
-  ]
-  if (noReturnPrefixes.some((p) => lastLine.startsWith(p)) || lastLine.endsWith('{') || lastLine.endsWith('}')) {
-    return code
-  }
-
-  // Strip trailing semicolon, then check for mid-line semicolons (multiple statements)
-  // which can't be safely wrapped in return(...)
-  const lastExpr = lines[lastIdx].trimEnd().replace(/;$/, '')
-  if (lastExpr.includes(';')) {
-    return code
-  }
-
-  const before = lines.slice(0, lastIdx).join('\n')
-  const after = lines.slice(lastIdx + 1).join('\n')
-  return `${before}\nreturn (${lastExpr})\n${after}`
+  return result.join('\n')
 }
 
 process.on('message', async (msg: { code: string; language: string }) => {
-  const capturedConsole = createConsoleCapturer(sendConsoleEntry)
+  const lineTracker = { value: 0 }
+
+  // Console capturer that includes line number
+  const capturedConsole = createConsoleCapturer((entry) => {
+    sendConsoleEntry({ ...entry, line: lineTracker.value || undefined })
+  })
+
+  // Expression result reporter
+  function exprReporter(line: number, value: unknown): unknown {
+    sendConsoleEntry({
+      id: `expr-${Date.now()}-${idCounter++}`,
+      method: 'log',
+      args: [{ __type: 'LastExpression', value: serializeArg(value) }],
+      timestamp: Date.now(),
+      line
+    })
+    return value
+  }
 
   try {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
+    const instrumented = instrumentCode(msg.code)
+
     const wrappedCode = `
       const console = __console__;
-      ${wrapForLastExpression(msg.code)}
+      ${instrumented.replace(/__currentLine__ = (\d+);/g, '__line__.value = $1;')}
     `
 
-    const fn = new AsyncFunction('__console__', 'require', wrappedCode)
-    const result = await fn(capturedConsole, require)
-
-    // Send last expression result if it's not undefined
-    if (result !== undefined) {
-      sendConsoleEntry({
-        id: `last-expr-${Date.now()}-${idCounter++}`,
-        method: 'log',
-        args: [{ __type: 'LastExpression', value: serializeArg(result) }],
-        timestamp: Date.now()
-      })
-    }
+    const fn = new AsyncFunction(
+      '__console__', 'require', '__expr__', '__line__',
+      wrappedCode
+    )
+    await fn(
+      capturedConsole,
+      require,
+      exprReporter,
+      lineTracker
+    )
 
     send({
       type: 'result',
-      result: {
-        success: true,
-        duration: 0,
-        lastExpressionResult: result !== undefined ? serializeArg(result) : undefined
-      }
+      result: { success: true, duration: 0 }
     })
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err))
@@ -97,7 +128,8 @@ process.on('message', async (msg: { code: string; language: string }) => {
       id: `error-${Date.now()}-${idCounter++}`,
       method: 'error',
       args: [error.message, error.stack || ''],
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      line: lineTracker.value || undefined
     })
 
     send({

@@ -92,6 +92,8 @@ export interface OutputEntry {
   method: ConsoleMethod
   args: unknown[]
   timestamp: number
+  /** 1-based source line that produced this entry (if known) */
+  line?: number
 }
 
 /** Result sent when execution completes */

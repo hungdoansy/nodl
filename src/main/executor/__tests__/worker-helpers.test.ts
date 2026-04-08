@@ -1,134 +1,185 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
 
-// Test the last-expression wrapping logic inline (extracted from worker.ts)
-function wrapForLastExpression(code: string): string {
-  const lines = code.split('\n')
+// Inline the logic from worker.ts for testing (worker can't be imported directly)
+const STATEMENT_PREFIXES = [
+  'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
+  'switch ', 'try ', 'import ', 'export ', 'return ', 'throw ', 'do ', 'break',
+  'continue', 'debugger'
+]
 
-  let lastIdx = -1
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const trimmed = lines[i].trim()
-    if (trimmed && !trimmed.startsWith('//')) {
-      lastIdx = i
-      break
+function isExpression(line: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+    return false
+  }
+  if (STATEMENT_PREFIXES.some((p) => trimmed.startsWith(p))) return false
+  if (trimmed.endsWith('{') || trimmed.endsWith('}')) return false
+  const stripped = trimmed.replace(/;$/, '')
+  if (stripped.includes(';')) return false
+  // console.* calls are side-effects, not value expressions — don't wrap
+  if (/^console\.\w+\(/.test(trimmed)) return false
+  return true
+}
+
+function instrumentCode(code: string): string {
+  const lines = code.split('\n')
+  const result: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    const lineNum = i + 1
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+      result.push(line)
+      continue
+    }
+
+    result.push(`__currentLine__ = ${lineNum};`)
+
+    if (isExpression(trimmed)) {
+      const expr = trimmed.replace(/;$/, '')
+      result.push(`__expr__(${lineNum}, ${expr});`)
+    } else {
+      result.push(line)
     }
   }
 
-  if (lastIdx === -1) return code
-
-  const lastLine = lines[lastIdx].trim()
-  const noReturnPrefixes = [
-    'const ', 'let ', 'var ', 'function ', 'class ', 'if ', 'for ', 'while ',
-    'switch ', 'try ', 'import ', 'export ', 'return ', 'throw '
-  ]
-  if (noReturnPrefixes.some((p) => lastLine.startsWith(p)) || lastLine.endsWith('{') || lastLine.endsWith('}')) {
-    return code
-  }
-
-  const lastExpr = lines[lastIdx].trimEnd().replace(/;$/, '')
-  if (lastExpr.includes(';')) {
-    return code
-  }
-
-  const before = lines.slice(0, lastIdx).join('\n')
-  const after = lines.slice(lastIdx + 1).join('\n')
-  return `${before}\nreturn (${lastExpr})\n${after}`
+  return result.join('\n')
 }
 
-describe('wrapForLastExpression', () => {
-  it('wraps a simple expression', () => {
-    expect(wrapForLastExpression('1 + 1')).toContain('return (1 + 1)')
+describe('isExpression', () => {
+  it('identifies standalone numbers', () => {
+    expect(isExpression('42')).toBe(true)
   })
 
-  it('wraps the last line of multi-line code', () => {
-    const result = wrapForLastExpression('const x = 1;\nx + 2')
-    expect(result).toContain('const x = 1;')
-    expect(result).toContain('return (x + 2)')
+  it('identifies standalone strings', () => {
+    expect(isExpression('"hello"')).toBe(true)
   })
 
-  it('strips trailing semicolon before wrapping', () => {
-    const result = wrapForLastExpression('console.log("hi");')
-    expect(result).toContain('return (console.log("hi"))')
-    expect(result).not.toContain(';)')
+  it('identifies function calls (non-console)', () => {
+    expect(isExpression('Math.max(1, 2)')).toBe(true)
+    expect(isExpression('foo()')).toBe(true)
+    expect(isExpression('arr.map(x => x + 1)')).toBe(true)
   })
 
-  it('strips trailing semicolon in multi-line code', () => {
-    const result = wrapForLastExpression('const x = 1;\nx + 2;')
-    expect(result).toContain('return (x + 2)')
-    expect(result).not.toContain(';)')
+  it('identifies variable references', () => {
+    expect(isExpression('b')).toBe(true)
+    expect(isExpression('x + y')).toBe(true)
   })
 
-  it('handles the default sample code', () => {
+  it('rejects declarations', () => {
+    expect(isExpression('const x = 1')).toBe(false)
+    expect(isExpression('let y = 2')).toBe(false)
+    expect(isExpression('var z = 3')).toBe(false)
+  })
+
+  it('rejects control flow', () => {
+    expect(isExpression('if (true) {}')).toBe(false)
+    expect(isExpression('for (;;) {}')).toBe(false)
+    expect(isExpression('while (true) {}')).toBe(false)
+    expect(isExpression('throw new Error()')).toBe(false)
+  })
+
+  it('rejects function/class declarations', () => {
+    expect(isExpression('function foo() {}')).toBe(false)
+    expect(isExpression('class Foo {}')).toBe(false)
+  })
+
+  it('rejects lines ending with braces', () => {
+    expect(isExpression('if (true) {')).toBe(false)
+    expect(isExpression('}')).toBe(false)
+  })
+
+  it('rejects multi-statement lines', () => {
+    expect(isExpression('a(); b()')).toBe(false)
+    expect(isExpression('a(); b();')).toBe(false)
+  })
+
+  it('rejects console.* calls', () => {
+    expect(isExpression('console.log("hi")')).toBe(false)
+    expect(isExpression('console.warn("w")')).toBe(false)
+    expect(isExpression('console.error("e")')).toBe(false)
+    expect(isExpression('console.table([1])')).toBe(false)
+  })
+
+  it('rejects comments', () => {
+    expect(isExpression('// comment')).toBe(false)
+    expect(isExpression('/* block */')).toBe(false)
+  })
+
+  it('rejects empty lines', () => {
+    expect(isExpression('')).toBe(false)
+    expect(isExpression('   ')).toBe(false)
+  })
+})
+
+describe('instrumentCode', () => {
+  it('wraps standalone expressions with __expr__', () => {
+    const result = instrumentCode('42')
+    expect(result).toContain('__expr__(1, 42)')
+  })
+
+  it('wraps multiple standalone expressions', () => {
+    const code = 'const x = 1\n\nx\n\n65'
+    const result = instrumentCode(code)
+    expect(result).toContain('__expr__(3, x)')
+    expect(result).toContain('__expr__(5, 65)')
+  })
+
+  it('does not wrap declarations', () => {
+    const result = instrumentCode('const x = 1')
+    expect(result).not.toContain('__expr__')
+    expect(result).toContain('const x = 1')
+  })
+
+  it('adds __currentLine__ tracking for each non-empty line', () => {
+    const result = instrumentCode('const x = 1\nconsole.log(x)')
+    expect(result).toContain('__currentLine__ = 1;')
+    expect(result).toContain('__currentLine__ = 2;')
+  })
+
+  it('preserves empty lines and comments', () => {
+    const result = instrumentCode('// comment\n\n42')
+    expect(result).toContain('// comment')
+    expect(result).toContain('__expr__(3, 42)')
+  })
+
+  it('handles the user sample code correctly', () => {
     const code = `console.log("Hello, nodl!");
 
 const sum = (a, b) => a + b;
-console.log("2 + 3 =", sum(2, 3));`
-    const result = wrapForLastExpression(code)
-    expect(result).toContain('return (console.log("2 + 3 =", sum(2, 3)))')
-    expect(result).not.toContain(';)')
+console.log("2 + 3 =", sum(2, 3));
+
+65
+
+const b = 1 + 2
+
+b`
+    const result = instrumentCode(code)
+    // Line 1: console.log is a side-effect call, NOT wrapped in __expr__
+    expect(result).not.toContain('__expr__(1,')
+    expect(result).toContain('console.log("Hello, nodl!")')
+    // Line 4: console.log is a side-effect call, NOT wrapped
+    expect(result).not.toContain('__expr__(4,')
+    expect(result).toContain('console.log("2 + 3 =", sum(2, 3))')
+    // Line 6: 65 is an expression
+    expect(result).toContain('__expr__(6, 65)')
+    // Line 8: const declaration — NOT wrapped
+    expect(result).not.toContain('__expr__(8,')
+    // Line 10: b is an expression
+    expect(result).toContain('__expr__(10, b)')
   })
 
-  it('does not wrap const declarations', () => {
-    const code = 'const x = 1'
-    expect(wrapForLastExpression(code)).toBe(code)
+  it('strips trailing semicolons from expressions', () => {
+    const result = instrumentCode('42;')
+    expect(result).toContain('__expr__(1, 42)')
+    expect(result).not.toContain('42;)')
   })
 
-  it('does not wrap let declarations', () => {
-    const code = 'let x = 1'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('does not wrap function declarations', () => {
-    const code = 'function foo() {}'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('does not wrap class declarations', () => {
-    const code = 'class Foo {}'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('does not wrap if statements', () => {
-    const code = 'if (true) { console.log(1) }'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('does not wrap lines ending with {', () => {
-    const code = 'for (let i = 0; i < 10; i++) {'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('handles empty code', () => {
-    expect(wrapForLastExpression('')).toBe('')
-  })
-
-  it('handles code with trailing comments', () => {
-    const result = wrapForLastExpression('42\n// comment')
-    expect(result).toContain('return (42)')
-  })
-
-  it('wraps function call expressions', () => {
-    const result = wrapForLastExpression('Math.max(1, 2)')
-    expect(result).toContain('return (Math.max(1, 2))')
-  })
-
-  it('wraps array literals', () => {
-    const result = wrapForLastExpression('[1, 2, 3]')
-    expect(result).toContain('return ([1, 2, 3])')
-  })
-
-  it('wraps object member access', () => {
-    const result = wrapForLastExpression('const obj = {a: 1};\nobj.a')
-    expect(result).toContain('return (obj.a)')
-  })
-
-  it('does not wrap multi-statement single lines', () => {
-    const code = 'await new Promise(r => setTimeout(r, 50)); console.log("done")'
-    expect(wrapForLastExpression(code)).toBe(code)
-  })
-
-  it('does not wrap lines with mid-line semicolons after stripping trailing', () => {
-    const code = 'a(); b();'
-    expect(wrapForLastExpression(code)).toBe(code)
+  it('skips multi-statement lines', () => {
+    const result = instrumentCode('a(); b()')
+    expect(result).not.toContain('__expr__')
   })
 })

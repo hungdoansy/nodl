@@ -32,13 +32,17 @@ function isErrorType(arg: unknown): arg is { __type: 'Error'; message: string; s
 
 interface Props {
   entry: OutputEntry
+  compact?: boolean
 }
 
-export function ConsoleEntryComponent({ entry }: Props) {
+export function ConsoleEntryComponent({ entry, compact }: Props) {
+  const padding = compact ? 'px-2 py-0' : 'px-3 py-1'
+  const border = compact ? '' : 'border-b border-zinc-800/50'
+
   // Handle console.table
   if (entry.method === 'table' && entry.args.length > 0) {
     return (
-      <div className="px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed">
+      <div className={`${padding} ${border} font-mono text-xs leading-relaxed`}>
         <ConsoleTable data={entry.args[0]} />
       </div>
     )
@@ -48,10 +52,10 @@ export function ConsoleEntryComponent({ entry }: Props) {
   const firstArg = entry.args[0]
   if (isLastExpression(firstArg)) {
     return (
-      <div className="px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed text-zinc-500">
-        <span className="mr-1">←</span>
+      <div className={`${padding} ${border} font-mono text-xs leading-relaxed text-zinc-500`}>
+        <span className="mr-1 text-zinc-600">←</span>
         {isPrimitive(firstArg.value) ? (
-          <span>{formatPrimitive(firstArg.value)}</span>
+          <span className="text-emerald-400/80">{formatPrimitive(firstArg.value)}</span>
         ) : (
           <ObjectTree data={firstArg.value} />
         )}
@@ -62,7 +66,7 @@ export function ConsoleEntryComponent({ entry }: Props) {
   const style = METHOD_STYLES[entry.method] ?? 'text-zinc-200'
 
   return (
-    <div className={`px-3 py-1 border-b border-zinc-800/50 font-mono text-xs leading-relaxed ${style}`}>
+    <div className={`${padding} ${border} font-mono text-xs leading-relaxed ${style}`}>
       {entry.args.map((arg, i) => (
         <span key={i} className={i > 0 ? 'ml-2' : ''}>
           {isErrorType(arg) ? (
