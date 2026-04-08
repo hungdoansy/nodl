@@ -57,8 +57,16 @@ export function Header() {
           </button>
         </div>
 
-        {/* Center: title */}
-        <div className="flex-1 flex items-center justify-center gap-1.5">
+        <div className="flex-1" />
+
+        {/* Center: title — absolute so it stays centered regardless of left/right content */}
+        <div
+          style={{
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 6,
+            pointerEvents: 'none',
+          }}
+        >
           <span style={{
             fontFamily: 'var(--font-ui)',
             color: 'var(--text-primary)',
