@@ -8,24 +8,28 @@ const EMPTY_ENTRIES: OutputEntry[] = []
 const NO_RESULT: ExecutionResult | null = null
 
 export function useCodeExecution() {
-  const setRunning = useOutputStore((s) => s.setRunning)
-  const clear = useOutputStore((s) => s.clear)
   const isRunning = useOutputStore((s) => s.isRunning)
 
-  const activeTab = useTabsStore((s) => s.activeTab)
+  const activeTabId = useTabsStore((s) => s.activeTabId)
 
   // Use stable fallback references to avoid infinite re-renders
   const entries = useOutputStore((s) => s.outputs[s.activeTabId]?.entries ?? EMPTY_ENTRIES)
   const lastResult = useOutputStore((s) => s.outputs[s.activeTabId]?.lastResult ?? NO_RESULT)
 
   const run = useCallback(() => {
-    const tab = activeTab()
-    setRunning()
+    const tab = useTabsStore.getState().activeTab()
+    // Ensure output store knows the active tab before clearing
+    useOutputStore.getState().setActiveTabId(useTabsStore.getState().activeTabId)
+    useOutputStore.getState().setRunning()
     bridge.runCode({ code: tab.code, language: tab.language })
-  }, [activeTab, setRunning])
+  }, [])
 
   const stop = useCallback(() => {
     bridge.stopExecution()
+  }, [])
+
+  const clear = useCallback(() => {
+    useOutputStore.getState().clear()
   }, [])
 
   return { run, stop, clear, isRunning, entries, lastResult }
