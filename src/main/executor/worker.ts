@@ -46,8 +46,13 @@ function wrapForLastExpression(code: string): string {
     return code
   }
 
-  // Wrap last line in return — strip trailing semicolon to avoid syntax error
+  // Strip trailing semicolon, then check for mid-line semicolons (multiple statements)
+  // which can't be safely wrapped in return(...)
   const lastExpr = lines[lastIdx].trimEnd().replace(/;$/, '')
+  if (lastExpr.includes(';')) {
+    return code
+  }
+
   const before = lines.slice(0, lastIdx).join('\n')
   const after = lines.slice(lastIdx + 1).join('\n')
   return `${before}\nreturn (${lastExpr})\n${after}`

@@ -26,6 +26,10 @@ function wrapForLastExpression(code: string): string {
   }
 
   const lastExpr = lines[lastIdx].trimEnd().replace(/;$/, '')
+  if (lastExpr.includes(';')) {
+    return code
+  }
+
   const before = lines.slice(0, lastIdx).join('\n')
   const after = lines.slice(lastIdx + 1).join('\n')
   return `${before}\nreturn (${lastExpr})\n${after}`
@@ -116,5 +120,15 @@ console.log("2 + 3 =", sum(2, 3));`
   it('wraps object member access', () => {
     const result = wrapForLastExpression('const obj = {a: 1};\nobj.a')
     expect(result).toContain('return (obj.a)')
+  })
+
+  it('does not wrap multi-statement single lines', () => {
+    const code = 'await new Promise(r => setTimeout(r, 50)); console.log("done")'
+    expect(wrapForLastExpression(code)).toBe(code)
+  })
+
+  it('does not wrap lines with mid-line semicolons after stripping trailing', () => {
+    const code = 'a(); b();'
+    expect(wrapForLastExpression(code)).toBe(code)
   })
 })
