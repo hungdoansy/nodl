@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, Download, X } from 'lucide-react'
 import { usePackagesStore } from '../../store/packages'
+import { useDialogTransition } from '../../hooks/useDialogTransition'
 import * as bridge from '../../ipc/bridge'
 import type { PackageSearchResult } from '../../../shared/types'
 
@@ -16,6 +17,9 @@ export function PackageDialog({ open, onClose }: Props) {
   const { install, installing } = usePackagesStore()
   const inputRef = useRef<HTMLInputElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { mounted, visible, close } = useDialogTransition(open)
+
+  const handleClose = useCallback(() => close(onClose), [close, onClose])
 
   useEffect(() => {
     if (open) {
@@ -38,26 +42,33 @@ export function PackageDialog({ open, onClose }: Props) {
   }, [query])
 
   useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    if (!mounted) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [mounted, handleClose])
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
-    <div className="fixed inset-0 flex items-start justify-center pt-16 z-50"
-      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-      onClick={onClose}
+    <div
+      className="fixed inset-0 flex items-start justify-center pt-16 z-50"
+      style={{
+        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 150ms ease',
+      }}
+      onClick={handleClose}
     >
       <div
-        className="w-[460px] max-h-[400px] flex flex-col animate-slide-down"
+        className="w-[460px] max-h-[400px] flex flex-col"
         style={{
           background: 'var(--bg-elevated)',
           boxShadow: 'var(--shadow-dialog)',
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden',
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.98)',
+          transition: 'transform 150ms var(--ease), opacity 150ms ease',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -73,7 +84,7 @@ export function PackageDialog({ open, onClose }: Props) {
               fontSize: 13, color: 'var(--text-primary)',
             }}
           />
-          <button onClick={onClose} className="btn-ghost" style={{ padding: 2 }}>
+          <button onClick={handleClose} className="btn-ghost" style={{ padding: 2 }}>
             <X size={14} />
           </button>
         </div>

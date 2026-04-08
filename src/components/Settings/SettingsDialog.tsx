@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { X, RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../../store/settings'
+import { useDialogTransition } from '../../hooks/useDialogTransition'
 import type { ThemeMode } from '../../../shared/types'
 
 interface SettingsDialogProps {
@@ -10,43 +11,54 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const settings = useSettingsStore()
+  const { mounted, visible, close } = useDialogTransition(open)
+
+  const handleClose = useCallback(() => close(onClose), [close, onClose])
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() },
-    [onClose]
+    (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() },
+    [handleClose]
   )
 
   useEffect(() => {
-    if (open) {
+    if (mounted) {
       document.addEventListener('keydown', handleKeyDown)
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, handleKeyDown])
+  }, [mounted, handleKeyDown])
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16"
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 150ms ease',
+      }}
+    >
       <div
         className="absolute inset-0"
         style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
-        onClick={onClose}
+        onClick={handleClose}
       />
       <div
-        className="relative w-full max-w-md mx-4 animate-slide-down"
+        className="relative w-full max-w-md mx-4"
         style={{
           background: 'var(--bg-elevated)',
           boxShadow: 'var(--shadow-dialog)',
           borderRadius: 'var(--radius-lg)',
           maxHeight: '70vh',
           overflowY: 'auto',
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.98)',
+          transition: 'transform 150ms var(--ease), opacity 150ms ease',
         }}
       >
         <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <h2 style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
             Settings
           </h2>
-          <button onClick={onClose} className="btn-ghost" style={{ padding: 3 }}>
+          <button onClick={handleClose} className="btn-ghost" style={{ padding: 3 }}>
             <X size={14} />
           </button>
         </div>
