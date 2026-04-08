@@ -3,14 +3,15 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import type { OutputEntry, ExecutionResult, RunCodePayload, WorkerMessage } from '../../../shared/types'
 
-// In dev, electron-vite wipes out/main/ on rebuild, so we build worker.js
+// In dev, electron-vite wipes out/main/ on rebuild, so we build worker.cjs
 // to out/worker/ instead. In production build, it's copied alongside main.
+// Uses .cjs extension so Node.js treats it as CommonJS even with "type": "module".
 function resolveWorkerPath(): string {
   // Try out/worker/ first (dev-safe location)
-  const devPath = join(__dirname, '..', 'worker', 'worker.js')
+  const devPath = join(__dirname, '..', 'worker', 'worker.cjs')
   if (existsSync(devPath)) return devPath
   // Fallback: same dir as main (production build)
-  return join(__dirname, 'worker.js')
+  return join(__dirname, 'worker.cjs')
 }
 
 const WORKER_PATH = resolveWorkerPath()
