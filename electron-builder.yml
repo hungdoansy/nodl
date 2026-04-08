@@ -9,12 +9,13 @@ directories:
 files:
   - out/**/*
   - "!node_modules/**/*"
+  - node_modules/esbuild/**/*
+  - node_modules/@esbuild/**/*
 
-extraResources:
-  - from: node_modules/esbuild
-    to: node_modules/esbuild
-    filter:
-      - "**/*"
+asarUnpack:
+  - out/main/worker.cjs
+  - node_modules/esbuild/**/*
+  - node_modules/@esbuild/**/*
 
 # macOS
 mac:

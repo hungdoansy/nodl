@@ -6,11 +6,16 @@ import type { OutputEntry, ExecutionResult, RunCodePayload, WorkerMessage } from
 // In dev, electron-vite wipes out/main/ on rebuild, so we build worker.cjs
 // to out/worker/ instead. In production build, it's copied alongside main.
 // Uses .cjs extension so Node.js treats it as CommonJS even with "type": "module".
+// In packaged app, worker.cjs is asar-unpacked so it can be forked.
 function resolveWorkerPath(): string {
   // Try out/worker/ first (dev-safe location)
   const devPath = join(__dirname, '..', 'worker', 'worker.cjs')
   if (existsSync(devPath)) return devPath
-  // Fallback: same dir as main (production build)
+  // Production: __dirname is inside app.asar, but worker is unpacked
+  // app.asar/out/main/ → app.asar.unpacked/out/main/worker.cjs
+  const unpackedPath = join(__dirname.replace('app.asar', 'app.asar.unpacked'), 'worker.cjs')
+  if (existsSync(unpackedPath)) return unpackedPath
+  // Fallback: same dir as main
   return join(__dirname, 'worker.cjs')
 }
 
