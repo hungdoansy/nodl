@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { X, RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../../store/settings'
 import type { ThemeMode } from '../../../shared/types'
 
@@ -28,7 +29,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
+        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
         onClick={onClose}
       />
       <div
@@ -36,53 +37,56 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         style={{
           background: 'var(--bg-elevated)',
           boxShadow: 'var(--shadow-dialog)',
-          border: '1px solid var(--border-default)',
           maxHeight: '70vh',
           overflowY: 'auto',
         }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
-          <h2 style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            <span style={{ opacity: 0.4 }}>[</span> config <span style={{ opacity: 0.4 }}>]</span>
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}>
+            Settings
           </h2>
-          <button onClick={onClose} className="btn-ghost" style={{ fontSize: 14 }}>×</button>
+          <button onClick={onClose} className="btn-ghost" style={{ padding: 3 }}>
+            <X size={14} />
+          </button>
         </div>
 
-        <div className="px-4 py-3 space-y-4">
-          <Section title="editor">
-            <SliderRow label="font_size" value={settings.fontSize} min={10} max={24} step={1}
+        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Section title="Editor">
+            <SliderRow label="Font Size" value={settings.fontSize} min={10} max={24} step={1}
               onChange={(v) => settings.setSetting('fontSize', v)} />
-            <SelectRow label="tab_size" value={String(settings.tabSize)}
+            <SelectRow label="Tab Size" value={String(settings.tabSize)}
               options={[{ value: '2', label: '2' }, { value: '4', label: '4' }]}
               onChange={(v) => settings.setSetting('tabSize', Number(v))} />
-            <ToggleRow label="word_wrap" checked={settings.wordWrap}
+            <ToggleRow label="Word Wrap" checked={settings.wordWrap}
               onChange={(v) => settings.setSetting('wordWrap', v)} />
-            <ToggleRow label="minimap" checked={settings.minimap}
+            <ToggleRow label="Minimap" checked={settings.minimap}
               onChange={(v) => settings.setSetting('minimap', v)} />
           </Section>
 
-          <Section title="execution">
-            <ToggleRow label="auto_run" checked={settings.autoRunEnabled}
+          <Section title="Execution">
+            <ToggleRow label="Auto-run" checked={settings.autoRunEnabled}
               onChange={(v) => settings.setSetting('autoRunEnabled', v)} />
-            <SliderRow label="auto_delay" value={settings.autoRunDelay} min={100} max={2000} step={100} unit="ms"
+            <SliderRow label="Auto-run Delay" value={settings.autoRunDelay} min={100} max={2000} step={100} unit="ms"
               onChange={(v) => settings.setSetting('autoRunDelay', v)} />
-            <SliderRow label="timeout" value={settings.executionTimeout} min={1} max={30} step={1} unit="s"
+            <SliderRow label="Timeout" value={settings.executionTimeout} min={1} max={30} step={1} unit="s"
               onChange={(v) => settings.setSetting('executionTimeout', v)} />
           </Section>
 
-          <Section title="display">
-            <SelectRow label="theme" value={settings.theme}
+          <Section title="Appearance">
+            <SelectRow label="Theme" value={settings.theme}
               options={[
-                { value: 'dark', label: 'DRK' },
-                { value: 'light', label: 'LGT' },
-                { value: 'system', label: 'SYS' }
+                { value: 'dark', label: 'Dark' },
+                { value: 'light', label: 'Light' },
+                { value: 'system', label: 'System' }
               ]}
               onChange={(v) => settings.setTheme(v as ThemeMode)} />
           </Section>
 
-          <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: 10 }}>
-            <button onClick={settings.resetToDefaults} className="btn">RESET DEFAULTS</button>
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+            <button onClick={settings.resetToDefaults} className="btn">
+              <RotateCcw size={10} />
+              Reset Defaults
+            </button>
           </div>
         </div>
       </div>
@@ -94,12 +98,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div>
       <h3 style={{
-        color: 'var(--text-tertiary)', fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
+        color: 'var(--text-secondary)', fontSize: 10, fontWeight: 600,
+        letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8,
       }}>
-        <span style={{ color: 'var(--accent)', opacity: 0.3 }}>├──</span> {title}
+        {title}
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{children}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
     </div>
   )
 }
@@ -110,16 +114,30 @@ function SliderRow({
   label: string; value: number; min: number; max: number; step: number; unit?: string
   onChange: (value: number) => void
 }) {
+  const pct = ((value - min) / (max - min)) * 100
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input
-          type="range" min={min} max={max} step={step} value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={{ width: 80, accentColor: 'var(--accent)' }}
-        />
-        <span style={{ color: 'var(--accent)', fontSize: 11, width: 40, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ position: 'relative', width: 80, height: 14, display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            position: 'absolute', height: 3, left: 0, right: 0,
+            background: 'var(--border-default)',
+          }} />
+          <div style={{
+            position: 'absolute', height: 3, left: 0, width: `${pct}%`,
+            background: 'var(--accent)',
+          }} />
+          <input
+            type="range" min={min} max={max} step={step} value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            style={{ position: 'relative', width: '100%', zIndex: 1 }}
+          />
+        </div>
+        <span style={{
+          color: 'var(--accent)', fontSize: 11, width: 40, textAlign: 'right',
+          fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+        }}>
           {value}{unit ?? ''}
         </span>
       </div>
@@ -137,19 +155,19 @@ function ToggleRow({
       <label style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</label>
       <button
         onClick={() => onChange(!checked)}
-        style={{
+        className="btn"
+        style={checked ? {
+          borderColor: 'rgba(167, 139, 250, 0.3)',
+          color: 'var(--accent)',
+          background: 'var(--accent-dim)',
+          padding: '2px 10px',
           fontSize: 10,
-          padding: '2px 8px',
-          border: `1px solid ${checked ? 'var(--accent-mid)' : 'var(--border-default)'}`,
-          background: checked ? 'var(--accent-dim)' : 'transparent',
-          color: checked ? 'var(--accent)' : 'var(--text-tertiary)',
-          cursor: 'pointer',
-          letterSpacing: '0.06em',
-          fontFamily: 'inherit',
-          transition: 'all 120ms',
+        } : {
+          padding: '2px 10px',
+          fontSize: 10,
         }}
       >
-        {checked ? '[ON]' : '[OFF]'}
+        {checked ? 'On' : 'Off'}
       </button>
     </div>
   )
@@ -168,12 +186,11 @@ function SelectRow({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          fontSize: 11,
-          padding: '2px 6px',
+          fontSize: 11, fontFamily: 'var(--font-ui)',
+          padding: '3px 8px',
           background: 'var(--bg-primary)',
           color: 'var(--text-primary)',
           border: '1px solid var(--border-default)',
-          fontFamily: 'inherit',
           outline: 'none',
         }}
       >

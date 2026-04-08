@@ -1,3 +1,4 @@
+import { Settings, Sun, Moon, Monitor } from 'lucide-react'
 import { SettingsDialog } from '../Settings/SettingsDialog'
 import { Logo } from '../Logo'
 import { useSettingsStore } from '../../store/settings'
@@ -10,10 +11,11 @@ const nextTheme: Record<ThemeMode, ThemeMode> = {
   system: 'dark'
 }
 
-const themeLabel: Record<ThemeMode, string> = {
-  dark: 'dark',
-  light: 'light',
-  system: 'sys'
+const ThemeIcon = ({ theme }: { theme: ThemeMode }) => {
+  const size = 13
+  if (theme === 'light') return <Sun size={size} />
+  if (theme === 'system') return <Monitor size={size} />
+  return <Moon size={size} />
 }
 
 export function Header() {
@@ -38,6 +40,7 @@ export function Header() {
         <div className="flex-1 flex items-center justify-center gap-2">
           <Logo size={15} />
           <span style={{
+            fontFamily: 'var(--font-mono)',
             color: 'var(--accent)',
             fontSize: 11,
             fontWeight: 600,
@@ -46,7 +49,9 @@ export function Header() {
           }}>
             nodl
           </span>
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>v0.1</span>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 9, fontFamily: 'var(--font-mono)' }}>
+            v0.1
+          </span>
         </div>
 
         <div
@@ -56,19 +61,12 @@ export function Header() {
           <button
             onClick={() => setTheme(nextTheme[theme])}
             className="btn-ghost"
-            style={{ fontSize: 9, letterSpacing: '0.06em' }}
             title={`Theme: ${theme}`}
           >
-            {themeLabel[theme]}
+            <ThemeIcon theme={theme} />
           </button>
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 9 }}>·</span>
-          <button
-            onClick={openSettings}
-            className="btn-ghost"
-            style={{ fontSize: 9, letterSpacing: '0.06em' }}
-            title="Settings"
-          >
-            config
+          <button onClick={openSettings} className="btn-ghost" title="Settings">
+            <Settings size={13} />
           </button>
         </div>
       </header>

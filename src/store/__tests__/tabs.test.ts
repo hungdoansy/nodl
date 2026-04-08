@@ -14,7 +14,7 @@ describe('useTabsStore', () => {
     const state = useTabsStore.getState()
     expect(state.tabs).toHaveLength(1)
     expect(state.tabs[0].name).toBe('Untitled 1')
-    expect(state.tabs[0].language).toBe('javascript')
+    expect(state.tabs[0].language).toBe('typescript')
     expect(state.activeTabId).toBe(state.tabs[0].id)
   })
 

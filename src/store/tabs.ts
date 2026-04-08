@@ -20,7 +20,7 @@ export function createDefaultTab(index = 1): Tab {
   return {
     id: nanoid(),
     name: `Untitled ${index}`,
-    language: 'javascript',
+    language: 'typescript',
     code: DEFAULT_CODE,
     createdAt: Date.now(),
     updatedAt: Date.now()

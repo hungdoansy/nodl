@@ -18,15 +18,11 @@ export function useTheme() {
       const root = document.documentElement
       root.classList.remove('dark', 'light')
       root.classList.add(resolved)
-
-      // Update body background for the theme
-      document.body.style.backgroundColor = resolved === 'dark' ? '#18181b' : '#fafafa'
-      document.body.style.color = resolved === 'dark' ? '#f4f4f5' : '#18181b'
+      // CSS variables handle all colors — no inline overrides needed
     }
 
     apply()
 
-    // Listen for system theme changes when mode is 'system'
     if (theme === 'system') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
       const handler = () => apply()

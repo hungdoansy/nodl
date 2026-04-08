@@ -1,14 +1,10 @@
 import { useEffect, useRef, useMemo } from 'react'
+import { Square, Trash2 } from 'lucide-react'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useTabsStore } from '../../store/tabs'
 import { ConsoleEntryComponent } from './ConsoleEntry'
-import { PackageList } from '../Packages/PackageList'
 import { useSettingsStore } from '../../store/settings'
 import type { OutputEntry } from '../../../shared/types'
-
-function getEditorLineHeight(fontSize: number): number {
-  return Math.round(fontSize * 1.35)
-}
 
 function groupByLine(entries: OutputEntry[]): { lined: Map<number, OutputEntry[]>; unlined: OutputEntry[] } {
   const lined = new Map<number, OutputEntry[]>()
@@ -39,58 +35,59 @@ export function OutputPane() {
     }
   }, [entries])
 
-  const lineHeight = getEditorLineHeight(fontSize)
+  const lineHeight = Math.round(fontSize * 1.5)
   const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
   const editorPaddingTop = 12
+  const hasOutput = entries.length > 0
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
-      {/* Toolbar */}
-      <div className="toolbar flex items-center gap-2 px-3 py-1">
-        <span style={{ color: 'var(--text-secondary)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          <span style={{ color: 'var(--accent)', opacity: 0.4 }}>&gt;</span> output
+      {/* Toolbar — same 33px height as editor */}
+      <div className="toolbar flex items-center gap-2 px-3" style={{ height: 33 }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 500 }}>
+          Output
         </span>
 
         {isRunning && (
-          <>
-            <span className="animate-blink" style={{ color: 'var(--accent)', fontSize: 8 }}>●</span>
-            <button onClick={stop} className="btn btn-danger" style={{ padding: '2px 8px' }}>
-              HALT
-            </button>
-          </>
+          <button onClick={stop} className="btn btn-danger" style={{ padding: '2px 8px' }}>
+            <Square size={9} />
+            Stop
+          </button>
         )}
 
         <div className="flex-1" />
 
         <button onClick={clear} className="btn" style={{ padding: '2px 8px' }}>
-          CLR
+          <Trash2 size={10} />
+          Clear
         </button>
       </div>
 
-      {/* Output content */}
+      {/* Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {entries.length === 0 && !isRunning && (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <div style={{ color: 'var(--text-tertiary)', opacity: 0.3, fontSize: 32, fontWeight: 300 }}>
-              {'{ }'}
-            </div>
+        {/* Empty + not running */}
+        {!hasOutput && !isRunning && (
+          <div className="flex flex-col items-center justify-center h-full gap-2">
             <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
-              awaiting input...
+              awaiting execution_
             </span>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: 10, opacity: 0.4 }}>
-              <span style={{ color: 'var(--accent)', opacity: 0.6 }}>[</span>
-              {' '}cmd+enter{' '}
-              <span style={{ color: 'var(--accent)', opacity: 0.6 }}>]</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: 10, opacity: 0.5 }}>
+              Cmd+Enter to run
             </span>
           </div>
         )}
-        {entries.length === 0 && isRunning && (
-          <div className="flex items-center justify-center h-full gap-2" style={{ color: 'var(--text-tertiary)' }}>
-            <span className="animate-blink" style={{ color: 'var(--accent)' }}>●</span>
-            <span style={{ fontSize: 11 }}>executing...</span>
+
+        {/* Empty + running — terminal cursor loader */}
+        {!hasOutput && isRunning && (
+          <div className="flex items-center h-full px-4" style={{ paddingTop: editorPaddingTop }}>
+            <span style={{ color: 'var(--accent)', fontSize, fontFamily: 'var(--font-mono)' }}>
+              <span className="animate-cursor">_</span>
+            </span>
           </div>
         )}
-        {entries.length > 0 && (
+
+        {/* Line-aligned output */}
+        {hasOutput && (
           <div className="relative" style={{ paddingTop: editorPaddingTop }}>
             {Array.from({ length: totalLines }, (_, i) => {
               const lineNum = i + 1
@@ -102,16 +99,16 @@ export function OutputPane() {
                 <div key={`line-${lineNum}`} style={{ minHeight: lineHeight }} className="flex items-start">
                   <div className="flex-1 min-w-0">
                     {lineEntries.map((entry) => (
-                      <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} />
+                      <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} lineHeight={lineHeight} />
                     ))}
                   </div>
                 </div>
               )
             })}
             {unlined.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border-default)', marginTop: 4 }}>
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 4 }}>
                 {unlined.map((entry) => (
-                  <ConsoleEntryComponent key={entry.id} entry={entry} fontSize={fontSize} />
+                  <ConsoleEntryComponent key={entry.id} entry={entry} fontSize={fontSize} lineHeight={lineHeight} />
                 ))}
               </div>
             )}
@@ -121,23 +118,20 @@ export function OutputPane() {
 
       {/* Status bar */}
       {lastResult && (
-        <div
-          className="px-3 py-1"
-          style={{
-            borderTop: '1px solid var(--border-default)',
-            background: 'var(--bg-surface)',
-            fontSize: 10,
-            color: lastResult.success ? 'var(--text-tertiary)' : 'var(--danger)',
-            letterSpacing: '0.04em',
-          }}
-        >
-          <span style={{ color: lastResult.success ? 'var(--accent)' : 'var(--danger)' }}>
-            {lastResult.success ? '[OK]' : '[ERR]'}
+        <div style={{
+          padding: '3px 12px',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+          fontSize: 10,
+          fontFamily: 'var(--font-mono)',
+          color: lastResult.success ? 'var(--text-tertiary)' : 'var(--danger)',
+        }}>
+          <span style={{ color: lastResult.success ? 'var(--ok)' : 'var(--danger)' }}>
+            {lastResult.success ? '[ok]' : '[err]'}
           </span>
-          {' '}executed in {lastResult.duration}ms
+          {' '}{lastResult.duration}ms
         </div>
       )}
-      <PackageList />
     </div>
   )
 }

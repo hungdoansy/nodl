@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react'
+import { Play, Zap } from 'lucide-react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { useTabsStore } from '../../store/tabs'
@@ -11,7 +12,6 @@ import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
   const updateCode = useTabsStore((s) => s.updateCode)
-  const setLanguage = useTabsStore((s) => s.setLanguage)
   const tab = activeTab()
   const { run, isRunning } = useCodeExecution()
 
@@ -31,63 +31,42 @@ export function EditorPane() {
 
   const handleMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
-    editor.addCommand(
-      // eslint-disable-next-line no-bitwise
-      2048 | 3,
-      () => run()
-    )
+    editor.addCommand(2048 | 3, () => run()) // eslint-disable-line no-bitwise
   }, [run])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
-      {/* Toolbar */}
-      <div className="toolbar flex items-center gap-1.5 px-3 py-1">
-        <button onClick={run} disabled={isRunning} className="btn btn-primary" title="Run // Cmd+Enter">
-          <span style={{ fontSize: 9 }}>▶</span>
-          EXEC
+      <div className="toolbar flex items-center gap-1.5 px-3" style={{ height: 33 }}>
+        <button onClick={run} disabled={isRunning} className="btn btn-primary" title="Run (Cmd+Enter)">
+          <Play size={10} />
+          Run
         </button>
-
         <button
           onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
           className="btn"
           style={autoRunEnabled ? {
-            borderColor: 'var(--accent-mid)',
+            borderColor: 'rgba(167, 139, 250, 0.3)',
             color: 'var(--accent)',
             background: 'var(--accent-dim)',
           } : undefined}
-          title={`Auto-run // ${autoRunDelay}ms`}
+          title={`Auto-run (${autoRunDelay}ms)`}
         >
-          {autoRunEnabled && <span className="animate-blink" style={{ color: 'var(--accent)', fontSize: 8 }}>●</span>}
-          AUTO
-        </button>
-
-        <div className="flex-1" />
-
-        <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>
-          ─── {tab.language === 'typescript' ? 'TS' : 'JS'} ───
-        </span>
-
-        <button
-          onClick={() => setLanguage(tab.language === 'javascript' ? 'typescript' : 'javascript')}
-          className="btn"
-          title="Toggle language"
-        >
-          {tab.language === 'typescript' ? '.TS' : '.JS'}
+          <Zap size={10} />
+          Auto
         </button>
       </div>
-
-      {/* Editor */}
       <div className="flex-1">
         <Editor
           key={tab.id}
           height="100%"
-          language={tab.language}
+          language="typescript"
           theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
           value={tab.code}
           onChange={(value) => updateCode(value ?? '')}
           options={{
             fontSize,
-            fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
+            fontFamily: "var(--font-mono)",
+            lineHeight: Math.round(fontSize * 1.5),
             minimap: { enabled: minimap },
             padding: { top: 12 },
             scrollBeyondLastLine: false,

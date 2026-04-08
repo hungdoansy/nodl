@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Search, Download, X } from 'lucide-react'
 import { usePackagesStore } from '../../store/packages'
 import * as bridge from '../../ipc/bridge'
 import type { PackageSearchResult } from '../../../shared/types'
@@ -25,11 +26,7 @@ export function PackageDialog({ open, onClose }: Props) {
   }, [open])
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([])
-      return
-    }
-
+    if (!query.trim()) { setResults([]); return }
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
       setSearching(true)
@@ -37,63 +34,77 @@ export function PackageDialog({ open, onClose }: Props) {
       setResults(r)
       setSearching(false)
     }, 300)
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [query])
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-20 z-50" onClick={onClose}>
+    <div className="fixed inset-0 flex items-start justify-center pt-16 z-50"
+      style={{ background: 'rgba(0,0,0,0.6)' }}
+      onClick={onClose}
+    >
       <div
-        className="bg-zinc-800 border border-zinc-700 rounded-lg w-[480px] max-h-[400px] flex flex-col shadow-xl"
+        className="w-[460px] max-h-[400px] flex flex-col animate-slide-down"
+        style={{ background: 'var(--bg-elevated)', boxShadow: 'var(--shadow-dialog)', border: '1px solid var(--border-default)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-3 border-b border-zinc-700">
+        <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <Search size={13} style={{ color: 'var(--text-tertiary)' }} />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search npm packages..."
-            className="w-full bg-zinc-900 border border-zinc-600 rounded px-3 py-1.5 text-sm text-zinc-100 outline-none focus:border-zinc-400"
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)',
+            }}
           />
+          <button onClick={onClose} className="btn-ghost" style={{ padding: 2 }}>
+            <X size={13} />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {searching && (
-            <div className="px-3 py-2 text-xs text-zinc-500">Searching...</div>
+            <div style={{ padding: '12px', fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+              searching<span className="animate-cursor">_</span>
+            </div>
           )}
           {!searching && results.length === 0 && query && (
-            <div className="px-3 py-2 text-xs text-zinc-500">No results</div>
+            <div style={{ padding: '12px', fontSize: 11, color: 'var(--text-tertiary)' }}>No results</div>
           )}
           {results.map((pkg) => (
             <div
               key={pkg.name}
-              className="flex items-center justify-between px-3 py-2 hover:bg-zinc-700/50 border-b border-zinc-700/50"
+              className="flex items-center justify-between px-3 py-2"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              <div className="flex-1 min-w-0 mr-2">
-                <div className="text-sm text-zinc-100 font-medium truncate">{pkg.name}</div>
-                <div className="text-xs text-zinc-500 truncate">{pkg.description}</div>
-                <div className="text-xs text-zinc-600">{pkg.version}</div>
+              <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 500 }} className="truncate">{pkg.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }} className="truncate">{pkg.description}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{pkg.version}</div>
               </div>
               <button
                 onClick={() => install(pkg.name)}
                 disabled={installing !== null}
-                className="px-3 py-1 text-xs font-medium rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition-colors shrink-0"
+                className="btn btn-primary"
+                style={{ padding: '3px 8px', flexShrink: 0 }}
               >
-                {installing === pkg.name ? 'Installing...' : 'Install'}
+                <Download size={10} />
+                {installing === pkg.name ? 'Installing' : 'Install'}
               </button>
             </div>
           ))}
-        </div>
-        <div className="p-2 border-t border-zinc-700 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-3 py-1 text-xs rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

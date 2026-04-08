@@ -11,13 +11,6 @@ const METHOD_COLORS: Record<string, string> = {
   table: 'var(--text-primary)'
 }
 
-const METHOD_PREFIX: Record<string, string> = {
-  warn: '[WARN] ',
-  error: '[ERR]  ',
-  info: '[INFO] ',
-  debug: '[DBG]  ',
-}
-
 function isLastExpression(arg: unknown): arg is { __type: 'LastExpression'; value: unknown } {
   return typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'LastExpression'
 }
@@ -41,25 +34,20 @@ interface Props {
   entry: OutputEntry
   compact?: boolean
   fontSize?: number
+  lineHeight?: number
 }
 
-export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
-  const pad = compact ? '0 8px' : '3px 12px'
-  const border = compact ? 'none' : '1px solid var(--border-subtle)'
-  const fontStyle = {
+export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: Props) {
+  const fontStyle: React.CSSProperties = {
     fontSize: fontSize ? `${fontSize}px` : '13px',
-    fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, Monaco, monospace",
-    lineHeight: 1.45,
-    padding: pad,
-    borderBottom: border,
+    fontFamily: 'var(--font-mono)',
+    lineHeight: lineHeight ? `${lineHeight}px` : '1.5',
+    padding: compact ? '0 8px' : '2px 12px',
+    borderBottom: compact ? 'none' : '1px solid var(--border-subtle)',
   }
 
   if (entry.method === 'table' && entry.args.length > 0) {
-    return (
-      <div style={fontStyle}>
-        <ConsoleTable data={entry.args[0]} />
-      </div>
-    )
+    return <div style={fontStyle}><ConsoleTable data={entry.args[0]} /></div>
   }
 
   const firstArg = entry.args[0]
@@ -77,11 +65,9 @@ export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
   }
 
   const color = METHOD_COLORS[entry.method] ?? 'var(--text-primary)'
-  const prefix = METHOD_PREFIX[entry.method] ?? ''
 
   return (
     <div style={{ ...fontStyle, color }}>
-      {prefix && <span style={{ opacity: 0.5 }}>{prefix}</span>}
       {entry.args.map((arg, i) => (
         <span key={i} style={i > 0 ? { marginLeft: 8 } : undefined}>
           {isErrorType(arg) ? (
