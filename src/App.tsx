@@ -6,12 +6,14 @@ import { usePersistence } from './hooks/usePersistence'
 import { useTheme } from './hooks/useTheme'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useMenuEvents } from './hooks/useMenuEvents'
+import { useOutputListener } from './hooks/useOutputListener'
 
 export default function App() {
   usePersistence()
   useTheme()
   useKeyboardShortcuts()
   useMenuEvents()
+  useOutputListener()
 
   return (
     <div className="flex flex-col h-screen">

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useOutputStore } from '../store/output'
 import { useTabsStore } from '../store/tabs'
 import * as bridge from '../ipc/bridge'
@@ -8,33 +8,15 @@ const EMPTY_ENTRIES: OutputEntry[] = []
 const NO_RESULT: ExecutionResult | null = null
 
 export function useCodeExecution() {
-  const addEntry = useOutputStore((s) => s.addEntry)
-  const setDone = useOutputStore((s) => s.setDone)
   const setRunning = useOutputStore((s) => s.setRunning)
   const clear = useOutputStore((s) => s.clear)
   const isRunning = useOutputStore((s) => s.isRunning)
-  const setActiveTabId = useOutputStore((s) => s.setActiveTabId)
 
-  const activeTabId = useTabsStore((s) => s.activeTabId)
   const activeTab = useTabsStore((s) => s.activeTab)
 
   // Use stable fallback references to avoid infinite re-renders
   const entries = useOutputStore((s) => s.outputs[s.activeTabId]?.entries ?? EMPTY_ENTRIES)
   const lastResult = useOutputStore((s) => s.outputs[s.activeTabId]?.lastResult ?? NO_RESULT)
-
-  // Sync active tab ID to output store
-  useEffect(() => {
-    setActiveTabId(activeTabId)
-  }, [activeTabId, setActiveTabId])
-
-  useEffect(() => {
-    const unsubOutput = bridge.onOutputEntry(addEntry)
-    const unsubDone = bridge.onExecutionDone(setDone)
-    return () => {
-      unsubOutput()
-      unsubDone()
-    }
-  }, [addEntry, setDone])
 
   const run = useCallback(() => {
     const tab = activeTab()
