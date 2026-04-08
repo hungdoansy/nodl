@@ -17,7 +17,8 @@ describe('useOutputStore (per-tab)', () => {
     useOutputStore.setState({
       outputs: {},
       isRunning: false,
-      activeTabId: 'tab-1'
+      activeTabId: 'tab-1',
+      buffer: []
     })
   })
 
@@ -28,44 +29,67 @@ describe('useOutputStore (per-tab)', () => {
     expect(state.lastResult()).toBeNull()
   })
 
-  it('addEntry appends to active tab entries', () => {
-    const entry = makeEntry()
-    useOutputStore.getState().addEntry(entry)
+  it('addEntry buffers entries during execution', () => {
+    useOutputStore.getState().addEntry(makeEntry())
+    // Buffered — not yet in visible entries
+    expect(useOutputStore.getState().buffer).toHaveLength(1)
+  })
+
+  it('setDone flushes buffer to visible entries atomically', () => {
+    useOutputStore.getState().setRunning()
+    useOutputStore.getState().addEntry(makeEntry({ args: ['a'] }))
+    useOutputStore.getState().addEntry(makeEntry({ args: ['b'] }))
+    // Still buffered, old entries visible
+    expect(useOutputStore.getState().entries()).toHaveLength(0)
+
+    useOutputStore.getState().setDone({ success: true, duration: 10 })
+    // Flushed — both entries now visible
+    expect(useOutputStore.getState().entries()).toHaveLength(2)
+    expect(useOutputStore.getState().entries()[0].args).toEqual(['a'])
+    expect(useOutputStore.getState().entries()[1].args).toEqual(['b'])
+  })
+
+  it('setRunning keeps old output visible (no flash)', () => {
+    // Simulate a previous run
+    useOutputStore.getState().addEntry(makeEntry({ args: ['old'] }))
+    useOutputStore.getState().setDone({ success: true, duration: 5 })
     expect(useOutputStore.getState().entries()).toHaveLength(1)
+
+    // Start new run — old output stays
+    useOutputStore.getState().setRunning()
+    expect(useOutputStore.getState().isRunning).toBe(true)
+    expect(useOutputStore.getState().entries()).toHaveLength(1)
+    expect(useOutputStore.getState().entries()[0].args).toEqual(['old'])
+
+    // New output arrives + done — old replaced atomically
+    useOutputStore.getState().addEntry(makeEntry({ args: ['new'] }))
+    useOutputStore.getState().setDone({ success: true, duration: 8 })
+    expect(useOutputStore.getState().entries()).toHaveLength(1)
+    expect(useOutputStore.getState().entries()[0].args).toEqual(['new'])
   })
 
   it('entries are isolated per tab', () => {
-    useOutputStore.getState().addEntry(makeEntry({ args: ['tab1 entry'] }))
+    useOutputStore.getState().addEntry(makeEntry({ args: ['tab1'] }))
+    useOutputStore.getState().setDone({ success: true, duration: 1 })
     useOutputStore.getState().setActiveTabId('tab-2')
     expect(useOutputStore.getState().entries()).toHaveLength(0)
 
-    useOutputStore.getState().addEntry(makeEntry({ args: ['tab2 entry'] }))
+    useOutputStore.getState().addEntry(makeEntry({ args: ['tab2'] }))
+    useOutputStore.getState().setDone({ success: true, duration: 1 })
     expect(useOutputStore.getState().entries()).toHaveLength(1)
 
-    // Switch back — tab-1 still has its entry
     useOutputStore.getState().setActiveTabId('tab-1')
     expect(useOutputStore.getState().entries()).toHaveLength(1)
-    expect(useOutputStore.getState().entries()[0].args).toEqual(['tab1 entry'])
+    expect(useOutputStore.getState().entries()[0].args).toEqual(['tab1'])
   })
 
-  it('addEntry with clear method resets entries for active tab', () => {
+  it('addEntry with clear method resets buffer', () => {
     useOutputStore.getState().addEntry(makeEntry())
     useOutputStore.getState().addEntry(makeEntry({ method: 'clear' }))
-    expect(useOutputStore.getState().entries()).toHaveLength(0)
+    expect(useOutputStore.getState().buffer).toHaveLength(0)
   })
 
-  it('setRunning sets isRunning and defers clear until first new entry', () => {
-    useOutputStore.getState().addEntry(makeEntry())
-    useOutputStore.getState().setRunning()
-    expect(useOutputStore.getState().isRunning).toBe(true)
-    // Old entries still visible (no flash)
-    expect(useOutputStore.getState().entries()).toHaveLength(1)
-    // First new entry clears old ones
-    useOutputStore.getState().addEntry(makeEntry({ method: 'log' }))
-    expect(useOutputStore.getState().entries()).toHaveLength(1) // only the new one
-  })
-
-  it('setDone stores result for active tab and clears isRunning', () => {
+  it('setDone stores result and clears isRunning', () => {
     useOutputStore.getState().setRunning()
     const result: ExecutionResult = { success: true, duration: 42 }
     useOutputStore.getState().setDone(result)
@@ -83,6 +107,7 @@ describe('useOutputStore (per-tab)', () => {
 
   it('clearTab removes output for a specific tab', () => {
     useOutputStore.getState().addEntry(makeEntry())
+    useOutputStore.getState().setDone({ success: true, duration: 1 })
     useOutputStore.getState().clearTab('tab-1')
     expect(useOutputStore.getState().entries()).toHaveLength(0)
   })
