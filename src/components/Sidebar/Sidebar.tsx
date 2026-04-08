@@ -16,9 +16,8 @@ export function Sidebar() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const openSettings = useUIStore((s) => s.openSettings)
 
-  const { packages, loadPackages, remove, removing } = usePackagesStore()
+  const { packages, loadPackages } = usePackagesStore()
   const [pkgDialogOpen, setPkgDialogOpen] = useState(false)
-  const [pkgSectionOpen, setPkgSectionOpen] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -141,42 +140,6 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Packages expanded list */}
-        {!collapsed && pkgSectionOpen && (
-          <div style={{ maxHeight: 120, overflowY: 'auto', padding: '0 6px' }}>
-            {packages.length === 0 && (
-              <div style={{ padding: '6px 8px', fontSize: 11, color: 'var(--text-tertiary)' }}>
-                No packages
-              </div>
-            )}
-            {packages.map((pkg) => (
-              <div
-                key={pkg.name}
-                className="group flex items-center justify-between"
-                style={{
-                  padding: '5px 8px', fontSize: 12,
-                  borderRadius: 'var(--radius-sm)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-              >
-                <span style={{ color: 'var(--text-secondary)' }} className="truncate">
-                  {pkg.name}
-                  <span style={{ color: 'var(--text-tertiary)', marginLeft: 4, fontSize: 11 }}>@{pkg.version}</span>
-                </span>
-                <button
-                  onClick={() => remove(pkg.name)}
-                  disabled={removing !== null}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
-                  style={{ padding: 1 }}
-                >
-                  <X size={11} style={{ color: 'var(--text-tertiary)' }} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Bottom: packages + settings — same layout as file items */}
         <div style={{
           borderTop: '1px solid var(--border-subtle)',
@@ -184,7 +147,7 @@ export function Sidebar() {
         }}>
           <div
             className="flex items-center cursor-pointer"
-            onClick={() => { if (collapsed) { setPkgDialogOpen(true) } else { setPkgSectionOpen(!pkgSectionOpen) } }}
+            onClick={() => setPkgDialogOpen(true)}
             style={{
               padding: collapsed ? '6px 0' : '5px 8px',
               justifyContent: collapsed ? 'center' : 'flex-start',
@@ -201,14 +164,9 @@ export function Sidebar() {
             {!collapsed && (
               <>
                 <span style={{ fontSize: 12 }} className="truncate flex-1">Packages</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setPkgDialogOpen(true) }}
-                  className="btn-ghost"
-                  style={{ padding: 1 }}
-                  title="Add package"
-                >
-                  <Plus size={12} style={{ color: 'var(--text-tertiary)' }} />
-                </button>
+                {packages.length > 0 && (
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{packages.length}</span>
+                )}
               </>
             )}
           </div>
