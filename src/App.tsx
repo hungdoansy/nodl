@@ -17,7 +17,7 @@ export default function App() {
   useOutputListener()
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex flex-col h-screen" style={{ background: 'var(--bg-void)' }}>
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -25,7 +25,7 @@ export default function App() {
           <Panel defaultSize={50} minSize={20}>
             <EditorPane />
           </Panel>
-          <Separator className="cursor-col-resize" />
+          <Separator />
           <Panel defaultSize={50} minSize={20}>
             <OutputPane />
           </Panel>

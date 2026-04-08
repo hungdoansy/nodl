@@ -34,16 +34,28 @@ export function Sidebar() {
 
   return (
     <div
-      className="flex flex-col h-full border-r select-none transition-[width] duration-200"
+      className="flex flex-col h-full select-none"
       style={{
-        width: collapsed ? 40 : 180,
-        minWidth: collapsed ? 40 : 180,
-        background: 'var(--bg-surface)',
-        borderColor: 'var(--border-default)'
+        width: collapsed ? 44 : 184,
+        minWidth: collapsed ? 44 : 184,
+        background: 'var(--bg-primary)',
+        borderRight: '1px solid var(--border-subtle)',
+        transition: `width 200ms var(--ease), min-width 200ms var(--ease)`,
       }}
     >
+      {/* Section label */}
+      {!collapsed && (
+        <div
+          className="px-3 pt-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-widest"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          Files
+        </div>
+      )}
+      {collapsed && <div className="h-2" />}
+
       {/* Tab list */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto px-1.5 space-y-0.5">
         {tabs.map((tab, index) => {
           const isActive = tab.id === activeTabId
           return (
@@ -60,25 +72,48 @@ export function Sidebar() {
               }}
               onClick={() => setActiveTab(tab.id)}
               onDoubleClick={() => startEditing(tab.id, tab.name)}
-              className={`group flex items-center gap-1.5 cursor-pointer transition-colors relative ${
-                collapsed ? 'px-0 py-1.5 justify-center' : 'px-2 py-1.5'
-              } ${
-                isActive
-                  ? 'bg-zinc-800/80 text-zinc-100'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
+              className="group flex items-center cursor-pointer relative rounded-[var(--radius-sm)]"
+              style={{
+                padding: collapsed ? '6px 0' : '5px 8px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: collapsed ? 0 : 6,
+                background: isActive ? 'var(--bg-hover)' : 'transparent',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                transition: 'all 150ms var(--ease)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'transparent'
+              }}
             >
-              {/* Active indicator */}
+              {/* Active accent dot */}
               {isActive && (
-                <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-emerald-500" />
+                <div
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-r"
+                  style={{ background: 'var(--accent)', left: collapsed ? 0 : -6 }}
+                />
               )}
 
               {collapsed ? (
-                <span className="text-[11px] font-mono font-medium w-5 text-center truncate">
+                <span
+                  className="font-mono text-[11px] font-medium w-5 text-center"
+                  style={{ color: isActive ? 'var(--accent)' : undefined }}
+                >
                   {tab.name.charAt(0).toUpperCase()}
                 </span>
               ) : (
                 <>
+                  {/* File icon — tiny dot */}
+                  <div
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{
+                      background: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                      opacity: isActive ? 1 : 0.5
+                    }}
+                  />
+
                   {editingId === tab.id ? (
                     <input
                       ref={inputRef}
@@ -89,21 +124,37 @@ export function Sidebar() {
                         if (e.key === 'Enter') commitEdit()
                         if (e.key === 'Escape') setEditingId(null)
                       }}
-                      className="bg-transparent border-b border-zinc-500 outline-none text-xs font-mono w-full"
+                      className="bg-transparent outline-none text-[12px] font-mono w-full"
+                      style={{
+                        borderBottom: '1px solid var(--accent)',
+                        color: 'var(--text-primary)'
+                      }}
                       autoFocus
                     />
                   ) : (
-                    <span className="text-xs font-mono truncate flex-1">{tab.name}</span>
+                    <span className="text-[12px] font-mono truncate flex-1">{tab.name}</span>
                   )}
-                  <span className="text-zinc-600 text-[10px] font-mono shrink-0">
+
+                  <span
+                    className="text-[10px] font-mono shrink-0"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     {tab.language === 'typescript' ? '.ts' : '.js'}
                   </span>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       closeTab(tab.id)
                     }}
-                    className="text-zinc-600 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] shrink-0 rounded"
+                    style={{ color: 'var(--text-muted)', padding: '0 2px' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#f87171'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--text-muted)'
+                    }}
                     title="Close tab"
                   >
                     ×
@@ -115,13 +166,18 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* Bottom bar: new tab + collapse toggle */}
-      <div className={`flex items-center border-t py-1 ${collapsed ? 'flex-col gap-1 px-0' : 'px-1'}`}
-        style={{ borderColor: 'var(--border-default)' }}
+      {/* Bottom controls */}
+      <div
+        className="flex items-center py-1.5 px-1.5"
+        style={{
+          borderTop: '1px solid var(--border-subtle)',
+          flexDirection: collapsed ? 'column' : 'row',
+          gap: collapsed ? 2 : 0,
+        }}
       >
         <button
           onClick={createTab}
-          className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded p-1 transition-colors text-xs"
+          className="btn-ghost text-[12px] font-mono"
           title="New tab"
         >
           +
@@ -129,8 +185,8 @@ export function Sidebar() {
         <div className="flex-1" />
         <button
           onClick={toggleSidebar}
-          className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded p-1 transition-colors text-[10px]"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="btn-ghost text-[10px]"
+          title={collapsed ? 'Expand' : 'Collapse'}
         >
           {collapsed ? '▸' : '◂'}
         </button>

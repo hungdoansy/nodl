@@ -2,13 +2,18 @@ import type { OutputEntry } from '../../../shared/types'
 import { ObjectTree } from './ObjectTree'
 import { ConsoleTable } from './ConsoleTable'
 
-const METHOD_STYLES: Record<string, string> = {
-  log: 'text-zinc-200',
-  info: 'text-blue-400',
-  warn: 'text-yellow-400 bg-yellow-400/5',
-  error: 'text-red-400 bg-red-400/5',
-  debug: 'text-zinc-400',
-  table: 'text-zinc-200'
+const METHOD_COLORS: Record<string, string> = {
+  log: 'var(--text-primary)',
+  info: '#60a5fa',
+  warn: '#fbbf24',
+  error: '#f87171',
+  debug: 'var(--text-muted)',
+  table: 'var(--text-primary)'
+}
+
+const METHOD_BG: Record<string, string | undefined> = {
+  warn: 'rgba(251, 191, 36, 0.04)',
+  error: 'rgba(248, 113, 113, 0.04)',
 }
 
 function isLastExpression(arg: unknown): arg is { __type: 'LastExpression'; value: unknown } {
@@ -37,27 +42,33 @@ interface Props {
 }
 
 export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
-  const padding = compact ? 'px-2 py-0' : 'px-3 py-1'
-  const border = compact ? '' : 'border-b border-zinc-800/50'
-  const sizeStyle = fontSize ? { fontSize: `${fontSize}px` } : undefined
+  const pad = compact ? '0 8px' : '2px 12px'
+  const border = compact ? 'none' : '1px solid var(--border-subtle)'
+  const fontStyle = {
+    fontSize: fontSize ? `${fontSize}px` : '13px',
+    fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
+    lineHeight: 1.5,
+    padding: pad,
+    borderBottom: border,
+  }
 
   // Handle console.table
   if (entry.method === 'table' && entry.args.length > 0) {
     return (
-      <div className={`${padding} ${border} font-mono leading-relaxed`} style={sizeStyle}>
+      <div style={fontStyle}>
         <ConsoleTable data={entry.args[0]} />
       </div>
     )
   }
 
-  // Handle last expression result
+  // Handle expression results
   const firstArg = entry.args[0]
   if (isLastExpression(firstArg)) {
     return (
-      <div className={`${padding} ${border} font-mono leading-relaxed text-zinc-500`} style={sizeStyle}>
-        <span className="mr-1 text-zinc-600">←</span>
+      <div style={{ ...fontStyle, color: 'var(--text-muted)' }}>
+        <span style={{ color: 'var(--text-muted)', marginRight: 6, opacity: 0.5 }}>←</span>
         {isPrimitive(firstArg.value) ? (
-          <span className="text-emerald-400/80">{formatPrimitive(firstArg.value)}</span>
+          <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
         ) : (
           <ObjectTree data={firstArg.value} />
         )}
@@ -65,12 +76,13 @@ export function ConsoleEntryComponent({ entry, compact, fontSize }: Props) {
     )
   }
 
-  const style = METHOD_STYLES[entry.method] ?? 'text-zinc-200'
+  const color = METHOD_COLORS[entry.method] ?? 'var(--text-primary)'
+  const bg = METHOD_BG[entry.method]
 
   return (
-    <div className={`${padding} ${border} font-mono leading-relaxed ${style}`} style={sizeStyle}>
+    <div style={{ ...fontStyle, color, background: bg }}>
       {entry.args.map((arg, i) => (
-        <span key={i} className={i > 0 ? 'ml-2' : ''}>
+        <span key={i} style={i > 0 ? { marginLeft: 8 } : undefined}>
           {isErrorType(arg) ? (
             <span>{arg.message}{arg.stack ? `\n${arg.stack}` : ''}</span>
           ) : isPrimitive(arg) ? (

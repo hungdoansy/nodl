@@ -6,16 +6,10 @@ import { PackageList } from '../Packages/PackageList'
 import { useSettingsStore } from '../../store/settings'
 import type { OutputEntry } from '../../../shared/types'
 
-/** Line height in the Monaco editor (matches fontSize + line spacing) */
 function getEditorLineHeight(fontSize: number): number {
-  // Monaco default lineHeight is ~1.35x fontSize, rounded
   return Math.round(fontSize * 1.35)
 }
 
-/**
- * Group entries by their source line. Entries without a line go into a
- * "floating" group rendered after all line-aligned entries.
- */
 function groupByLine(entries: OutputEntry[]): { lined: Map<number, OutputEntry[]>; unlined: OutputEntry[] } {
   const lined = new Map<number, OutputEntry[]>()
   const unlined: OutputEntry[] = []
@@ -47,47 +41,62 @@ export function OutputPane() {
 
   const lineHeight = getEditorLineHeight(fontSize)
   const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
-
-  // Editor has 12px top padding
   const editorPaddingTop = 12
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
-        <span className="text-xs font-medium text-zinc-400">Output</span>
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
+      {/* Toolbar */}
+      <div className="toolbar flex items-center gap-2 px-3 py-1.5">
+        <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+          Output
+        </span>
+
         {isRunning && (
           <>
-            <span className="inline-block w-3 h-3 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
-            <button
-              onClick={stop}
-              className="px-2 py-0.5 text-xs rounded bg-red-600 hover:bg-red-500 text-white transition-colors"
-            >
-              ■ Stop
+            <div
+              className="w-3 h-3 rounded-full border-[1.5px] border-t-transparent animate-spin"
+              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
+            />
+            <button onClick={stop} className="btn btn-danger" style={{ padding: '3px 8px' }}>
+              Stop
             </button>
           </>
         )}
-        <button
-          onClick={clear}
-          className="px-2 py-0.5 text-xs rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors ml-auto"
-        >
+
+        <div className="flex-1" />
+
+        <button onClick={clear} className="btn btn-secondary" style={{ padding: '3px 8px' }}>
           Clear
         </button>
       </div>
+
+      {/* Output content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {entries.length === 0 && !isRunning && (
-          <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
-            Run your code to see output here
+          <div
+            className="flex flex-col items-center justify-center h-full gap-2"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-[12px]">Run your code to see output</span>
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
+              Cmd+Enter
+            </span>
           </div>
         )}
         {entries.length === 0 && isRunning && (
-          <div className="flex items-center justify-center h-full gap-2 text-zinc-500 text-sm">
-            <span className="inline-block w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-            Running...
+          <div className="flex items-center justify-center h-full gap-2" style={{ color: 'var(--text-muted)' }}>
+            <div
+              className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
+            />
+            <span className="text-[12px]">Running...</span>
           </div>
         )}
         {entries.length > 0 && (
           <div className="relative" style={{ paddingTop: editorPaddingTop }}>
-            {/* Line-aligned entries */}
             {Array.from({ length: totalLines }, (_, i) => {
               const lineNum = i + 1
               const lineEntries = lined.get(lineNum)
@@ -104,9 +113,8 @@ export function OutputPane() {
                 </div>
               )
             })}
-            {/* Unlined entries (e.g. errors without line info) */}
             {unlined.length > 0 && (
-              <div className="border-t border-zinc-800/50 mt-1">
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 4 }}>
                 {unlined.map((entry) => (
                   <ConsoleEntryComponent key={entry.id} entry={entry} fontSize={fontSize} />
                 ))}
@@ -115,11 +123,21 @@ export function OutputPane() {
           </div>
         )}
       </div>
+
+      {/* Status bar */}
       {lastResult && (
-        <div className={`px-3 py-1 bg-zinc-800/50 border-t border-zinc-700 text-xs ${
-          lastResult.success ? 'text-zinc-500' : 'text-red-400'
-        }`}>
-          {lastResult.success ? '✓' : '✗'} Ran in {lastResult.duration}ms
+        <div
+          className="px-3 py-1 text-[11px]"
+          style={{
+            borderTop: '1px solid var(--border-subtle)',
+            background: 'var(--bg-surface)',
+            color: lastResult.success ? 'var(--text-muted)' : '#f87171',
+          }}
+        >
+          <span style={{ color: lastResult.success ? 'var(--accent)' : '#f87171' }}>
+            {lastResult.success ? '✓' : '✗'}
+          </span>
+          {' '}Ran in {lastResult.duration}ms
         </div>
       )}
       <PackageList />

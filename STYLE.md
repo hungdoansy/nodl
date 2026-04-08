@@ -1,126 +1,118 @@
-# nodl — Design System & Styling Guide
+# nodl — Design System
 
-This document defines the visual identity, color palette, component patterns, and styling conventions for the nodl app. It serves as the source of truth for AI-assisted development so design decisions remain consistent across sessions.
+> **"Precision Terminal"** — Ultra-clean dark surfaces. Depth through shadow, not borders. One accent color. Every pixel intentional.
 
 ## Philosophy
 
-- **Quiet and precise.** The UI stays out of the way. Code and output are the focus.
-- **Monochrome + one accent.** The chrome is neutral zinc tones; emerald green is the single accent color used sparingly for primary actions and expression results.
-- **Deterministic.** Every color, radius, and spacing value comes from the system below — no ad-hoc hex codes or magic numbers.
-- **Dense but not cramped.** Small font sizes, tight spacing, but generous enough to be readable.
+- **Depth over borders.** Panels separate through background layers and shadows, not visible border lines. Borders are `rgba(255,255,255,0.06–0.12)` — structural, not decorative.
+- **One accent.** Teal-emerald (`#34d399`) is the only color. Used for: primary buttons, active indicators, expression results, toggle states, resizer glow. Everything else is greyscale.
+- **Dense precision.** Small type (11–13px UI), tight spacing, monospace code. Generous negative space in empty states.
+- **Quiet motion.** 150–200ms transitions with `cubic-bezier(0.22, 1, 0.36, 1)`. No bouncing, no spring physics. Scale-in for dialogs, fade-in for content.
 
-## Color Palette
+## Color System (CSS Custom Properties)
 
-All colors use Tailwind's zinc scale for neutrality.
+All colors defined in `src/index.css` on `:root`:
 
-| Token | Dark mode | Usage |
-|-------|-----------|-------|
-| `bg-primary` | `bg-zinc-900` (#18181b) | Main background, editor bg |
-| `bg-surface` | `bg-zinc-850` (#1e1e22) | Sidebar, panels, toolbars — custom color via CSS var |
-| `bg-elevated` | `bg-zinc-800` (#27272a) | Header, dialogs, dropdowns |
-| `bg-hover` | `bg-zinc-700` (#3f3f46) | Hover states on interactive elements |
-| `bg-active` | `bg-zinc-700/50` | Active/pressed states |
-| `border-default` | `border-zinc-800` (#27272a) | Subtle borders between panels |
-| `border-strong` | `border-zinc-700` (#3f3f46) | Visible borders (header bottom, dividers) |
-| `text-primary` | `text-zinc-100` (#f4f4f5) | Headings, active tab text |
-| `text-secondary` | `text-zinc-400` (#a1a1aa) | Labels, inactive text, secondary info |
-| `text-muted` | `text-zinc-500` (#71717a) | Placeholders, disabled text |
-| `accent` | `emerald-500` (#10b981) | Primary buttons, expression results, active indicators |
-| `accent-hover` | `emerald-400` (#34d399) | Hover on accent elements |
-| `danger` | `red-500` (#ef4444) | Errors, stop button, destructive actions |
-| `warn` | `amber-500` (#f59e0b) | Warnings, auto-run active state |
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--bg-void` | `#0c0c0e` | Deepest background, app root |
+| `--bg-primary` | `#121214` | Main panels, editor/output bg |
+| `--bg-surface` | `#18181b` | Sidebar, toolbars |
+| `--bg-elevated` | `#1e1e22` | Header, dialogs, dropdowns |
+| `--bg-hover` | `rgba(255,255,255,0.04)` | Hover states |
+| `--bg-active` | `rgba(255,255,255,0.06)` | Pressed/active states |
+| `--border-subtle` | `rgba(255,255,255,0.06)` | Panel separators (barely visible) |
+| `--border-default` | `rgba(255,255,255,0.08)` | Input borders, dividers |
+| `--border-strong` | `rgba(255,255,255,0.12)` | Focus rings, emphasis |
+| `--accent` | `#34d399` | Primary action color |
+| `--accent-dim` | `rgba(52,211,153,0.15)` | Accent backgrounds, glow |
+| `--accent-glow` | `rgba(52,211,153,0.08)` | Subtle accent wash |
+| `--text-primary` | `#e4e4e7` | Headings, active text |
+| `--text-secondary` | `#a1a1aa` | Body text, labels |
+| `--text-muted` | `#63636e` | Placeholders, disabled |
+| `--text-accent` | `#34d399` | Accent text |
 
 ## Typography
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| App title | System sans (Inter) | 13px (`text-[13px]`) | 600 (`font-semibold`) |
-| Tab labels | Mono | 12px (`text-xs`) | 400 |
-| Toolbar buttons | System sans | 11px (`text-[11px]`) | 500 (`font-medium`) |
-| Editor | Mono (Menlo, Monaco, Consolas) | User setting (default 14px) | 400 |
-| Output | Mono | Same as editor setting | 400 |
+| App title | System sans | 13px | 600 (semibold) |
+| Section labels | System sans | 10px uppercase tracking-widest | 600 |
+| Toolbar buttons | System sans | 11px | 500 |
+| Tab names | JetBrains Mono | 12px | 400 |
+| Editor + Output | JetBrains Mono | User setting (default 14px) | 400 |
 | Settings labels | System sans | 13px | 400 |
 
-## Spacing & Layout
+Font stack: `'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace`
+Loaded via Google Fonts in `index.html`.
+
+## Shadows
+
+Three levels of depth:
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--shadow-panel` | `0 1px 3px rgba(0,0,0,0.4), inset ring` | Panels, cards |
+| `--shadow-elevated` | `0 4px 16px rgba(0,0,0,0.5), inset ring` | Popovers, menus |
+| `--shadow-dialog` | `0 16px 48px rgba(0,0,0,0.6), inset ring` | Modal dialogs |
+
+## Button Variants
+
+Defined as CSS utility classes in `index.css`:
+
+### `.btn-primary` — Primary actions (Run)
+Accent background, dark text. Glow on hover. Scale down on active.
+
+### `.btn-secondary` — Secondary actions (Auto, Language, Clear)
+Transparent with subtle border. Lightens on hover.
+
+### `.btn-ghost` — Icon buttons (Theme, Settings, Sidebar toggle)
+No background. Color change on hover.
+
+### `.btn-danger` — Destructive actions (Stop)
+Red-tinted background and border.
+
+All buttons: `transition: 150ms`, `transform: scale(0.97)` on active.
+
+## Layout Constants
 
 | Element | Value |
 |---------|-------|
-| Header height | 38px (py-1.5 + content) |
-| Sidebar width (expanded) | 180px |
-| Sidebar width (collapsed) | 40px |
-| Toolbar height | 33px (py-1.5 + buttons) |
-| Panel gap (resizer) | 1px visual, 8px hit area |
-| Border radius (buttons) | `rounded` (4px) |
-| Border radius (dialogs) | `rounded-lg` (8px) |
-| Padding (toolbar items) | `px-2 py-1` |
+| Header height | 38px |
+| Sidebar expanded | 184px |
+| Sidebar collapsed | 44px |
+| Toolbar height | ~33px (py-1.5 + buttons) |
+| Resizer visual width | 1px |
+| Resizer hit area | 8px (via ::before pseudo) |
+| Border radius (buttons) | 4px (`--radius-sm`) |
+| Border radius (dialogs) | 10px (`--radius-lg`) |
 
-## Button Styles
+## Component Patterns
 
-Three button variants:
+### Sidebar
+- Active tab: left `--accent` bar (3px wide), `--bg-hover` background
+- Collapsed: shows first letter, accent color when active
+- Section label: "Files" in muted uppercase
+- Green dot file indicator
 
-### Primary (accent)
-```
-bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700
-text-white text-[11px] font-medium rounded px-2.5 py-1
-```
+### Resizer
+- At rest: `--border-subtle` (nearly invisible)
+- Hover: accent color at 40% opacity with soft glow
+- Active: accent at 60% with stronger glow
+- No outline, no border. Clean.
 
-### Secondary (neutral)
-```
-bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600
-text-zinc-300 text-[11px] font-medium rounded px-2 py-1
-border border-zinc-700
-```
+### Settings Dialog
+- Backdrop blur (4px) over dark overlay
+- Scale-in animation on open
+- Sections separated by uppercase labels
+- Custom toggle switches (accent green when on)
 
-### Ghost (icon buttons)
-```
-text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800
-active:bg-zinc-700 rounded p-1.5 transition-colors
-```
-
-## Resizer
-
-The panel resizer should be nearly invisible at rest and subtly visible on hover:
-
-```
-width: 1px (visual), 8px (hit area via padding)
-bg-zinc-800 (rest) → bg-zinc-600 (hover) → bg-emerald-500/50 (active/dragging)
-No outline, no border. cursor-col-resize.
-```
-
-## Sidebar (Tab List)
-
-- Vertical list on the left side
-- Collapsed: 40px wide, shows only icons/first letter
-- Expanded: 180px wide, shows full tab name
-- Toggle via chevron button at the bottom
-- Active tab: left emerald border accent (2px), slightly lighter bg
-- Hover: bg-zinc-800
-
-## Component Tokens (CSS Custom Properties)
-
-Defined in `index.css` on `:root` / `.dark`:
-
-```css
---bg-primary: #18181b;
---bg-surface: #1e1e22;
---bg-elevated: #27272a;
---border-default: #27272a;
---border-strong: #3f3f46;
---accent: #10b981;
-```
-
-These allow future light-theme support by overriding under `.light`.
-
-## Logo
-
-The nodl logo is a minimal geometric mark:
-- A rounded square (the "node") with the letter "n" inside
-- Emerald green on dark background
-- Used at 20x20 in the header, larger in about/splash
+### Empty State (Output)
+- Centered icon + text + keyboard hint
+- Lightning bolt SVG at 30% opacity
+- "Cmd+Enter" muted helper
 
 ## File Reference
 
-- Colors & variables: `src/index.css`
-- Tailwind config: `tailwind.config.js`
-- Component patterns: follow existing code in `src/components/`
-- This file: `STYLE.md` (source of truth for design decisions)
+- Design tokens: `src/index.css`
+- This document: `STYLE.md`
