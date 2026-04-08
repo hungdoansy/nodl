@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
-import { Square, Trash2, AlignLeft, Terminal } from 'lucide-react'
+import { Square, Trash2, AlignLeft, Terminal, Copy, Check } from 'lucide-react'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useTabsStore } from '../../store/tabs'
 import { useUIStore } from '../../store/ui'
@@ -23,6 +23,30 @@ function groupByLine(entries: OutputEntry[]): { lined: Map<number, OutputEntry[]
   return { lined, unlined }
 }
 
+function stringifyArg(arg: unknown): string {
+  if (arg === null) return 'null'
+  if (arg === undefined) return 'undefined'
+  if (typeof arg === 'string') return arg
+  if (typeof arg !== 'object') return String(arg)
+  const typed = arg as { __type?: string; value?: unknown; message?: string; stack?: string; entries?: unknown[]; values?: unknown[] }
+  if (typed.__type === 'LastExpression') return stringifyArg(typed.value)
+  if (typed.__type === 'Error') return typed.stack ? `${typed.message}\n${typed.stack}` : typed.message ?? 'Error'
+  if (typed.__type === 'Date' || typed.__type === 'RegExp') return String(typed.value)
+  if (typed.__type === 'Map') return `Map(${(typed.entries ?? []).length})`
+  if (typed.__type === 'Set') return `Set(${(typed.values ?? []).length})`
+  try { return JSON.stringify(arg, null, 2) } catch { return String(arg) }
+}
+
+function entriesToText(entries: OutputEntry[]): string {
+  return entries.map((entry) => {
+    const prefix = entry.method === 'error' ? '[error] '
+      : entry.method === 'warn' ? '[warn] '
+      : entry.method === 'info' ? '[info] '
+      : ''
+    return prefix + entry.args.map(stringifyArg).join(' ')
+  }).join('\n')
+}
+
 const STOP_BUTTON_DELAY = 3000
 
 export function OutputPane() {
@@ -34,8 +58,18 @@ export function OutputPane() {
   const totalLines = useMemo(() => tab.code.split('\n').length, [tab.code])
 
   const [showStop, setShowStop] = useState(false)
+  const [copied, setCopied] = useState(false)
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ignoreScrollRef = useRef(false)
+
+  const handleCopy = useCallback(() => {
+    if (entries.length === 0) return
+    const text = entriesToText(entries)
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => { /* clipboard write failed silently */ })
+  }, [entries])
 
   useEffect(() => {
     if (isRunning) {
@@ -128,6 +162,15 @@ export function OutputPane() {
           title={outputMode === 'aligned' ? 'Switch to console mode' : 'Switch to line-aligned mode'}
         >
           {outputMode === 'aligned' ? <Terminal size={14} /> : <AlignLeft size={14} />}
+        </button>
+
+        <button
+          onClick={handleCopy}
+          className="toolbar-btn"
+          title={copied ? 'Copied!' : 'Copy output'}
+          disabled={entries.length === 0}
+        >
+          {copied ? <Check size={14} style={{ color: 'var(--ok)' }} /> : <Copy size={14} />}
         </button>
 
         <button onClick={clear} className="toolbar-btn" title="Clear output">
