@@ -93,7 +93,7 @@ export function OutputPane() {
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       {/* Toolbar */}
       <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36, minHeight: 36 }}>
-        <span style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 500, paddingLeft: 6, paddingRight: 4 }}>
+        <span style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 500, paddingLeft: 6, paddingRight: 4, userSelect: 'none' }}>
           Output
         </span>
 
@@ -104,6 +104,7 @@ export function OutputPane() {
             fontFamily: 'var(--font-mono)',
             color: lastResult.success ? 'var(--text-tertiary)' : 'var(--danger)',
             display: 'inline-flex', alignItems: 'center', gap: 4,
+            userSelect: 'none',
           }}>
             <span style={{
               width: 5, height: 5, borderRadius: '50%',
@@ -138,7 +139,7 @@ export function OutputPane() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto" onScroll={handleOutputScroll} style={{ paddingBottom: 4 }}>
         {/* Empty state */}
         {!hasOutput && !isRunning && (
-          <div className="flex flex-col items-center justify-center h-full gap-1.5">
+          <div className="flex flex-col items-center justify-center h-full gap-1.5" style={{ userSelect: 'none' }}>
             <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
               No output yet
             </span>
