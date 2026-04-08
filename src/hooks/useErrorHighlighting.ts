@@ -3,6 +3,8 @@ import type { editor as monacoEditor } from 'monaco-editor'
 import { useOutputStore } from '../store/output'
 import type { OutputEntry } from '../../shared/types'
 
+const EMPTY_ENTRIES: OutputEntry[] = []
+
 /**
  * Extract error line numbers from output entries.
  * Exported for testing.
@@ -41,14 +43,9 @@ export function extractErrorLines(entries: OutputEntry[], maxLine: number): numb
 export function useErrorHighlighting(
   editorRef: RefObject<monacoEditor.IStandaloneCodeEditor | null>
 ) {
-  const lastResult = useOutputStore((s) => {
-    const tabId = s.activeTabId
-    return s.outputs[tabId]?.lastResult ?? null
-  })
-  const entries = useOutputStore((s) => {
-    const tabId = s.activeTabId
-    return s.outputs[tabId]?.entries ?? []
-  })
+  const activeTabId = useOutputStore((s) => s.activeTabId)
+  const lastResult = useOutputStore((s) => s.outputs[s.activeTabId]?.lastResult ?? null)
+  const entries = useOutputStore((s) => s.outputs[s.activeTabId]?.entries ?? EMPTY_ENTRIES)
 
   useEffect(() => {
     const editor = editorRef.current
@@ -89,5 +86,5 @@ export function useErrorHighlighting(
         }
       }))
     )
-  }, [lastResult, entries, editorRef])
+  }, [lastResult, entries, editorRef, activeTabId])
 }
