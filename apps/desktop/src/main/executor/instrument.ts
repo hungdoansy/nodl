@@ -282,6 +282,11 @@ export function instrumentCode(code: string): string {
     }
 
     updateStack(line, stack, trimmed, inTemplate)
+
+    // Inject loop guard inside for/while/do loop bodies to detect infinite loops
+    if (/^(for|while|do)\b/.test(trimmed) && trimmed.endsWith('{')) {
+      result.push('__loopGuard__();')
+    }
   }
 
   return result.join('\n')

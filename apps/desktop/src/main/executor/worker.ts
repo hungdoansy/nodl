@@ -142,16 +142,25 @@ process.on('message', async (msg: { code: string; language: string }) => {
   try {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
+    // Loop guard: throws after too many iterations to detect infinite loops
+    const MAX_ITERATIONS = 1_000_000
+    let loopCount = 0
+    function loopGuard(): void {
+      if (++loopCount > MAX_ITERATIONS) {
+        throw new Error(`Infinite loop detected (exceeded ${MAX_ITERATIONS.toLocaleString()} iterations)`)
+      }
+    }
+
     const wrappedCode = `
       const console = __console__;
       ${msg.code}
     `
 
     const fn = new AsyncFunction(
-      '__console__', 'require', '__expr__', '__line__',
+      '__console__', 'require', '__expr__', '__line__', '__loopGuard__',
       wrappedCode
     )
-    await fn(capturedConsole, require, exprReporter, lineTracker)
+    await fn(capturedConsole, require, exprReporter, lineTracker, loopGuard)
 
     // Wait for pending Promises from expression results (e.g., async function calls)
     if (pendingPromises.length > 0) {

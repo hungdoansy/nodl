@@ -640,4 +640,39 @@ console.log(x)`)
 const b = 2
 console.log(a + b)`)
   })
+
+  it('injects loop guard in for loops', () => {
+    const { instrumented } = pipeline(`for (let i = 0; i < 10; i++) {
+  console.log(i)
+}`)
+    expect(instrumented).toContain('__loopGuard__();')
+  })
+
+  it('injects loop guard in while loops', () => {
+    const { instrumented } = pipeline(`while (true) {
+  break
+}`)
+    expect(instrumented).toContain('__loopGuard__();')
+  })
+
+  it('injects loop guard in do...while loops', () => {
+    const { instrumented } = pipeline(`do {
+  break
+} while (true)`)
+    expect(instrumented).toContain('__loopGuard__();')
+  })
+
+  it('loop guard does not break valid for loop', () => {
+    expectValid(`for (let i = 0; i < 10; i++) {
+  console.log(i)
+}`)
+  })
+
+  it('loop guard does not break nested loops', () => {
+    expectValid(`for (let i = 0; i < 5; i++) {
+  for (let j = 0; j < 5; j++) {
+    console.log(i, j)
+  }
+}`)
+  })
 })

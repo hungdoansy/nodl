@@ -6,16 +6,10 @@ A catalog of edge cases, limitations, and potential improvements in the code exe
 
 ## Critical
 
-### 1. Infinite synchronous loops are undetectable
-**File:** `apps/desktop/src/main/executor/worker.ts`
+### 1. ~~Infinite synchronous loops are undetectable~~ ✅ FIXED
+**File:** `apps/desktop/src/main/executor/instrument.ts`, `worker.ts`
 
-The worker runs in a single thread. A synchronous infinite loop blocks everything — the only escape is the parent's 5-second timeout killing the process. There is no in-process bailout or cooperative scheduling.
-
-```js
-while (true) {} // Hangs until external timeout kills the worker
-```
-
-**Possible fix:** Inject a loop counter or timeout check via instrumentation (e.g., insert `if (Date.now() > deadline) throw new Error("timeout")` inside loops).
+The instrumenter now injects `__loopGuard__();` inside `for`/`while`/`do` loop bodies (after the opening `{`). The worker provides a `__loopGuard__` function that throws after 1,000,000 iterations with a clear error message. This catches infinite loops within milliseconds instead of waiting for the 5-second external timeout. Note: only works for loops with braces — single-line loops without `{` still rely on the timeout.
 
 ### 2. ~~No serialization size limit in console capture~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`
