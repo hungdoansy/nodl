@@ -10,18 +10,31 @@ export interface Tab {
   updatedAt: number
 }
 
-const DEFAULT_CODE = `console.log("Hello, nodl!");
+const WELCOME_CODE = `// Welcome to nodl — a fast JS/TS scratchpad
+// Hit Cmd+Enter (or Ctrl+Enter) to run your code
 
-const sum = (a, b) => a + b;
-console.log("2 + 3 =", sum(2, 3));
+console.log("Hello, nodl!")
+
+// Expressions are evaluated inline — no console.log needed
+2 ** 10
+
+// TypeScript works out of the box
+const greet = (name: string): string => \`Hello, \${name}!\`
+greet("world")
+
+// Arrays, objects, promises — all rendered nicely
+[1, 2, 3].map(x => x * x)
+
+// Install npm packages from the sidebar
+// import lodash from "lodash"
 `
 
-export function createDefaultTab(index = 1): Tab {
+export function createDefaultTab(index = 1, welcome = false): Tab {
   return {
     id: nanoid(),
     name: `Untitled ${index}`,
     language: 'typescript',
-    code: DEFAULT_CODE,
+    code: welcome ? WELCOME_CODE : '',
     createdAt: Date.now(),
     updatedAt: Date.now()
   }
@@ -47,7 +60,7 @@ interface TabsState {
   restoreTabs: (tabs: Tab[], activeTabId: string) => void
 }
 
-const initialTab = createDefaultTab(1)
+const initialTab = createDefaultTab(1, true)
 
 export const useTabsStore = create<TabsState>((set, get) => ({
   tabs: [initialTab],

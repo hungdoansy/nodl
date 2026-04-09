@@ -126,4 +126,22 @@ describe('useTabsStore', () => {
     useTabsStore.getState().updateCode('changed')
     expect(useTabsStore.getState().activeTab().updatedAt).toBeGreaterThanOrEqual(before)
   })
+
+  it('initial tab has welcome code', () => {
+    const tab = createDefaultTab(1, true)
+    expect(tab.code).toContain('Welcome to nodl')
+    expect(tab.code).toContain('console.log')
+    expect(tab.code.length).toBeGreaterThan(0)
+  })
+
+  it('new tabs have blank code', () => {
+    const tab = createDefaultTab(2)
+    expect(tab.code).toBe('')
+  })
+
+  it('createTab creates a blank tab', () => {
+    useTabsStore.getState().createTab()
+    const newTab = useTabsStore.getState().tabs[1]
+    expect(newTab.code).toBe('')
+  })
 })

@@ -189,13 +189,26 @@ export function OutputPane() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto" onScroll={handleOutputScroll} style={{ paddingBottom: 4 }}>
         {/* Empty state */}
         {!hasOutput && !isRunning && (
-          <div className="flex flex-col items-center justify-center h-full gap-1.5" style={{ userSelect: 'none' }}>
+          <div className="flex flex-col items-center justify-center h-full gap-3" style={{ userSelect: 'none', padding: '0 24px' }}>
             <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
               No output yet
             </span>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.5 }}>
-              Cmd+Enter to run
-            </span>
+            <div className="flex flex-col gap-1.5" style={{ color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, textAlign: 'center', lineHeight: 1.5 }}>
+              <span>Write code in the editor, then</span>
+              <kbd style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontSize: 11,
+                fontFamily: 'var(--font-mono)',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)'
+              }}>
+                {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'} + Enter
+              </kbd>
+              <span>to run</span>
+            </div>
           </div>
         )}
 
