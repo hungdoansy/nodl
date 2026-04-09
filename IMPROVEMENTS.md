@@ -17,16 +17,10 @@ while (true) {} // Hangs until external timeout kills the worker
 
 **Possible fix:** Inject a loop counter or timeout check via instrumentation (e.g., insert `if (Date.now() > deadline) throw new Error("timeout")` inside loops).
 
-### 2. No serialization size limit in console capture
+### 2. ~~No serialization size limit in console capture~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`
 
-`serializeArg()` recursively walks the entire object graph with no depth or size cap. Large objects serialize fully over IPC and can OOM or freeze the process.
-
-```js
-console.log(new Array(1_000_000).fill({ data: "x".repeat(1000) }))
-```
-
-**Possible fix:** Add a max depth (e.g., 5 levels) and max total size (e.g., 1MB) to `serializeArg()`. Truncate with a `[truncated]` marker.
+Added depth limit (8 levels), array item limit (1000), and object key limit (200) to `serializeArg()`. Deeply nested objects show `[Object (truncated)]` or `[Array (N)]`. Large arrays append `... N more items`. Large objects append `... N more keys`.
 
 ---
 

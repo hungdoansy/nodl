@@ -156,4 +156,61 @@ describe('createConsoleCapturer', () => {
     expect(entries[0].timestamp).toBeGreaterThanOrEqual(before)
     expect(entries[0].timestamp).toBeLessThanOrEqual(Date.now())
   })
+
+  it('truncates deeply nested objects at max depth', () => {
+    const { entries, console } = setup()
+    // Build a 15-level deep object (exceeds MAX_DEPTH of 8)
+    let obj: Record<string, unknown> = { value: 'leaf' }
+    for (let i = 0; i < 15; i++) {
+      obj = { nested: obj }
+    }
+    console.log(obj)
+    // Walk to depth 8 — should hit truncation
+    let current = entries[0].args[0] as Record<string, unknown>
+    for (let i = 0; i < 7; i++) {
+      expect(current.nested).toBeDefined()
+      current = current.nested as Record<string, unknown>
+    }
+    // At depth 8, it should be truncated
+    expect(current.nested).toBe('[Object (truncated)]')
+  })
+
+  it('truncates large arrays', () => {
+    const { entries, console } = setup()
+    const bigArray = new Array(2000).fill(0).map((_, i) => i)
+    console.log(bigArray)
+    const serialized = entries[0].args[0] as unknown[]
+    // Should have 1000 items + 1 truncation message
+    expect(serialized.length).toBe(1001)
+    expect(serialized[1000]).toBe('... 1000 more items')
+  })
+
+  it('truncates objects with many keys', () => {
+    const { entries, console } = setup()
+    const bigObj: Record<string, number> = {}
+    for (let i = 0; i < 500; i++) {
+      bigObj[`key${i}`] = i
+    }
+    console.log(bigObj)
+    const serialized = entries[0].args[0] as Record<string, unknown>
+    const keys = Object.keys(serialized)
+    // Should have 200 keys + 1 truncation key
+    expect(keys.length).toBe(201)
+    expect(serialized['...']).toBe('300 more keys')
+  })
+
+  it('truncates deeply nested arrays at max depth', () => {
+    const { entries, console } = setup()
+    let arr: unknown = ['leaf']
+    for (let i = 0; i < 15; i++) {
+      arr = [arr]
+    }
+    console.log(arr)
+    let current = entries[0].args[0] as unknown[]
+    for (let i = 0; i < 7; i++) {
+      expect(Array.isArray(current[0])).toBe(true)
+      current = current[0] as unknown[]
+    }
+    expect(current[0]).toBe('[Array (1)]')
+  })
 })
