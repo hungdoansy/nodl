@@ -3,15 +3,19 @@ import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 
 // esbuild uses require.resolve() to find its platform binary, which resolves
-// inside the asar archive. Spawning from asar fails with ENOTDIR.
+// inside the asar archive. Spawning from asar fails with ENOTDIR/ENOENT.
 // Set ESBUILD_BINARY_PATH to the unpacked binary so esbuild skips resolution.
 if (__dirname.includes('app.asar')) {
-  const unpackedBin = join(
+  const unpackedModules = join(
     __dirname.replace('app.asar', 'app.asar.unpacked'),
-    '..', '..', 'node_modules', '@esbuild', `${process.platform}-${process.arch}`, 'bin', 'esbuild'
+    '..', '..', 'node_modules', '@esbuild', `${process.platform}-${process.arch}`
   )
-  if (existsSync(unpackedBin)) {
-    process.env.ESBUILD_BINARY_PATH = unpackedBin
+  // macOS/Linux: bin/esbuild — Windows: esbuild.exe
+  const bin = process.platform === 'win32'
+    ? join(unpackedModules, 'esbuild.exe')
+    : join(unpackedModules, 'bin', 'esbuild')
+  if (existsSync(bin)) {
+    process.env.ESBUILD_BINARY_PATH = bin
   }
 }
 import { createRunner, setNodeModulesPath } from './executor/runner'
