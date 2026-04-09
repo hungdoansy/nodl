@@ -28,6 +28,7 @@
     "postinstall": "electron-builder install-app-deps",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "lint": "tsc --noEmit",
     "pack": "pnpm run build && electron-builder --dir",
     "dist": "pnpm run build && electron-builder"
@@ -45,6 +46,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^25.5.2",

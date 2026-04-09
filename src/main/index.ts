@@ -2,6 +2,19 @@ import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
+
+// esbuild uses require.resolve() to find its platform binary, which resolves
+// inside the asar archive. Spawning from asar fails with ENOTDIR.
+// Set ESBUILD_BINARY_PATH to the unpacked binary so esbuild skips resolution.
+if (__dirname.includes('app.asar')) {
+  const unpackedBin = join(
+    __dirname.replace('app.asar', 'app.asar.unpacked'),
+    '..', '..', 'node_modules', '@esbuild', `${process.platform}-${process.arch}`, 'bin', 'esbuild'
+  )
+  if (existsSync(unpackedBin)) {
+    process.env.ESBUILD_BINARY_PATH = unpackedBin
+  }
+}
 import { createRunner, setNodeModulesPath } from './executor/runner'
 import { transpile } from './executor/transpiler'
 import { instrumentCode } from './executor/instrument'
