@@ -31,10 +31,7 @@ mac:
         - arm64
   artifactName: "${productName}-${version}-mac-${arch}.${ext}"
   darkModeSupport: true
-  hardenedRuntime: true
-  gatekeeperAssess: false
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
+  identity: null
 
 dmg:
   sign: false
