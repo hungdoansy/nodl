@@ -18,8 +18,13 @@ export function isExpression(line: string): boolean {
   if (STATEMENT_PREFIXES.some((p) => trimmed.startsWith(p))) return false
   // Reject lines starting with closing/continuation chars (multi-line expression parts)
   if (/^[}\])]/.test(trimmed)) return false
-  if (/^[.,?:+\-*/%|&^~!=]/.test(trimmed)) return false
+  // Reject binary/assignment operator continuations, but allow unary prefix operators
+  // Unary: !x, ~x, +x, -x are valid expressions when followed by a word char or (
+  if (/^[.,?:*/%|&^=]/.test(trimmed)) return false
   if (/^(&&|\|\||\?\?|=>)/.test(trimmed)) return false
+  // +/- are unary only if followed by a word char or paren; otherwise continuation
+  if (/^[+\-]/.test(trimmed) && !/^[+\-][\w(]/.test(trimmed)) return false
+  // ! and ~ are always unary prefix — allow them (already not in the reject list above)
   // Reject lines ending with opening/closing braces (block boundaries)
   if (trimmed.endsWith('{') || trimmed.endsWith('}')) return false
   // Reject lines ending with comma (multi-line args/arrays/objects)

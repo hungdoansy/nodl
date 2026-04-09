@@ -51,16 +51,10 @@ Lines starting with `/` are rejected (treated as division operator), so regex li
 
 **Possible fix:** Add regex detection — if a line starts with `/` and ends with `/[gimsuy]*`, treat it as an expression.
 
-### 5. Unary operators rejected as expressions
+### 5. ~~Unary operators rejected as expressions~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isExpression()`
 
-`!x`, `~x`, `-x`, `+x` as standalone expressions are rejected because `isExpression()` excludes lines starting with operators.
-
-```js
-!someFlag // Valid expression, not recognized
-```
-
-**Possible fix:** Whitelist unary prefix operators (`!`, `~`, `+`, `-`, `typeof`, `void`) in `isExpression()`.
+Split the operator rejection regex: `!` and `~` are no longer rejected (always unary). `+` and `-` are only rejected when followed by a space (binary continuation), allowed when followed by a word char or `(` (unary). `typeof` and `void` were already allowed (not in STATEMENT_PREFIXES).
 
 ### 6. Re-exports not transformed
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `transformImports()`

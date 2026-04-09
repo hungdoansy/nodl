@@ -614,4 +614,12 @@ const obj = {
   return x * 2
 }`)
   })
+
+  it('handles unary operators as expressions', () => {
+    expectValid('!true')
+    expectValid('~0xFF')
+    expectValid('+x')
+    expectValid('-x')
+    expectValid('!someFlag')
+  })
 })

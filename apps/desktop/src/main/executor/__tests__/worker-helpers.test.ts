@@ -91,11 +91,22 @@ describe('isExpression', () => {
     expect(isExpression('"hello",')).toBe(false)
   })
 
-  it('rejects lines starting with operators', () => {
+  it('rejects binary operator continuations', () => {
     expect(isExpression('+ 1')).toBe(false)
+    expect(isExpression('- 1')).toBe(false)
     expect(isExpression('&& true')).toBe(false)
     expect(isExpression('|| false')).toBe(false)
     expect(isExpression('?? default')).toBe(false)
+  })
+
+  it('accepts unary prefix operators as expressions', () => {
+    expect(isExpression('!someFlag')).toBe(true)
+    expect(isExpression('~bits')).toBe(true)
+    expect(isExpression('+x')).toBe(true)
+    expect(isExpression('-x')).toBe(true)
+    expect(isExpression('!true')).toBe(true)
+    expect(isExpression('!(a && b)')).toBe(true)
+    expect(isExpression('-Math.PI')).toBe(true)
   })
 
   it('rejects import/export statements', () => {
