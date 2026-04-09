@@ -160,6 +160,27 @@ function isChainContinuation(trimmed: string): boolean {
  */
 export function transformImports(line: string): string {
   const trimmed = line.trim()
+
+  // Handle re-exports: export { ... } from "mod" and export * from "mod"
+  if (trimmed.startsWith('export ') && trimmed.includes(' from ')) {
+    // export type { ... } from → strip (no runtime)
+    if (/^export\s+type\s/.test(trimmed)) return ''
+
+    const fromMatch = trimmed.match(/from\s+(['"])(.*?)\1;?\s*$/)
+    if (!fromMatch) return line
+    const quote = fromMatch[1]
+    const mod = fromMatch[2]
+
+    // export * from "mod" → require("mod") (side-effect only in scratchpad context)
+    if (/^export\s+\*\s+from/.test(trimmed)) return `require(${quote}${mod}${quote});`
+
+    // export { a, b } from "mod" → const { a, b } = require("mod")
+    const namedMatch = trimmed.match(/^export\s+(\{[^}]+\})\s+from/)
+    if (namedMatch) return `const ${namedMatch[1]} = require(${quote}${mod}${quote});`
+
+    return line
+  }
+
   if (!trimmed.startsWith('import ')) return line
 
   // import "foo" or import 'foo' → require("foo")
@@ -244,8 +265,8 @@ export function instrumentCode(code: string): string {
       // Safe to insert __line__ tracking
       result.push(`__line__.value = ${lineNum};`)
 
-      // Transform import statements to require() calls
-      if (trimmed.startsWith('import ')) {
+      // Transform import/export-from statements to require() calls
+      if (trimmed.startsWith('import ') || (trimmed.startsWith('export ') && trimmed.includes(' from '))) {
         const transformed = transformImports(trimmed)
         result.push(transformed)
       } else if (stack.length === 0 && isExpression(trimmed) && !nextIsContinuation) {

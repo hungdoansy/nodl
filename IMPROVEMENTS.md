@@ -50,12 +50,10 @@ Split `/` handling: if the line matches `/pattern/flags` (regex literal syntax),
 
 Split the operator rejection regex: `!` and `~` are no longer rejected (always unary). `+` and `-` are only rejected when followed by a space (binary continuation), allowed when followed by a word char or `(` (unary). `typeof` and `void` were already allowed (not in STATEMENT_PREFIXES).
 
-### 6. Re-exports not transformed
+### 6. ~~Re-exports not transformed~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `transformImports()`
 
-`export { foo } from "bar"` isn't handled — only lines starting with `import` are matched. This fails at runtime inside `AsyncFunction`.
-
-**Possible fix:** Add regex patterns for `export ... from` syntax, converting to `const { foo } = require("bar"); module.exports.foo = foo` or similar.
+Added handling for `export { a, b } from "mod"` → `const { a, b } = require("mod")`, `export * from "mod"` → `require("mod")`, and `export type { ... } from` → stripped. The instrumenter now detects `export ... from` lines and routes them through `transformImports()`.
 
 ### 7. ~~Silent promise rejections~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/worker.ts`

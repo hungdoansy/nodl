@@ -500,6 +500,20 @@ describe('transformImports', () => {
     const result = transformImports('import { a } from "mod";')
     expect(result).toBe('const { a } = require("mod");')
   })
+
+  it('transforms export { a } from "mod" to const + require', () => {
+    const result = transformImports('export { a, b } from "mod"')
+    expect(result).toBe('const { a, b } = require("mod");')
+  })
+
+  it('transforms export * from "mod" to require', () => {
+    const result = transformImports('export * from "mod"')
+    expect(result).toBe('require("mod");')
+  })
+
+  it('strips export type { ... } from', () => {
+    expect(transformImports('export type { Foo } from "./types"')).toBe('')
+  })
 })
 
 describe('instrumentCode — import transforms', () => {
