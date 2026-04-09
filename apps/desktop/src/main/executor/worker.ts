@@ -25,6 +25,7 @@ const origClearInterval = globalThis.clearInterval
 
 let pendingTimers = 0
 const trackedTimers = new Set<ReturnType<typeof setTimeout>>()
+const trackedIntervals = new Set<ReturnType<typeof setInterval>>()
 
 // Intercept setTimeout so we can track pending async work
 // @ts-expect-error — override global
@@ -53,6 +54,7 @@ globalThis.setInterval = (fn: (...args: unknown[]) => void, ms?: number, ...args
   pendingTimers++
   const id = origSetInterval(fn, ms, ...args)
   trackedTimers.add(id)
+  trackedIntervals.add(id)
   return id
 }
 
@@ -112,7 +114,16 @@ process.on('message', async (msg: { code: string; language: string }) => {
               })
             }
           },
-          () => { /* errors are caught by the user's own catch blocks */ }
+          (err) => {
+            const msg = err instanceof Error ? err.message : String(err)
+            sendConsoleEntry({
+              id: `expr-err-${Date.now()}-${idCounter++}`,
+              method: 'error',
+              args: [msg],
+              timestamp: Date.now(),
+              line
+            })
+          }
         )
         pendingPromises.push(p)
       } else {
@@ -147,7 +158,17 @@ process.on('message', async (msg: { code: string; language: string }) => {
       await Promise.allSettled(pendingPromises)
     }
 
-    // Wait for pending setTimeout/setInterval chains to complete
+    // Auto-clear all intervals — they'd run forever and block drain
+    for (const id of trackedIntervals) {
+      origClearInterval(id)
+      if (trackedTimers.has(id)) {
+        pendingTimers--
+        trackedTimers.delete(id)
+      }
+    }
+    trackedIntervals.clear()
+
+    // Wait for remaining setTimeout chains to complete
     await waitForAsyncDrain()
 
     send({

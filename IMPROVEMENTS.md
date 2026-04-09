@@ -57,16 +57,10 @@ Split the operator rejection regex: `!` and `~` are no longer rejected (always u
 
 **Possible fix:** Add regex patterns for `export ... from` syntax, converting to `const { foo } = require("bar"); module.exports.foo = foo` or similar.
 
-### 7. Silent promise rejections
+### 7. ~~Silent promise rejections~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-When `__expr__()` tracks a promise that rejects, the rejection handler is a no-op. The error is silently swallowed.
-
-```js
-Promise.reject(new Error("oops")) // Expression tracked, rejection lost
-```
-
-**Possible fix:** Capture rejection in the `__expr__` handler and send it as an error `OutputEntry` to the renderer.
+The `__expr__` rejection handler now sends the error message as a `console.error` entry to the renderer instead of silently swallowing it.
 
 ### 8. ~~Exit code 0 without result = silent failure~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/runner.ts`
@@ -106,23 +100,15 @@ Added `//` and `/* */` comment detection in `updateStack()`. When the character 
 
 Added `=>` to continuation detection in `isChainContinuation()`, `isExpression()`, and `nextNonEmptyIsContinuation()`. The instrumenter no longer inserts `__line__` before or on `=>` continuation lines. Note: `=>` on a new line is invalid JS syntax regardless — esbuild rejects it. But the instrumenter no longer makes it worse.
 
-### 14. `setInterval` never drains
+### 14. ~~`setInterval` never drains~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-Intervals auto-reschedule, so `pendingTimers` never reaches 0. `waitForAsyncDrain()` polls until the 5-second timeout.
+Added `trackedIntervals` set. After main code completes (and pending promises settle), all tracked intervals are auto-cleared before `waitForAsyncDrain()`. This prevents intervals from blocking the worker exit.
 
-```js
-setInterval(() => console.log("tick"), 100) // Blocks drain
-```
-
-**Possible fix:** Auto-clear all intervals after main code completes, or cap interval execution count.
-
-### 15. Race condition on timeout boundary
+### 15. ~~Race condition on timeout boundary~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/runner.ts`
 
-If the worker sends a result at t=5001ms but the timeout fires at t=5000ms, the `stopped` flag is set first and the valid result is silently dropped.
-
-**Possible fix:** Add a small grace period after timeout, or check for pending messages before killing.
+The timeout handler now checks `gotResult` before killing the worker. If the worker sent a valid result just before the timeout fired, the result is preserved and the timeout is a no-op.
 
 ### 16. ~~Many console methods uncaptured~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`

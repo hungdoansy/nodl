@@ -137,7 +137,7 @@ export function createRunner(): Runner {
       // Execution timeout
       const timeout = payload.timeout ?? DEFAULT_TIMEOUT
       timeoutId = setTimeout(() => {
-        if (!stopped && child && !child.killed) {
+        if (!stopped && !gotResult && child && !child.killed) {
           cleanup()
           callbacks.onOutput({
             id: `timeout-${Date.now()}`,
