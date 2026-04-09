@@ -12,23 +12,20 @@ files:
   - node_modules/esbuild/**/*
   - node_modules/@esbuild/**/*
 
+afterPack: ./scripts/afterPack.cjs
+
 asarUnpack:
   - out/main/worker.cjs
   - node_modules/esbuild/**/*
   - node_modules/@esbuild/**/*
 
-# macOS
+# macOS — each arch must be built on its native runner (esbuild bundles a
+# platform-specific binary). CI handles this via separate matrix jobs.
 mac:
   category: public.app-category.developer-tools
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
     - target: zip
-      arch:
-        - x64
-        - arm64
   artifactName: "${productName}-${version}-mac-${arch}.${ext}"
   darkModeSupport: true
   identity: null
