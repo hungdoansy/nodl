@@ -601,4 +601,17 @@ const obj = {
   static: 3,
 }`)
   })
+
+  // Note: `const fn = (x)\n  => x * 2` is invalid JS (=> must be on same line as params).
+  // The instrumenter correctly passes through => continuations without inserting __line__,
+  // but esbuild rejects the syntax. This is expected behavior, not a bug.
+
+  it('handles arrow continuation without breaking further', () => {
+    // Arrow on same line (valid) still works
+    expectValid('const fn = (x) => x * 2')
+    expectValid('const fn = (x) => ({ value: x })')
+    expectValid(`const fn = (x) => {
+  return x * 2
+}`)
+  })
 })

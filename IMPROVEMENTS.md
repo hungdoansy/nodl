@@ -134,17 +134,10 @@ const x = 1 // Instrumentation thinks we're inside a template literal
 
 **Possible fix:** Strip or skip comment content before updating template literal state.
 
-### 13. Arrow function continuations not detected
+### 13. ~~Arrow function continuations not detected~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isChainContinuation()`
 
-Only `.`, `?`, `:` are checked as continuation prefixes. Lines starting with `=>` aren't detected.
-
-```js
-const fn = (x)
-  => x * 2 // __line__ inserted before =>, breaking syntax
-```
-
-**Possible fix:** Add `=>` to the continuation detection patterns.
+Added `=>` to continuation detection in `isChainContinuation()`, `isExpression()`, and `nextNonEmptyIsContinuation()`. The instrumenter no longer inserts `__line__` before or on `=>` continuation lines. Note: `=>` on a new line is invalid JS syntax regardless — esbuild rejects it. But the instrumenter no longer makes it worse.
 
 ### 14. `setInterval` never drains
 **File:** `apps/desktop/src/main/executor/worker.ts`

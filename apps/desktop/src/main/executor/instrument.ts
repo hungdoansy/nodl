@@ -18,8 +18,8 @@ export function isExpression(line: string): boolean {
   if (STATEMENT_PREFIXES.some((p) => trimmed.startsWith(p))) return false
   // Reject lines starting with closing/continuation chars (multi-line expression parts)
   if (/^[}\])]/.test(trimmed)) return false
-  if (/^[.,?:+\-*/%|&^~!]/.test(trimmed)) return false
-  if (/^(&&|\|\||\?\?)/.test(trimmed)) return false
+  if (/^[.,?:+\-*/%|&^~!=]/.test(trimmed)) return false
+  if (/^(&&|\|\||\?\?|=>)/.test(trimmed)) return false
   // Reject lines ending with opening/closing braces (block boundaries)
   if (trimmed.endsWith('{') || trimmed.endsWith('}')) return false
   // Reject lines ending with comma (multi-line args/arrays/objects)
@@ -120,7 +120,7 @@ function nextNonEmptyIsContinuation(lines: string[], fromIndex: number): boolean
   for (let j = fromIndex + 1; j < lines.length; j++) {
     const t = lines[j].trim()
     if (!t) continue
-    return /^[.?]/.test(t)
+    return isChainContinuation(t)
   }
   return false
 }
@@ -134,6 +134,8 @@ function isChainContinuation(trimmed: string): boolean {
   if (/^[.?]/.test(trimmed)) return true
   // Ternary continuation: line starts with `: ` (but not `case X:` or `default:`)
   if (/^:\s/.test(trimmed) && !trimmed.startsWith('case ') && !trimmed.startsWith('default')) return true
+  // Arrow function continuation: line starts with `=>`
+  if (trimmed.startsWith('=>')) return true
   return false
 }
 
@@ -220,7 +222,10 @@ export function instrumentCode(code: string): string {
     const stmtCtx = isStatementContext(stack)
     const isContinuation = isChainContinuation(trimmed)
 
-    if (stmtCtx && !isContinuation) {
+    // Skip __line__ if this line or the next is a continuation (arrow, chain, ternary)
+    // Inserting a statement between `(x)` and `=> ...` would break arrow syntax
+    const nextIsContinuation = nextNonEmptyIsContinuation(lines, i)
+    if (stmtCtx && !isContinuation && !nextIsContinuation) {
       // Safe to insert __line__ tracking
       result.push(`__line__.value = ${lineNum};`)
 
@@ -228,7 +233,7 @@ export function instrumentCode(code: string): string {
       if (trimmed.startsWith('import ')) {
         const transformed = transformImports(trimmed)
         result.push(transformed)
-      } else if (stack.length === 0 && isExpression(trimmed) && !nextNonEmptyIsContinuation(lines, i)) {
+      } else if (stack.length === 0 && isExpression(trimmed) && !nextIsContinuation) {
         // Only wrap with __expr__ at top level (stack empty) and not starting a chain
         const expr = trimmed.replace(/;$/, '')
         result.push(`__expr__(${lineNum}, ${expr});`)

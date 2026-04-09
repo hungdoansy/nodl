@@ -108,6 +108,18 @@ describe('isExpression', () => {
     expect(isExpression('break')).toBe(false)
     expect(isExpression('continue')).toBe(false)
   })
+
+  it('rejects arrow function continuations', () => {
+    expect(isExpression('=> x * 2')).toBe(false)
+    expect(isExpression('=> ({ value: x })')).toBe(false)
+    expect(isExpression('=> {')).toBe(false)
+  })
+
+  it('rejects lines starting with = (assignment continuations)', () => {
+    expect(isExpression('= 42')).toBe(false)
+    expect(isExpression('== true')).toBe(false)
+    expect(isExpression('=== 0')).toBe(false)
+  })
 })
 
 describe('instrumentCode', () => {
