@@ -74,12 +74,10 @@ Promise.reject(new Error("oops")) // Expression tracked, rejection lost
 
 **Possible fix:** Capture rejection in the `__expr__` handler and send it as an error `OutputEntry` to the renderer.
 
-### 8. Exit code 0 without result = silent failure
+### 8. ~~Exit code 0 without result = silent failure~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/runner.ts`
 
-If the worker exits cleanly (code 0) but never sent a `result` message, the runner doesn't report an error. The user sees no output and no error.
-
-**Possible fix:** Track whether a `result` or `error` message was received. If the process exits without one, fire `onDone` with a synthetic error.
+Added `gotResult` flag. On exit, if no `result`/`error` message was received: exit code 0 fires `onDone({ success: true })`, non-zero fires `onDone` with an error. The user no longer sees a blank panel when the worker exits silently.
 
 ---
 

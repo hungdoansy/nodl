@@ -64,6 +64,7 @@ export function createRunner(): Runner {
   return {
     run(payload: RunCodePayload, callbacks: RunnerCallbacks) {
       stopped = false
+      let gotResult = false
       const startTime = Date.now()
 
       child = fork(WORKER_PATH, [], {
@@ -85,12 +86,14 @@ export function createRunner(): Runner {
         if (msg.type === 'console' && msg.entry) {
           callbacks.onOutput(msg.entry)
         } else if (msg.type === 'result' && msg.result) {
+          gotResult = true
           cleanup()
           callbacks.onDone({
             ...msg.result,
             duration: Date.now() - startTime
           })
         } else if (msg.type === 'error') {
+          gotResult = true
           cleanup()
           callbacks.onDone({
             success: false,
@@ -111,13 +114,19 @@ export function createRunner(): Runner {
       })
 
       child.on('exit', (code) => {
-        if (stopped) return
-        if (code !== 0 && child) {
-          cleanup()
+        if (stopped || gotResult) return
+        cleanup()
+        if (code !== 0) {
           callbacks.onDone({
             success: false,
             duration: Date.now() - startTime,
             error: `Process exited with code ${code}`
+          })
+        } else {
+          // Exit 0 but no result/error message — synthetic completion
+          callbacks.onDone({
+            success: true,
+            duration: Date.now() - startTime
           })
         }
       })
