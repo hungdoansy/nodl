@@ -65,7 +65,10 @@ export function createConsoleCapturer(send: (entry: OutputEntry) => void) {
       const entry: OutputEntry = {
         id: generateId(),
         method,
-        args: method === 'clear' ? [] : args.map((a) => serializeArg(a)),
+        args: method === 'clear' ? [] : (() => {
+          const seen = new WeakSet()
+          return args.map((a) => serializeArg(a, seen))
+        })(),
         timestamp: Date.now()
       }
       send(entry)

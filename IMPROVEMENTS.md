@@ -144,12 +144,10 @@ Only `log`, `warn`, `error`, `info`, `debug`, `table`, `clear` are captured. Mis
 
 **Possible fix:** Add handlers for the missing methods, at minimum `console.assert()`, `console.time()`, and `console.trace()`.
 
-### 17. Circular reference detection is per-argument
+### 17. ~~Circular reference detection is per-argument~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`
 
-Each argument in `console.log(a, b)` gets its own `WeakSet`. If `a` and `b` reference the same circular object, it's serialized twice.
-
-**Possible fix:** Share a single `WeakSet` across all arguments within one `console.log()` call.
+A single `WeakSet` is now created per `console.log()` call and shared across all arguments. If the same circular object appears as multiple args, the second reference is `[Circular]` instead of being serialized again.
 
 ### 18. No JSX support in JavaScript mode
 **File:** `apps/desktop/src/main/executor/transpiler.ts`

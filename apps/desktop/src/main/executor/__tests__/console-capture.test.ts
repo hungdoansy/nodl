@@ -89,6 +89,17 @@ describe('createConsoleCapturer', () => {
     expect(entries[0].args[0]).toEqual({ a: 1, self: '[Circular]' })
   })
 
+  it('shares circular detection across multiple args', () => {
+    const { entries, console } = setup()
+    const shared: Record<string, unknown> = { x: 1 }
+    shared.self = shared
+    // Same circular object as two separate args
+    console.log(shared, shared)
+    expect(entries[0].args[0]).toEqual({ x: 1, self: '[Circular]' })
+    // Second arg sees the same object already in WeakSet → [Circular]
+    expect(entries[0].args[1]).toBe('[Circular]')
+  })
+
   it('serializes functions', () => {
     const { entries, console } = setup()
     console.log(function myFunc() {})
