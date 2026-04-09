@@ -41,8 +41,11 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
 
-      - name: Build and package
-        run: pnpm run dist -- --${{ matrix.arch }} --publish never
+      - name: Build app
+        run: pnpm run build
+
+      - name: Package
+        run: npx electron-builder --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
