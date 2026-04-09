@@ -116,10 +116,17 @@ export function OutputPane() {
     return unsub
   }, [outputMode])
 
-  // Auto-scroll to bottom in console mode when new entries arrive
+  // Auto-scroll when new entries arrive
   useEffect(() => {
-    if (outputMode === 'console' && scrollRef.current) {
+    if (!scrollRef.current) return
+    if (outputMode === 'console') {
+      // Console mode: always scroll to bottom
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    } else {
+      // Aligned mode: re-sync to editor's current scroll position
+      // (new output may have changed the content height)
+      const { scrollTop } = useScrollSync.getState()
+      scrollRef.current.scrollTop = scrollTop
     }
   }, [entries, outputMode])
 

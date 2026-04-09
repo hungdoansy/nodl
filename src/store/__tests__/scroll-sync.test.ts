@@ -29,4 +29,24 @@ describe('useScrollSync', () => {
     expect(useScrollSync.getState().scrollTop).toBe(200)
     expect(useScrollSync.getState().source).toBe('output')
   })
+
+  it('subscribers are notified on scroll change', () => {
+    const values: number[] = []
+    const unsub = useScrollSync.subscribe((state) => {
+      values.push(state.scrollTop)
+    })
+    useScrollSync.getState().setScrollTop(100, 'editor')
+    useScrollSync.getState().setScrollTop(250, 'editor')
+    unsub()
+    useScrollSync.getState().setScrollTop(999, 'editor')
+    expect(values).toEqual([100, 250])
+  })
+
+  it('getState returns current position for re-sync after content change', () => {
+    // Simulates the fix: output reads editor's current position when entries change
+    useScrollSync.getState().setScrollTop(500, 'editor')
+    // After new output arrives, output panel reads current state to re-sync
+    const { scrollTop } = useScrollSync.getState()
+    expect(scrollTop).toBe(500)
+  })
 })

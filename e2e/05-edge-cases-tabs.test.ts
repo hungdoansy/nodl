@@ -432,3 +432,50 @@ test('E2E-100: rapid re-execution does not crash', async () => {
   const editor = page.locator('.monaco-editor')
   await expect(editor.first()).toBeVisible()
 })
+
+// --- E2E-101: Output auto-scrolls in aligned mode when editor is at bottom ---
+test('E2E-101: output panel scrolls to match editor after execution', async () => {
+  // Generate enough lines to make the editor scrollable, with output at the bottom
+  const lines: string[] = []
+  for (let i = 0; i < 50; i++) {
+    lines.push(`// line ${i}`)
+  }
+  lines.push('console.log("bottom output")')
+  await typeCode(page, lines.join('\n'))
+
+  // Ensure we're in aligned mode
+  const consoleToggle = page.locator('button[title="Switch to line-aligned mode"]')
+  if (await consoleToggle.isVisible().catch(() => false)) {
+    await consoleToggle.click()
+    await page.waitForTimeout(300)
+  }
+
+  // Scroll editor to the bottom via Monaco API
+  await page.evaluate(() => {
+    const editors = (window as any).monaco?.editor?.getEditors?.()
+    if (editors && editors.length > 0) {
+      const editor = editors[0]
+      const model = editor.getModel()
+      if (model) {
+        editor.revealLine(model.getLineCount())
+      }
+    }
+  })
+  await page.waitForTimeout(300)
+
+  // Run code
+  await runCode(page)
+  await waitForExecution(page)
+
+  // Check that the output panel has scrolled down (scrollTop > 0)
+  const outputScrollTop = await page.evaluate(() => {
+    const scrollContainers = document.querySelectorAll('.overflow-y-auto')
+    const outputContainer = scrollContainers[scrollContainers.length - 1]
+    return outputContainer ? outputContainer.scrollTop : 0
+  })
+  expect(outputScrollTop).toBeGreaterThan(0)
+
+  // And the output should contain our bottom line's output
+  const output = await getOutputText(page)
+  expect(output).toContain('bottom output')
+})
