@@ -56,7 +56,11 @@ export function createRunner(): Runner {
       timeoutId = null
     }
     if (child && !child.killed) {
-      child.kill('SIGKILL')
+      const killed = child.kill('SIGKILL')
+      if (!killed) {
+        // Retry once — process may have been in a transient state
+        try { child.kill('SIGKILL') } catch { /* already dead */ }
+      }
     }
     child = null
   }

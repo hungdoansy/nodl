@@ -11,10 +11,18 @@ export interface TranspileResult {
   errors: TranspileError[]
 }
 
+function detectJsx(code: string): boolean {
+  // Detect JSX: <Component or <div or <>
+  return /<[A-Za-z>]/.test(code)
+}
+
 export function transpile(code: string, loader: 'ts' | 'tsx' = 'ts'): TranspileResult {
+  // Auto-upgrade to tsx if JSX syntax is detected
+  const effectiveLoader = loader === 'ts' && detectJsx(code) ? 'tsx' : loader
+
   try {
     const result = transformSync(code, {
-      loader,
+      loader: effectiveLoader,
       target: 'esnext',
       jsx: 'automatic',
       sourcemap: false

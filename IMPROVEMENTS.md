@@ -120,12 +120,10 @@ Added support for `assert` (only outputs on falsy), `time`/`timeEnd` (internal t
 
 A single `WeakSet` is now created per `console.log()` call and shared across all arguments. If the same circular object appears as multiple args, the second reference is `[Circular]` instead of being serialized again.
 
-### 18. No JSX support in JavaScript mode
+### 18. ~~No JSX support in JavaScript mode~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/transpiler.ts`
 
-If the language is set to JavaScript but the code contains JSX, esbuild rejects it since the loader is `'ts'`, not `'tsx'`.
-
-**Possible fix:** Detect JSX syntax and switch to the `tsx` loader automatically.
+Added `detectJsx()` that checks for `<Component`, `<div`, or `<>` patterns. When JSX is detected and the loader is `'ts'`, it auto-upgrades to `'tsx'`.
 
 ### 19. Source maps disabled
 **File:** `apps/desktop/src/main/executor/transpiler.ts`
@@ -138,12 +136,10 @@ If the language is set to JavaScript but the code contains JSX, esbuild rejects 
 
 ## Low
 
-### 20. No zombie process cleanup retry
+### 20. ~~No zombie process cleanup retry~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/runner.ts`
 
-`child.kill('SIGKILL')` doesn't check its return value. On rare failure, the process lingers.
-
-**Possible fix:** Verify kill succeeded, retry if needed.
+`cleanup()` now checks the return value of `child.kill('SIGKILL')`. If it returns false (kill failed), retries once with try/catch to handle the case where the process died between the check and the retry.
 
 ### 21. `@__PURE__` stripping is fragile
 **File:** `apps/desktop/src/main/executor/transpiler.ts`

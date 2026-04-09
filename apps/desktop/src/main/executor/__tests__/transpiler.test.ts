@@ -164,4 +164,22 @@ describe('transpiler', () => {
     expect(result.errors).toHaveLength(0)
     // esbuild may compact, but instrumented code relies on this
   })
+
+  it('auto-detects JSX in ts mode and transpiles successfully', () => {
+    const result = transpile('const el = <div>hello</div>')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).toBeTruthy()
+  })
+
+  it('auto-detects JSX fragments', () => {
+    const result = transpile('const el = <>fragment</>')
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('does not false-positive on comparison operators', () => {
+    // `a < b` should not trigger JSX detection and cause issues
+    const result = transpile('const x = 1 < 2')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).toContain('1 < 2')
+  })
 })
