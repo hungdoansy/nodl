@@ -20,19 +20,10 @@ Added depth limit (8 levels), array item limit (1000), and object key limit (200
 
 ## High
 
-### 3. No persistent scope between runs
+### 3. No persistent scope between runs — DEFERRED
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-Each execution creates a new `AsyncFunction`. Variables from a previous run are gone.
-
-```js
-// Run 1:
-const x = 42
-// Run 2:
-x // ReferenceError
-```
-
-**Possible fix:** Maintain a shared `vm.Context` or accumulate declarations across runs (like a REPL).
+Each execution creates a new `AsyncFunction` in a fresh child process. Variables from a previous run are gone. Fixing this requires either a `vm.Context` that persists across runs (keeping the worker alive) or REPL-style declaration accumulation. Both are significant architectural changes that affect the isolation model.
 
 ### 4. ~~Regex literals rejected as expressions~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isExpression()`
@@ -68,12 +59,10 @@ Added `gotResult` flag. On exit, if no `result`/`error` message was received: ex
 
 Verified: `Buffer`, `URL`, `TextEncoder`, `TextDecoder`, `__dirname`, `__filename` are all available as Node.js globals inside `AsyncFunction`. They don't need to be passed as parameters. The worker runs in a real Node.js child process, so all globals are accessible.
 
-### 10. `require()` resolves relative to the worker, not the user's project
+### 10. `require()` resolves relative to the worker, not the user's project — DEFERRED
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-File paths in `require("./file")` or `fs.readFileSync("./data.json")` resolve relative to the worker process CWD, not the user's expected directory.
-
-**Possible fix:** Set the worker's CWD to the user's project directory, or rewrite relative paths during instrumentation.
+File paths in `require("./file")` or `fs.readFileSync("./data.json")` resolve relative to the worker process CWD, not the user's expected directory. Fixing this requires a "project directory" concept (e.g., letting users set a working directory per tab) and passing it to the worker's CWD.
 
 ### 11. ~~Dynamic imports not transformed~~ ❌ NOT A BUG
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `transformImports()`
@@ -115,12 +104,10 @@ A single `WeakSet` is now created per `console.log()` call and shared across all
 
 Added `detectJsx()` that checks for `<Component`, `<div`, or `<>` patterns. When JSX is detected and the loader is `'ts'`, it auto-upgrades to `'tsx'`.
 
-### 19. Source maps disabled
+### 19. Source maps disabled — DEFERRED
 **File:** `apps/desktop/src/main/executor/transpiler.ts`
 
-`sourcemap: false` is hardcoded. Error stack traces reference transpiled line numbers, and combined with `__line__` insertions shifting lines, error locations can be misleading.
-
-**Possible fix:** Enable sourcemaps and map error locations back to original source.
+`sourcemap: false` is hardcoded. Enabling source maps requires generating mappings through the full instrument→transpile→worker pipeline and mapping error stack traces back to original line numbers. The `__line__` instrumentation already provides correct line tracking for console output, so the main gap is in error stack traces.
 
 ---
 
