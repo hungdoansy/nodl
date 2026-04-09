@@ -41,6 +41,20 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
 
+      - name: Install esbuild for target arch
+        if: runner.arch == 'ARM64' && matrix.arch == 'x64'
+        run: |
+          ESBUILD_VER=$(node -e "console.log(require('esbuild/package.json').version)")
+          echo "Installing @esbuild/darwin-x64@$ESBUILD_VER"
+          pnpm add @esbuild/darwin-x64@$ESBUILD_VER
+          # Ensure it's a real directory, not just a symlink (for electron-builder)
+          if [ -L node_modules/@esbuild/darwin-x64 ]; then
+            TARGET=$(readlink node_modules/@esbuild/darwin-x64)
+            rm node_modules/@esbuild/darwin-x64
+            cp -r "$TARGET" node_modules/@esbuild/darwin-x64
+          fi
+          ls -la node_modules/@esbuild/
+
       - name: Build app
         run: pnpm run build
 
