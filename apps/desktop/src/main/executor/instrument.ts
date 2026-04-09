@@ -96,6 +96,14 @@ function updateStack(line: string, stack: (StackEntry | BraceContext)[], trimmed
       if (ch === inString) { inString = null; if (ch === '`') inTemplate.value = false }
       continue
     }
+    // Skip single-line comments — don't count backticks inside // ...
+    if (ch === '/' && line[i + 1] === '/') break
+    // Skip block comments — don't count backticks inside /* ... */
+    if (ch === '/' && line[i + 1] === '*') {
+      const end = line.indexOf('*/', i + 2)
+      if (end !== -1) { i = end + 1; continue }
+      break // unclosed block comment extends to end of line
+    }
     if (ch === '"' || ch === "'") { inString = ch; continue }
     if (ch === '`') { inString = '`'; inTemplate.value = true; continue }
     if (ch === '(') stack.push('(')

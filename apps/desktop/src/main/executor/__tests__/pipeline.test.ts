@@ -622,4 +622,22 @@ const obj = {
     expectValid('-x')
     expectValid('!someFlag')
   })
+
+  it('handles backtick in single-line comment without corrupting state', () => {
+    expectValid(`// This has a backtick \` in a comment
+const x = 1
+console.log(x)`)
+  })
+
+  it('handles backtick in block comment without corrupting state', () => {
+    expectValid(`/* backtick \` here */
+const x = 2
+console.log(x)`)
+  })
+
+  it('handles code after comment with backtick', () => {
+    expectValid(`const a = 1 // note: use \` for templates
+const b = 2
+console.log(a + b)`)
+  })
 })

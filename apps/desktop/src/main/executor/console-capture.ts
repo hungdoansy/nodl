@@ -56,24 +56,84 @@ export function serializeArg(arg: unknown, seen = new WeakSet(), depth = 0): unk
 }
 
 export function createConsoleCapturer(send: (entry: OutputEntry) => void) {
-  const methods: ConsoleMethod[] = ['log', 'warn', 'error', 'info', 'debug', 'table', 'clear']
+  const passthrough: ConsoleMethod[] = ['log', 'warn', 'error', 'info', 'debug', 'table', 'dir']
 
   const consoleObj: Record<string, (...args: unknown[]) => void> = {}
 
-  for (const method of methods) {
+  // Standard methods: serialize args and send
+  for (const method of passthrough) {
     consoleObj[method] = (...args: unknown[]) => {
-      const entry: OutputEntry = {
+      const seen = new WeakSet()
+      send({
         id: generateId(),
         method,
-        args: method === 'clear' ? [] : (() => {
-          const seen = new WeakSet()
-          return args.map((a) => serializeArg(a, seen))
-        })(),
+        args: args.map((a) => serializeArg(a, seen)),
         timestamp: Date.now()
-      }
-      send(entry)
+      })
     }
   }
+
+  // console.clear — no args
+  consoleObj.clear = () => {
+    send({ id: generateId(), method: 'clear', args: [], timestamp: Date.now() })
+  }
+
+  // console.assert(condition, ...args) — only outputs if condition is falsy
+  consoleObj.assert = (condition: unknown, ...args: unknown[]) => {
+    if (!condition) {
+      const seen = new WeakSet()
+      const msg = args.length > 0 ? args.map((a) => serializeArg(a, seen)) : ['Assertion failed']
+      send({ id: generateId(), method: 'error', args: msg, timestamp: Date.now() })
+    }
+  }
+
+  // console.time / console.timeEnd
+  const timers = new Map<string, number>()
+  consoleObj.time = (label = 'default') => {
+    timers.set(String(label), Date.now())
+  }
+  consoleObj.timeEnd = (label = 'default') => {
+    const key = String(label)
+    const start = timers.get(key)
+    if (start !== undefined) {
+      const ms = Date.now() - start
+      timers.delete(key)
+      send({ id: generateId(), method: 'log', args: [`${key}: ${ms}ms`], timestamp: Date.now() })
+    }
+  }
+
+  // console.count / console.countReset
+  const counters = new Map<string, number>()
+  consoleObj.count = (label = 'default') => {
+    const key = String(label)
+    const val = (counters.get(key) ?? 0) + 1
+    counters.set(key, val)
+    send({ id: generateId(), method: 'log', args: [`${key}: ${val}`], timestamp: Date.now() })
+  }
+  consoleObj.countReset = (label = 'default') => {
+    counters.delete(String(label))
+  }
+
+  // console.trace — log with stack trace
+  consoleObj.trace = (...args: unknown[]) => {
+    const stack = new Error().stack?.split('\n').slice(2).join('\n') ?? ''
+    const seen = new WeakSet()
+    send({
+      id: generateId(),
+      method: 'log',
+      args: [...args.map((a) => serializeArg(a, seen)), `\n${stack}`],
+      timestamp: Date.now()
+    })
+  }
+
+  // console.group / console.groupEnd — output as log (no visual nesting in our output panel)
+  consoleObj.group = (...args: unknown[]) => {
+    if (args.length > 0) {
+      const seen = new WeakSet()
+      send({ id: generateId(), method: 'log', args: args.map((a) => serializeArg(a, seen)), timestamp: Date.now() })
+    }
+  }
+  consoleObj.groupEnd = () => { /* no-op — no visual nesting support yet */ }
 
   return consoleObj
 }

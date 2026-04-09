@@ -77,16 +77,10 @@ Added `gotResult` flag. On exit, if no `result`/`error` message was received: ex
 
 ## Medium
 
-### 9. Missing Node.js globals in worker
+### 9. ~~Missing Node.js globals in worker~~ ❌ NOT A BUG
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-The `AsyncFunction` only receives `require`, `__console__`, `__expr__`, `__line__` as parameters. Common globals like `Buffer`, `__filename`, `__dirname` are unavailable or point to the worker's context.
-
-```js
-Buffer.from("hello") // ReferenceError
-```
-
-**Possible fix:** Pass `Buffer`, `URL`, `TextEncoder`, `TextDecoder`, etc. as additional parameters to the `AsyncFunction`.
+Verified: `Buffer`, `URL`, `TextEncoder`, `TextDecoder`, `__dirname`, `__filename` are all available as Node.js globals inside `AsyncFunction`. They don't need to be passed as parameters. The worker runs in a real Node.js child process, so all globals are accessible.
 
 ### 10. `require()` resolves relative to the worker, not the user's project
 **File:** `apps/desktop/src/main/executor/worker.ts`
@@ -102,17 +96,10 @@ File paths in `require("./file")` or `fs.readFileSync("./data.json")` resolve re
 
 **Possible fix:** Leave dynamic imports as-is (they work natively in Node.js) or ensure the AsyncFunction context supports them.
 
-### 12. Template literals in comments corrupt state
+### 12. ~~Template literals in comments corrupt state~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts`
 
-A backtick inside a comment flips the `inTemplate` tracker, corrupting instrumentation for subsequent lines.
-
-```js
-// This has a backtick ` in a comment
-const x = 1 // Instrumentation thinks we're inside a template literal
-```
-
-**Possible fix:** Strip or skip comment content before updating template literal state.
+Added `//` and `/* */` comment detection in `updateStack()`. When the character loop encounters `//` outside a string, it stops processing the rest of the line. Block comments `/* ... */` skip to the closing `*/`. Backticks inside comments no longer flip `inTemplate`.
 
 ### 13. ~~Arrow function continuations not detected~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isChainContinuation()`
@@ -137,12 +124,10 @@ If the worker sends a result at t=5001ms but the timeout fires at t=5000ms, the 
 
 **Possible fix:** Add a small grace period after timeout, or check for pending messages before killing.
 
-### 16. Many console methods uncaptured
+### 16. ~~Many console methods uncaptured~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`
 
-Only `log`, `warn`, `error`, `info`, `debug`, `table`, `clear` are captured. Missing: `assert`, `time`/`timeEnd`, `count`/`countReset`, `trace`, `dir`, `group`/`groupEnd`.
-
-**Possible fix:** Add handlers for the missing methods, at minimum `console.assert()`, `console.time()`, and `console.trace()`.
+Added support for `assert` (only outputs on falsy), `time`/`timeEnd` (internal timer map), `count`/`countReset` (counter map), `trace` (with stack trace), `dir` (like log), `group`/`groupEnd` (group outputs as log, groupEnd is no-op). Updated `ConsoleMethod` type in `shared/types.ts`.
 
 ### 17. ~~Circular reference detection is per-argument~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/console-capture.ts`

@@ -210,6 +210,73 @@ describe('createConsoleCapturer', () => {
     expect(serialized['...']).toBe('300 more keys')
   })
 
+  it('captures console.assert — only on falsy', () => {
+    const { entries, console } = setup()
+    console.assert(true, 'should not appear')
+    expect(entries).toHaveLength(0)
+    console.assert(false, 'assertion failed')
+    expect(entries).toHaveLength(1)
+    expect(entries[0].method).toBe('error')
+    expect(entries[0].args).toEqual(['assertion failed'])
+  })
+
+  it('captures console.assert with no args on falsy', () => {
+    const { entries, console } = setup()
+    console.assert(false)
+    expect(entries[0].args).toEqual(['Assertion failed'])
+  })
+
+  it('captures console.time and timeEnd', () => {
+    const { entries, console } = setup()
+    console.time('test')
+    console.timeEnd('test')
+    expect(entries).toHaveLength(1)
+    expect(entries[0].args[0]).toMatch(/test: \d+ms/)
+  })
+
+  it('captures console.count and countReset', () => {
+    const { entries, console } = setup()
+    console.count('x')
+    console.count('x')
+    console.count('x')
+    expect(entries).toHaveLength(3)
+    expect(entries[0].args).toEqual(['x: 1'])
+    expect(entries[1].args).toEqual(['x: 2'])
+    expect(entries[2].args).toEqual(['x: 3'])
+    console.countReset('x')
+    console.count('x')
+    expect(entries[3].args).toEqual(['x: 1'])
+  })
+
+  it('captures console.trace with stack', () => {
+    const { entries, console } = setup()
+    console.trace('trace msg')
+    expect(entries).toHaveLength(1)
+    expect(entries[0].args[0]).toBe('trace msg')
+    expect(entries[0].args[1]).toContain('\n')
+  })
+
+  it('captures console.dir like log', () => {
+    const { entries, console } = setup()
+    console.dir({ a: 1 })
+    expect(entries).toHaveLength(1)
+    expect(entries[0].method).toBe('dir')
+    expect(entries[0].args[0]).toEqual({ a: 1 })
+  })
+
+  it('captures console.group with args', () => {
+    const { entries, console } = setup()
+    console.group('group label')
+    expect(entries).toHaveLength(1)
+    expect(entries[0].args).toEqual(['group label'])
+  })
+
+  it('console.groupEnd is a no-op', () => {
+    const { entries, console } = setup()
+    console.groupEnd()
+    expect(entries).toHaveLength(0)
+  })
+
   it('truncates deeply nested arrays at max depth', () => {
     const { entries, console } = setup()
     let arr: unknown = ['leaf']

@@ -92,7 +92,7 @@ export interface PersistedState {
 }
 
 /** Console methods we capture */
-export type ConsoleMethod = 'log' | 'warn' | 'error' | 'info' | 'debug' | 'table' | 'clear'
+export type ConsoleMethod = 'log' | 'warn' | 'error' | 'info' | 'debug' | 'table' | 'clear' | 'assert' | 'time' | 'timeEnd' | 'count' | 'countReset' | 'trace' | 'dir' | 'group' | 'groupEnd'
 
 /** A single console output entry */
 export interface OutputEntry {
