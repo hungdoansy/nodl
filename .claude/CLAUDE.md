@@ -4,17 +4,30 @@
 
 nodl is a desktop JavaScript/TypeScript code scratchpad (like RunJS). Users write code in a Monaco editor, hit Cmd+Enter, and see output inline next to the corresponding source lines.
 
-**Stack:** Electron + React 19 + Vite (via electron-vite) + Zustand + Monaco Editor + Tailwind CSS v3 + esbuild
+**Monorepo:** Turborepo + pnpm workspaces
+- `apps/desktop/` — Electron app (Electron + React 19 + electron-vite + Zustand + Monaco + Tailwind v3 + esbuild)
+- `apps/web/` — Landing page (Next.js, static export)
 
 ## Quick Start
 
 ```bash
-pnpm install
-pnpm run dev        # Start dev (builds worker + launches electron-vite)
-pnpm run test       # Run all tests (vitest)
-pnpm run build      # Production build
-pnpm run pack       # Build + package to .app (dir only)
-pnpm run dist       # Build + package to DMG/installer
+pnpm install              # Install all workspace deps
+pnpm run dev              # Start all apps (turbo)
+pnpm run build            # Build all apps (turbo)
+pnpm run test             # Test all apps (turbo)
+
+# Desktop app specifically:
+cd apps/desktop
+pnpm run dev              # Electron dev mode
+pnpm run test             # 248 unit tests (vitest)
+pnpm run test:e2e         # 101 E2E tests (playwright)
+pnpm run pack             # Package to .app (local testing)
+pnpm run dist             # Package to DMG/installer
+
+# Landing page:
+cd apps/web
+pnpm run dev              # Next.js dev server
+pnpm run build            # Static export to out/
 ```
 
 ## Architecture
@@ -59,6 +72,8 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
 
 ## File Structure
+
+All desktop app paths below are relative to `apps/desktop/`.
 
 ```
 src/

@@ -24,6 +24,9 @@ jobs:
             arch: x64
 
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +39,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        working-directory: .
         run: pnpm install
 
       - name: Run unit tests
@@ -65,11 +69,11 @@ jobs:
         with:
           name: nodl-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.deb
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.deb
           if-no-files-found: ignore
 
   release:

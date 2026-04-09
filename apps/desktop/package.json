@@ -1,0 +1,57 @@
+{
+  "name": "@nodl/desktop",
+  "version": "1.0.0",
+  "description": "A fast, lightweight desktop scratchpad for writing and running JavaScript/TypeScript code with instant inline output",
+  "main": "./out/main/index.js",
+  "author": {
+    "name": "Hung Doan",
+    "email": "hungdoansy@gmail.com",
+    "url": "https://github.com/hungdoansy"
+  },
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/main/executor/worker.ts'],bundle:true,platform:'node',format:'cjs',outfile:'out/worker/worker.cjs',external:['electron']})\"",
+    "dev": "pnpm run build:worker && electron-vite dev",
+    "build": "electron-vite build && pnpm run build:worker && cp out/worker/worker.cjs out/main/worker.cjs",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "tsc --noEmit",
+    "pack": "pnpm run build && electron-builder --dir",
+    "dist": "pnpm run build && electron-builder"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "electron-store": "^11.0.2",
+    "esbuild": "^0.28.0",
+    "lucide-react": "^1.7.0",
+    "nanoid": "^5.1.7",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-resizable-panels": "^4.9.0",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^25.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.27",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0",
+    "jsdom": "^29.0.2",
+    "postcss": "^8.5.8",
+    "tailwindcss": "3",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.2",
+    "vitest": "^4.1.3"
+  }
+}
