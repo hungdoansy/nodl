@@ -20,7 +20,9 @@ export function isExpression(line: string): boolean {
   if (/^[}\])]/.test(trimmed)) return false
   // Reject binary/assignment operator continuations, but allow unary prefix operators
   // Unary: !x, ~x, +x, -x are valid expressions when followed by a word char or (
-  if (/^[.,?:*/%|&^=]/.test(trimmed)) return false
+  if (/^[.,?:*%|&^=]/.test(trimmed)) return false
+  // / is division (continuation) unless it's a regex literal: /pattern/flags
+  if (trimmed.startsWith('/') && !/^\/(?:[^/\\]|\\.)*\/[gimsuy]*$/.test(trimmed)) return false
   if (/^(&&|\|\||\?\?|=>)/.test(trimmed)) return false
   // +/- are unary only if followed by a word char or paren; otherwise continuation
   if (/^[+\-]/.test(trimmed) && !/^[+\-][\w(]/.test(trimmed)) return false

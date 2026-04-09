@@ -126,6 +126,18 @@ describe('isExpression', () => {
     expect(isExpression('=> {')).toBe(false)
   })
 
+  it('accepts regex literals as expressions', () => {
+    expect(isExpression('/test/gi')).toBe(true)
+    expect(isExpression('/^hello$/')).toBe(true)
+    expect(isExpression('/foo\\/bar/')).toBe(true)
+    expect(isExpression('/\\d+/g')).toBe(true)
+  })
+
+  it('rejects division continuations', () => {
+    expect(isExpression('/ 2')).toBe(false)
+    expect(isExpression('/= 3')).toBe(false)
+  })
+
   it('rejects lines starting with = (assignment continuations)', () => {
     expect(isExpression('= 42')).toBe(false)
     expect(isExpression('== true')).toBe(false)

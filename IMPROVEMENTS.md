@@ -40,16 +40,10 @@ x // ReferenceError
 
 **Possible fix:** Maintain a shared `vm.Context` or accumulate declarations across runs (like a REPL).
 
-### 4. Regex literals rejected as expressions
+### 4. ~~Regex literals rejected as expressions~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isExpression()`
 
-Lines starting with `/` are rejected (treated as division operator), so regex literals at the top level aren't wrapped with `__expr__()`.
-
-```js
-/test/gi // Not recognized as an expression
-```
-
-**Possible fix:** Add regex detection — if a line starts with `/` and ends with `/[gimsuy]*`, treat it as an expression.
+Split `/` handling: if the line matches `/pattern/flags` (regex literal syntax), it's accepted as an expression. Otherwise (`/ 2`, `/= 3`), it's rejected as a division continuation.
 
 ### 5. ~~Unary operators rejected as expressions~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `isExpression()`
