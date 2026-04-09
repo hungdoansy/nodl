@@ -81,12 +81,10 @@ File paths in `require("./file")` or `fs.readFileSync("./data.json")` resolve re
 
 **Possible fix:** Set the worker's CWD to the user's project directory, or rewrite relative paths during instrumentation.
 
-### 11. Dynamic imports not transformed
+### 11. ~~Dynamic imports not transformed~~ ❌ NOT A BUG
 **File:** `apps/desktop/src/main/executor/instrument.ts` — `transformImports()`
 
-`import("lodash")` is valid syntax but the transformer only handles static `import ... from` patterns.
-
-**Possible fix:** Leave dynamic imports as-is (they work natively in Node.js) or ensure the AsyncFunction context supports them.
+Verified: `import("mod")` works natively inside `AsyncFunction` in Node.js. No transformation needed — dynamic imports are left as-is and work correctly.
 
 ### 12. ~~Template literals in comments corrupt state~~ ✅ FIXED
 **File:** `apps/desktop/src/main/executor/instrument.ts`
@@ -139,22 +137,12 @@ Added `detectJsx()` that checks for `<Component`, `<div`, or `<>` patterns. When
 
 `cleanup()` now checks the return value of `child.kill('SIGKILL')`. If it returns false (kill failed), retries once with try/catch to handle the case where the process died between the check and the retry.
 
-### 21. `@__PURE__` stripping is fragile
+### 21. ~~`@__PURE__` stripping is fragile~~ ❌ ACCEPTABLE RISK
 **File:** `apps/desktop/src/main/executor/transpiler.ts`
 
-The regex-based cleanup of `/* @__PURE__ */` comments is context-unaware and could theoretically strip legitimate code containing that pattern.
+The regex matches the exact esbuild pattern `/* @__PURE__ */ ` (with trailing space). No legitimate user code would contain this exact string. `treeShaking: false` was tested but doesn't prevent the annotations. The current regex approach is the best available option.
 
-**Possible fix:** Only strip these comments in known esbuild output patterns, or skip stripping entirely.
-
-### 22. Circular promise dependencies not tracked
+### 22. ~~Circular promise dependencies not tracked~~ ❌ NOT A BUG
 **File:** `apps/desktop/src/main/executor/worker.ts`
 
-`Promise.allSettled(pendingPromises)` doesn't recursively track promises that resolve to other promises.
-
-```js
-const p1 = new Promise(r => setTimeout(() => r(p2), 100))
-const p2 = new Promise(r => setTimeout(() => r(1), 200))
-p1 // __expr__ tracks p1 but not the chained p2
-```
-
-**Possible fix:** Recursively unwrap promise results until a non-promise value is reached.
+Verified: JavaScript's `.then()` automatically unwraps nested promises. `Promise.resolve(Promise.resolve(42)).then(v => ...)` gives `v = 42`. The `exprReporter`'s `.then()` handler already receives the fully unwrapped value — no manual recursion needed.
