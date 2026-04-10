@@ -7,6 +7,28 @@ const STATEMENT_PREFIXES = [
 ]
 
 /**
+ * Strip an inline `// comment` that is NOT inside a string literal.
+ * Needed before wrapping with __expr__() — otherwise the closing `);`
+ * becomes part of the comment and causes a parse error.
+ */
+export function stripInlineComment(code: string): string {
+  let inString: string | null = null
+  let escaped = false
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (inString) {
+      if (ch === inString) inString = null
+      continue
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { inString = ch; continue }
+    if (ch === '/' && code[i + 1] === '/') return code.slice(0, i).trimEnd()
+  }
+  return code
+}
+
+/**
  * Check if a line is a standalone expression that should have its value captured.
  * Must reject continuation lines (part of multi-line constructs) to avoid syntax errors.
  */
@@ -271,7 +293,9 @@ export function instrumentCode(code: string): string {
         result.push(transformed)
       } else if (stack.length === 0 && isExpression(trimmed) && !nextIsContinuation) {
         // Only wrap with __expr__ at top level (stack empty) and not starting a chain
-        const expr = trimmed.replace(/;$/, '')
+        // Strip inline comments first — otherwise `expr // comment` becomes
+        // `__expr__(N, expr // comment);` and the ); is swallowed by the comment
+        const expr = stripInlineComment(trimmed).replace(/;$/, '')
         result.push(`__expr__(${lineNum}, ${expr});`)
       } else {
         result.push(line)

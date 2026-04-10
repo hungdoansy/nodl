@@ -4,7 +4,7 @@
  * Simulates what the main process does before sending code to the worker.
  */
 import { describe, it, expect } from 'vitest'
-import { instrumentCode } from '../instrument'
+import { instrumentCode, stripInlineComment } from '../instrument'
 import { transpile } from '../transpiler'
 
 /** Run the full pipeline and verify no transpilation errors */
@@ -674,5 +674,72 @@ console.log(a + b)`)
     console.log(i, j)
   }
 }`)
+  })
+
+  // --- Inline comments on expressions ---
+  it('handles expression with inline comment', () => {
+    expectValid(`const p = Promise.reject(new Error("oops"))
+p  // Expression wraps this`)
+  })
+
+  it('handles number expression with inline comment', () => {
+    expectValid(`42 // the answer`)
+  })
+
+  it('handles variable expression with inline comment', () => {
+    expectValid(`const x = 1
+x // check value`)
+  })
+
+  it('handles expression with complex inline comment', () => {
+    expectValid(`const arr = [1, 2, 3]
+arr.length // should be 3`)
+  })
+
+  it('preserves URL strings that contain //', () => {
+    expectValid(`"http://example.com"`)
+    const { instrumented } = pipeline(`"http://example.com"`)
+    expect(instrumented).toContain('http://example.com')
+  })
+
+  it('preserves strings with // inside when followed by comment', () => {
+    expectValid(`"http://example.com" // a URL`)
+    const { instrumented } = pipeline(`"http://example.com" // a URL`)
+    expect(instrumented).toContain('http://example.com')
+    expect(instrumented).not.toContain('a URL')
+  })
+})
+
+describe('stripInlineComment', () => {
+  it('strips simple inline comment', () => {
+    expect(stripInlineComment('42 // the answer')).toBe('42')
+  })
+
+  it('returns code unchanged when no comment', () => {
+    expect(stripInlineComment('42')).toBe('42')
+  })
+
+  it('does not strip // inside double-quoted string', () => {
+    expect(stripInlineComment('"http://example.com"')).toBe('"http://example.com"')
+  })
+
+  it('does not strip // inside single-quoted string', () => {
+    expect(stripInlineComment("'http://example.com'")).toBe("'http://example.com'")
+  })
+
+  it('does not strip // inside template literal', () => {
+    expect(stripInlineComment('`http://example.com`')).toBe('`http://example.com`')
+  })
+
+  it('strips comment after string containing //', () => {
+    expect(stripInlineComment('"http://example.com" // a URL')).toBe('"http://example.com"')
+  })
+
+  it('strips comment with no space before //', () => {
+    expect(stripInlineComment('x//comment')).toBe('x')
+  })
+
+  it('handles escaped quotes in strings', () => {
+    expect(stripInlineComment('"she said \\"hi\\"" // quote')).toBe('"she said \\"hi\\""')
   })
 })
