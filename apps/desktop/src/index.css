@@ -45,6 +45,13 @@
 
   --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+
+  /* Output type colors */
+  --type-string: #a5d6a7;
+  --type-number: #90caf9;
+  --type-boolean: #ce93d8;
+  --type-function: #ffe082;
+  --type-regexp: #ef9a9a;
 }
 
 /* ─── Light theme ─── */
@@ -78,6 +85,13 @@
 
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
   --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border-subtle);
+
+  /* Output type colors */
+  --type-string: #16a34a;
+  --type-number: #2563eb;
+  --type-boolean: #9333ea;
+  --type-function: #b45309;
+  --type-regexp: #dc2626;
 }
 
 /* ─── Base ─── */

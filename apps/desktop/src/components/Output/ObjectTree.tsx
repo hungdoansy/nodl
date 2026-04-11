@@ -10,14 +10,14 @@ interface ObjectTreeProps {
 const meta: React.CSSProperties = { userSelect: 'none' }
 
 const TYPE_STYLES: Record<string, React.CSSProperties> = {
-  string: { color: '#a5d6a7' },
-  number: { color: '#90caf9' },
-  boolean: { color: '#ce93d8' },
+  string: { color: 'var(--type-string)' },
+  number: { color: 'var(--type-number)' },
+  boolean: { color: 'var(--type-boolean)' },
   null: { color: 'var(--text-tertiary)' },
   undefined: { color: 'var(--text-tertiary)' },
-  function: { color: '#ffe082' },
-  symbol: { color: '#ffe082' },
-  bigint: { color: '#90caf9' },
+  function: { color: 'var(--type-function)' },
+  symbol: { color: 'var(--type-function)' },
+  bigint: { color: 'var(--type-number)' },
 }
 
 function getTypeTag(data: unknown): string | null {
@@ -90,14 +90,29 @@ function getEntries(data: unknown): [string, unknown][] {
   return Object.entries(data)
 }
 
+const PAGE_SIZE = 5
+const PAGE_INCREMENT = 10
+
 const chevronStyle: React.CSSProperties = {
   color: 'var(--text-tertiary)',
   flexShrink: 0,
   transition: 'transform 150ms ease',
 }
 
+const paginationBtnStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: '1px 4px',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.85em',
+  color: 'var(--text-tertiary)',
+  borderRadius: 3,
+}
+
 export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) {
   const [expanded, setExpanded] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   if (data === '[Circular]') {
     return <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic', ...meta }}>[Circular]</span>
@@ -107,7 +122,7 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   if (typeof data === 'object' && data !== null) {
     const typed = data as { __type?: string; value?: string; message?: string; stack?: string }
     if (typed.__type === 'Date') return <span style={TYPE_STYLES.number}>{typed.value}</span>
-    if (typed.__type === 'RegExp') return <span style={{ color: '#ef9a9a' }}>{typed.value}</span>
+    if (typed.__type === 'RegExp') return <span style={{ color: 'var(--type-regexp)' }}>{typed.value}</span>
   }
 
   if (!isExpandable(data)) {
@@ -131,7 +146,7 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
     <div>
       <span
         style={toggleStyle}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => { setExpanded(!expanded); if (expanded) setVisibleCount(PAGE_SIZE) }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
       >
@@ -140,16 +155,40 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>{tag}</span>
       </span>
-      {expanded && (
-        <div style={{ marginLeft: 16, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8 }}>
-          {entries.map(([key, value]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-              <span style={{ color: 'var(--accent)', flexShrink: 0, ...meta }}>{key}:</span>
-              <ObjectTree data={value} depth={depth + 1} maxDepth={maxDepth} />
-            </div>
-          ))}
-        </div>
-      )}
+      {expanded && (() => {
+        const visibleEntries = entries.slice(0, visibleCount)
+        const remaining = entries.length - visibleCount
+        return (
+          <div style={{ marginLeft: 16, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 8 }}>
+            {visibleEntries.map(([key, value]) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                <span style={{ color: 'var(--accent)', flexShrink: 0, ...meta }}>{key}:</span>
+                <ObjectTree data={value} depth={depth + 1} maxDepth={maxDepth} />
+              </div>
+            ))}
+            {remaining > 0 && (
+              <div style={{ display: 'flex', gap: 8, paddingTop: 2, ...meta }}>
+                <button
+                  style={paginationBtnStyle}
+                  onClick={() => setVisibleCount((c) => c + PAGE_INCREMENT)}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)' }}
+                >
+                  {remaining} more…
+                </button>
+                <button
+                  style={paginationBtnStyle}
+                  onClick={() => setVisibleCount(entries.length)}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)' }}
+                >
+                  Show all
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
