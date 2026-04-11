@@ -21,7 +21,7 @@ if (__dirname.includes('app.asar')) {
 import { createRunner, setNodeModulesPath } from './executor/runner'
 import { transpile } from './executor/transpiler'
 import { instrumentCode } from './executor/instrument'
-import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath, checkPackageUpdates } from './executor/package-manager'
+import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath, checkPackageUpdates, getPackagePaths } from './executor/package-manager'
 import { IPC } from '../../shared/types'
 import { net } from 'electron'
 import type { RunCodePayload, PersistedState, AppSettings, UpdateInfo } from '../../shared/types'
@@ -193,6 +193,10 @@ ipcMain.handle(IPC.SEARCH_PACKAGES, (_event, query: string) => {
 
 ipcMain.handle(IPC.CHECK_PACKAGE_UPDATES, (_event, packages: { name: string; version: string }[]) => {
   return checkPackageUpdates(packages)
+})
+
+ipcMain.handle(IPC.GET_PACKAGE_PATHS, () => {
+  return getPackagePaths()
 })
 
 // --- Update check ---

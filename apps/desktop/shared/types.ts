@@ -19,7 +19,8 @@ export const IPC = {
   SEARCH_PACKAGES: 'ipc:search-packages',
   CHECK_FOR_UPDATES: 'ipc:check-for-updates',
   OPEN_EXTERNAL: 'ipc:open-external',
-  CHECK_PACKAGE_UPDATES: 'ipc:check-package-updates'
+  CHECK_PACKAGE_UPDATES: 'ipc:check-package-updates',
+  GET_PACKAGE_PATHS: 'ipc:get-package-paths'
 } as const
 
 export interface UpdateInfo {
@@ -149,6 +150,7 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<UpdateInfo>
   openExternal: (url: string) => void
   checkPackageUpdates: (packages: { name: string; version: string }[]) => Promise<Record<string, string>>
+  getPackagePaths: () => Promise<{ npmPath: string; packagesDir: string }>
 }
 
 declare global {

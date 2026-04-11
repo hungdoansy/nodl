@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { X, RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../../store/settings'
 import { useDialogTransition } from '../../hooks/useDialogTransition'
+import { getPackagePaths } from '../../ipc/bridge'
 import type { ThemeMode } from '../../../shared/types'
 
 interface SettingsDialogProps {
@@ -12,8 +13,15 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const settings = useSettingsStore()
   const { mounted, visible, close } = useDialogTransition(open)
+  const [packagePaths, setPackagePaths] = useState<{ npmPath: string; packagesDir: string } | null>(null)
 
   const handleClose = useCallback(() => close(onClose), [close, onClose])
+
+  useEffect(() => {
+    if (open && packagePaths === null) {
+      getPackagePaths().then(setPackagePaths)
+    }
+  }, [open, packagePaths])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() },
@@ -85,7 +93,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setSetting('executionTimeout', v)} />
           </Section>
 
-          <Section title="Appearance" last>
+          <Section title="Appearance">
             <SelectRow label="Theme" value={settings.theme}
               options={[
                 { value: 'dark', label: 'Dark' },
@@ -93,6 +101,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 { value: 'system', label: 'System' }
               ]}
               onChange={(v) => settings.setTheme(v as ThemeMode)} />
+          </Section>
+
+          <Section title="Packages" last>
+            <PathRow label="npm" value={packagePaths?.npmPath ?? '…'} />
+            <PathRow label="Packages dir" value={packagePaths?.packagesDir ?? '…'} />
           </Section>
 
           <div style={{ paddingTop: 14, marginTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
@@ -216,6 +229,25 @@ function SelectRow({
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
+    </div>
+  )
+}
+
+function PathRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</span>
+      <span
+        style={{
+          fontSize: 11,
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text-tertiary)',
+          wordBreak: 'break-all',
+          userSelect: 'text',
+        }}
+      >
+        {value}
+      </span>
     </div>
   )
 }

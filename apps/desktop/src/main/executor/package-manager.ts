@@ -155,6 +155,17 @@ function isNewer(latest: string, installed: string): boolean {
   return lPatch > iPatch
 }
 
+/** Returns the resolved npm binary path and packages storage directory. */
+export function getPackagePaths(): { npmPath: string; packagesDir: string } {
+  let npmPath: string
+  try {
+    npmPath = getNpm()
+  } catch {
+    npmPath = 'npm not found'
+  }
+  return { npmPath, packagesDir: PACKAGES_DIR }
+}
+
 export function removePackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {

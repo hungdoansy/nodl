@@ -86,3 +86,7 @@ export function openExternal(url: string): void {
 export async function checkPackageUpdates(packages: { name: string; version: string }[]): Promise<Record<string, string>> {
   return (await getAPI()?.checkPackageUpdates(packages)) ?? {}
 }
+
+export async function getPackagePaths(): Promise<{ npmPath: string; packagesDir: string }> {
+  return (await getAPI()?.getPackagePaths()) ?? { npmPath: 'unknown', packagesDir: 'unknown' }
+}
