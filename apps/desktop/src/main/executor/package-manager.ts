@@ -8,37 +8,28 @@ import type { InstalledPackage, PackageOperationResult, PackageSearchResult } fr
 const PACKAGES_DIR = join(app.getPath('userData'), 'packages')
 
 /**
- * Find a usable npm or pnpm binary.
+ * Find the npm binary.
  *
- * In dev mode the shell PATH contains the right binary. In the packaged .app
- * Electron launches with a minimal system PATH (/usr/bin:/bin:/usr/sbin:/sbin)
- * so pnpm/npm are invisible. We search well-known locations explicitly.
+ * In dev mode npm is on PATH. In the packaged .app Electron launches with a
+ * minimal system PATH (/usr/bin:/bin:/usr/sbin:/sbin) so npm is invisible.
+ * We search well-known locations explicitly.
  */
-function resolvePackageManager(): string {
+function resolveNpm(): string {
   const home = homedir()
-
   const isWin = process.platform === 'win32'
 
   const candidates = [
-    // Shell PATH (works in dev / when launched from terminal)
+    // Shell PATH (works in dev / terminal launch)
     isWin ? 'npm.cmd' : 'npm',
-    isWin ? 'pnpm.cmd' : 'pnpm',
     // Homebrew — Intel Mac
     '/usr/local/bin/npm',
-    '/usr/local/bin/pnpm',
     // Homebrew — Apple Silicon
     '/opt/homebrew/bin/npm',
-    '/opt/homebrew/bin/pnpm',
-    // pnpm standalone installer (macOS/Linux)
-    join(home, 'Library', 'pnpm', 'pnpm'),
-    join(home, '.local', 'share', 'pnpm', 'pnpm'),
-    // Windows — Node.js official installer default locations
+    // Windows — Node.js official installer
     'C:\\Program Files\\nodejs\\npm.cmd',
     join(home, 'AppData', 'Roaming', 'npm', 'npm.cmd'),
-    // Windows — pnpm standalone
-    join(home, 'AppData', 'Local', 'pnpm', 'pnpm.cmd'),
+    // Windows — Scoop
     join(home, 'scoop', 'shims', 'npm.cmd'),
-    join(home, 'scoop', 'shims', 'pnpm.cmd'),
   ]
 
   for (const bin of candidates) {
@@ -50,7 +41,7 @@ function resolvePackageManager(): string {
     }
   }
 
-  // Last resort: scan nvm versions directory (macOS/Linux)
+  // Last resort: scan nvm versions (macOS/Linux), newest Node first
   try {
     const nvmDir = process.env.NVM_DIR ?? join(home, '.nvm')
     const versionsDir = join(nvmDir, 'versions', 'node')
@@ -58,9 +49,8 @@ function resolvePackageManager(): string {
       const versions = readdirSync(versionsDir)
         .filter(v => v.startsWith('v'))
         .sort((a, b) => {
-          // Sort descending by semver so we try the newest Node first
-          const [, aMaj = 0, aMin = 0] = a.split('.').map(Number)
-          const [, bMaj = 0, bMin = 0] = b.split('.').map(Number)
+          const [aMaj = 0, aMin = 0] = a.slice(1).split('.').map(Number)
+          const [bMaj = 0, bMin = 0] = b.slice(1).split('.').map(Number)
           return bMaj !== aMaj ? bMaj - aMaj : bMin - aMin
         })
       for (const v of versions) {
@@ -72,16 +62,14 @@ function resolvePackageManager(): string {
     // nvm not present
   }
 
-  throw new Error(
-    'No package manager found. Install Node.js from https://nodejs.org'
-  )
+  throw new Error('npm not found. Install Node.js from https://nodejs.org')
 }
 
 // Resolved once per app session
-let _pm: string | null = null
-function getPackageManager(): string {
-  if (!_pm) _pm = resolvePackageManager()
-  return _pm
+let _npm: string | null = null
+function getNpm(): string {
+  if (!_npm) _npm = resolveNpm()
+  return _npm
 }
 
 function ensurePackagesDir(): void {
@@ -106,15 +94,14 @@ export function getNodeModulesPath(): string {
 export function installPackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {
-    const pm = getPackageManager()
-    execSync(`"${pm}" add ${name}`, {
+    const npm = getNpm()
+    execSync(`"${npm}" install ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 60000,
       env: { ...process.env, NODE_ENV: '' }
     })
 
-    // Read installed version from package.json
     const pkgJson = JSON.parse(readFileSync(join(PACKAGES_DIR, 'package.json'), 'utf-8'))
     const deps = pkgJson.dependencies ?? {}
     const version = deps[name] ?? deps[name.split('/').pop()!] ?? 'unknown'
@@ -129,8 +116,8 @@ export function installPackage(name: string): PackageOperationResult {
 export function removePackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {
-    const pm = getPackageManager()
-    execSync(`"${pm}" remove ${name}`, {
+    const npm = getNpm()
+    execSync(`"${npm}" uninstall ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 30000
