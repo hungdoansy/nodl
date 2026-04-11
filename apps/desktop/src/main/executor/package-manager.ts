@@ -1,5 +1,5 @@
 import { execSync } from 'child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { app } from 'electron'
@@ -17,19 +17,28 @@ const PACKAGES_DIR = join(app.getPath('userData'), 'packages')
 function resolvePackageManager(): string {
   const home = homedir()
 
+  const isWin = process.platform === 'win32'
+
   const candidates = [
     // Shell PATH (works in dev / when launched from terminal)
-    'npm',
-    'pnpm',
+    isWin ? 'npm.cmd' : 'npm',
+    isWin ? 'pnpm.cmd' : 'pnpm',
     // Homebrew — Intel Mac
     '/usr/local/bin/npm',
     '/usr/local/bin/pnpm',
     // Homebrew — Apple Silicon
     '/opt/homebrew/bin/npm',
     '/opt/homebrew/bin/pnpm',
-    // pnpm standalone installer default location
+    // pnpm standalone installer (macOS/Linux)
     join(home, 'Library', 'pnpm', 'pnpm'),
     join(home, '.local', 'share', 'pnpm', 'pnpm'),
+    // Windows — Node.js official installer default locations
+    'C:\\Program Files\\nodejs\\npm.cmd',
+    join(home, 'AppData', 'Roaming', 'npm', 'npm.cmd'),
+    // Windows — pnpm standalone
+    join(home, 'AppData', 'Local', 'pnpm', 'pnpm.cmd'),
+    join(home, 'scoop', 'shims', 'npm.cmd'),
+    join(home, 'scoop', 'shims', 'pnpm.cmd'),
   ]
 
   for (const bin of candidates) {
@@ -41,14 +50,20 @@ function resolvePackageManager(): string {
     }
   }
 
-  // Last resort: find npm inside nvm (use the highest installed version)
+  // Last resort: scan nvm versions directory (macOS/Linux)
   try {
     const nvmDir = process.env.NVM_DIR ?? join(home, '.nvm')
     const versionsDir = join(nvmDir, 'versions', 'node')
     if (existsSync(versionsDir)) {
-      const versions = execSync(`ls -1 "${versionsDir}"`, { stdio: 'pipe' })
-        .toString().trim().split('\n').filter(Boolean)
-      for (const v of versions.reverse()) {
+      const versions = readdirSync(versionsDir)
+        .filter(v => v.startsWith('v'))
+        .sort((a, b) => {
+          // Sort descending by semver so we try the newest Node first
+          const [, aMaj = 0, aMin = 0] = a.split('.').map(Number)
+          const [, bMaj = 0, bMin = 0] = b.split('.').map(Number)
+          return bMaj !== aMaj ? bMaj - aMaj : bMin - aMin
+        })
+      for (const v of versions) {
         const npmPath = join(versionsDir, v, 'bin', 'npm')
         if (existsSync(npmPath)) return npmPath
       }
@@ -58,8 +73,7 @@ function resolvePackageManager(): string {
   }
 
   throw new Error(
-    'No package manager found (tried npm, pnpm, Homebrew, pnpm standalone, nvm). ' +
-    'Install Node.js from https://nodejs.org or pnpm from https://pnpm.io'
+    'No package manager found. Install Node.js from https://nodejs.org'
   )
 }
 
