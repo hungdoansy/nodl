@@ -1,6 +1,6 @@
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo
 } from '../../shared/types'
 
 function getAPI(): ElectronAPI | null {
@@ -89,4 +89,8 @@ export async function checkPackageUpdates(packages: { name: string; version: str
 
 export async function getPackagePaths(): Promise<{ npmPath: string; packagesDir: string }> {
   return (await getAPI()?.getPackagePaths()) ?? { npmPath: 'unknown', packagesDir: 'unknown' }
+}
+
+export async function getTypeDefs(): Promise<TypeDefInfo[]> {
+  return (await getAPI()?.getTypeDefs()) ?? []
 }

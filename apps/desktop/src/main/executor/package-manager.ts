@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'path'
 import { homedir } from 'os'
 import { app } from 'electron'
-import type { InstalledPackage, PackageOperationResult, PackageSearchResult } from '../../../shared/types'
+import type { InstalledPackage, PackageOperationResult, PackageSearchResult, TypeDefInfo } from '../../../shared/types'
 
 const PACKAGES_DIR = join(app.getPath('userData'), 'packages')
 
@@ -218,4 +218,43 @@ export async function searchPackages(query: string): Promise<PackageSearchResult
   } catch {
     return []
   }
+}
+
+/**
+ * Read .d.ts entry points from installed packages that ship their own types.
+ * Returns the content of the top-level type definition file for each package.
+ */
+export function getTypeDefinitions(): TypeDefInfo[] {
+  const nodeModules = join(PACKAGES_DIR, 'node_modules')
+  if (!existsSync(nodeModules)) return []
+
+  const packages = listPackages()
+  const results: TypeDefInfo[] = []
+
+  for (const pkg of packages) {
+    try {
+      const pkgDir = join(nodeModules, pkg.name)
+      const pkgJsonPath = join(pkgDir, 'package.json')
+      if (!existsSync(pkgJsonPath)) continue
+
+      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+      const typesField = pkgJson.types ?? pkgJson.typings
+
+      let dtsPath: string | null = null
+      if (typesField) {
+        dtsPath = join(pkgDir, typesField)
+      } else if (existsSync(join(pkgDir, 'index.d.ts'))) {
+        dtsPath = join(pkgDir, 'index.d.ts')
+      }
+
+      if (dtsPath && existsSync(dtsPath)) {
+        const content = readFileSync(dtsPath, 'utf-8')
+        results.push({ packageName: pkg.name, filePath: dtsPath, content })
+      }
+    } catch {
+      // Skip packages whose types can't be read
+    }
+  }
+
+  return results
 }

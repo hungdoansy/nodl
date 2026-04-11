@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../../shared/types'
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo
 } from '../../shared/types'
 
 const api: ElectronAPI = {
@@ -102,6 +102,10 @@ const api: ElectronAPI = {
 
   getPackagePaths(): Promise<{ npmPath: string; packagesDir: string }> {
     return ipcRenderer.invoke(IPC.GET_PACKAGE_PATHS)
+  },
+
+  getTypeDefs(): Promise<TypeDefInfo[]> {
+    return ipcRenderer.invoke(IPC.GET_TYPE_DEFS)
   }
 }
 

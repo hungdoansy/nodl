@@ -10,6 +10,9 @@ import { useTheme } from '../../hooks/useTheme'
 import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
 import { useScrollSync } from '../../store/scroll-sync'
 import { useUIStore } from '../../store/ui'
+import { usePackagesStore } from '../../store/packages'
+import * as bridge from '../../ipc/bridge'
+import type { Monaco } from '@monaco-editor/react'
 
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -27,14 +30,18 @@ export function EditorPane() {
   const resolvedTheme = useTheme()
   const outputMode = useUIStore((s) => s.outputMode)
 
+  const packages = usePackagesStore((s) => s.packages)
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<Monaco | null>(null)
   const ignoreScrollRef = useRef(false)
+  const typeLibsRef = useRef<Map<string, { dispose: () => void }>>(new Map())
   const [editorVersion, setEditorVersion] = useState(0)
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    monacoRef.current = monaco
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ESNext,
       module: monaco.languages.typescript.ModuleKind.ESNext,
@@ -112,6 +119,38 @@ export function EditorPane() {
       useScrollSync.getState().setLineHeights(null)
     }
   }, [editorVersion, outputMode, fontSize, wordWrap])
+
+  // Load type definitions from installed packages into Monaco
+  useEffect(() => {
+    const monaco = monacoRef.current
+    if (!monaco) return
+
+    bridge.getTypeDefs().then((defs) => {
+      const currentLibs = typeLibsRef.current
+      const newNames = new Set(defs.map((d) => d.packageName))
+
+      // Dispose libs for removed packages
+      for (const [name, lib] of currentLibs) {
+        if (!newNames.has(name)) {
+          lib.dispose()
+          currentLibs.delete(name)
+        }
+      }
+
+      // Add or update libs for current packages
+      for (const def of defs) {
+        const existing = currentLibs.get(def.packageName)
+        if (existing) {
+          existing.dispose()
+        }
+        const lib = monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          def.content,
+          `file:///node_modules/${def.packageName}/index.d.ts`
+        )
+        currentLibs.set(def.packageName, lib)
+      }
+    })
+  }, [packages])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
