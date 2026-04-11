@@ -1,10 +1,74 @@
 import { execSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { homedir } from 'os'
 import { app } from 'electron'
 import type { InstalledPackage, PackageOperationResult, PackageSearchResult } from '../../../shared/types'
 
 const PACKAGES_DIR = join(app.getPath('userData'), 'packages')
+
+/**
+ * Find a usable npm or pnpm binary.
+ *
+ * In dev mode the shell PATH contains the right binary. In the packaged .app
+ * Electron launches with a minimal system PATH (/usr/bin:/bin:/usr/sbin:/sbin)
+ * so pnpm/npm are invisible. We search well-known locations explicitly.
+ */
+function resolvePackageManager(): string {
+  const home = homedir()
+
+  const candidates = [
+    // Shell PATH (works in dev / when launched from terminal)
+    'npm',
+    'pnpm',
+    // Homebrew — Intel Mac
+    '/usr/local/bin/npm',
+    '/usr/local/bin/pnpm',
+    // Homebrew — Apple Silicon
+    '/opt/homebrew/bin/npm',
+    '/opt/homebrew/bin/pnpm',
+    // pnpm standalone installer default location
+    join(home, 'Library', 'pnpm', 'pnpm'),
+    join(home, '.local', 'share', 'pnpm', 'pnpm'),
+  ]
+
+  for (const bin of candidates) {
+    try {
+      execSync(`"${bin}" --version`, { stdio: 'pipe', timeout: 3000 })
+      return bin
+    } catch {
+      // not available — try next
+    }
+  }
+
+  // Last resort: find npm inside nvm (use the highest installed version)
+  try {
+    const nvmDir = process.env.NVM_DIR ?? join(home, '.nvm')
+    const versionsDir = join(nvmDir, 'versions', 'node')
+    if (existsSync(versionsDir)) {
+      const versions = execSync(`ls -1 "${versionsDir}"`, { stdio: 'pipe' })
+        .toString().trim().split('\n').filter(Boolean)
+      for (const v of versions.reverse()) {
+        const npmPath = join(versionsDir, v, 'bin', 'npm')
+        if (existsSync(npmPath)) return npmPath
+      }
+    }
+  } catch {
+    // nvm not present
+  }
+
+  throw new Error(
+    'No package manager found (tried npm, pnpm, Homebrew, pnpm standalone, nvm). ' +
+    'Install Node.js from https://nodejs.org or pnpm from https://pnpm.io'
+  )
+}
+
+// Resolved once per app session
+let _pm: string | null = null
+function getPackageManager(): string {
+  if (!_pm) _pm = resolvePackageManager()
+  return _pm
+}
 
 function ensurePackagesDir(): void {
   if (!existsSync(PACKAGES_DIR)) {
@@ -28,7 +92,8 @@ export function getNodeModulesPath(): string {
 export function installPackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {
-    execSync(`pnpm add ${name}`, {
+    const pm = getPackageManager()
+    execSync(`"${pm}" add ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 60000,
@@ -50,7 +115,8 @@ export function installPackage(name: string): PackageOperationResult {
 export function removePackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {
-    execSync(`pnpm remove ${name}`, {
+    const pm = getPackageManager()
+    execSync(`"${pm}" remove ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 30000
