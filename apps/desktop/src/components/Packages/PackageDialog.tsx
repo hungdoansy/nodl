@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Download, X, Plus, Loader2 } from 'lucide-react'
+import { Search, Download, X, Plus, Loader2, RefreshCw } from 'lucide-react'
 import { usePackagesStore } from '../../store/packages'
 import { useDialogTransition } from '../../hooks/useDialogTransition'
 import * as bridge from '../../ipc/bridge'
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function PackageDialog({ open, onClose }: Props) {
-  const { packages, loadPackages, install, installing, remove, removing } = usePackagesStore()
+  const { packages, loadPackages, install, installing, remove, removing, update, updating, latestVersions, checkUpdates } = usePackagesStore()
   const [showSearch, setShowSearch] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PackageSearchResult[]>([])
@@ -24,12 +24,12 @@ export function PackageDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) {
-      loadPackages()
+      loadPackages().then(() => checkUpdates())
       setShowSearch(false)
       setQuery('')
       setResults([])
     }
-  }, [open, loadPackages])
+  }, [open, loadPackages, checkUpdates])
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
@@ -64,6 +64,7 @@ export function PackageDialog({ open, onClose }: Props) {
   if (!mounted) return null
 
   const installedNames = new Set(packages.map((p) => p.name))
+  const isBusy = installing !== null || removing !== null || updating !== null
 
   return (
     <div
@@ -171,7 +172,7 @@ export function PackageDialog({ open, onClose }: Props) {
                   ) : (
                     <button
                       onClick={() => install(`${pkg.name}@${pkg.version}`)}
-                      disabled={installing !== null}
+                      disabled={isBusy}
                       className="btn btn-primary"
                       style={{ padding: '3px 8px', flexShrink: 0, fontSize: 11 }}
                     >
@@ -200,31 +201,54 @@ export function PackageDialog({ open, onClose }: Props) {
                   </button>
                 </div>
               )}
-              {packages.map((pkg) => (
-                <div
-                  key={pkg.name}
-                  className="group flex items-center justify-between px-5 py-2"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{pkg.name}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{pkg.version}</span>
-                  </div>
-                  <button
-                    onClick={() => remove(pkg.name)}
-                    disabled={removing !== null}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
-                    style={{ padding: 2 }}
-                    title="Remove package"
+              {packages.map((pkg) => {
+                const availableUpdate = latestVersions[pkg.name]
+                return (
+                  <div
+                    key={pkg.name}
+                    className="group flex items-center justify-between px-5 py-2"
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                   >
-                    {removing === pkg.name
-                      ? <Loader2 size={12} className="animate-spin" style={{ color: 'var(--text-tertiary)' }} />
-                      : <X size={12} style={{ color: 'var(--text-tertiary)' }} />
-                    }
-                  </button>
-                </div>
-              ))}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{pkg.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{pkg.version}</span>
+                      {availableUpdate && (
+                        <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 6 }}>→ {availableUpdate}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {availableUpdate && (
+                        <button
+                          onClick={() => update(pkg.name, availableUpdate)}
+                          disabled={isBusy}
+                          className="btn btn-primary"
+                          style={{ padding: '2px 7px', fontSize: 11, flexShrink: 0 }}
+                          title={`Update to ${availableUpdate}`}
+                        >
+                          {updating === pkg.name
+                            ? <Loader2 size={10} className="animate-spin" />
+                            : <RefreshCw size={10} />
+                          }
+                          {updating === pkg.name ? 'Updating...' : 'Update'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => remove(pkg.name)}
+                        disabled={isBusy}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
+                        style={{ padding: 2 }}
+                        title="Remove package"
+                      >
+                        {removing === pkg.name
+                          ? <Loader2 size={12} className="animate-spin" style={{ color: 'var(--text-tertiary)' }} />
+                          : <X size={12} style={{ color: 'var(--text-tertiary)' }} />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

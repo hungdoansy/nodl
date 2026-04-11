@@ -121,6 +121,40 @@ export function installPackage(name: string): PackageOperationResult {
   }
 }
 
+/**
+ * Fetch latest versions for a list of packages from the npm registry.
+ * Returns a map of packageName → latestVersion for packages that have updates.
+ */
+export async function checkPackageUpdates(
+  packages: { name: string; version: string }[]
+): Promise<Record<string, string>> {
+  const results: Record<string, string> = {}
+  await Promise.all(
+    packages.map(async ({ name, version }) => {
+      try {
+        const res = await fetch(`https://registry.npmjs.org/${name}/latest`)
+        if (!res.ok) return
+        const data = await res.json() as { version: string }
+        if (data.version && isNewer(data.version, version)) {
+          results[name] = data.version
+        }
+      } catch {
+        // network error or package not found — skip
+      }
+    })
+  )
+  return results
+}
+
+function isNewer(latest: string, installed: string): boolean {
+  const parse = (v: string) => v.replace(/^\^|~/, '').split('.').map(n => parseInt(n, 10) || 0)
+  const [lMaj, lMin, lPatch] = parse(latest)
+  const [iMaj, iMin, iPatch] = parse(installed)
+  if (lMaj !== iMaj) return lMaj > iMaj
+  if (lMin !== iMin) return lMin > iMin
+  return lPatch > iPatch
+}
+
 export function removePackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {

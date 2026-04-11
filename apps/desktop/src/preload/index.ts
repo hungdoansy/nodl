@@ -94,6 +94,10 @@ const api: ElectronAPI = {
 
   openExternal(url: string) {
     ipcRenderer.send(IPC.OPEN_EXTERNAL, url)
+  },
+
+  checkPackageUpdates(packages: { name: string; version: string }[]): Promise<Record<string, string>> {
+    return ipcRenderer.invoke(IPC.CHECK_PACKAGE_UPDATES, packages)
   }
 }
 

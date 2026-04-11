@@ -82,3 +82,7 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 export function openExternal(url: string): void {
   getAPI()?.openExternal(url)
 }
+
+export async function checkPackageUpdates(packages: { name: string; version: string }[]): Promise<Record<string, string>> {
+  return (await getAPI()?.checkPackageUpdates(packages)) ?? {}
+}
