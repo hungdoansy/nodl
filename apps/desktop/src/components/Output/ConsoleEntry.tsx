@@ -1,6 +1,7 @@
 import type { OutputEntry } from '../../../shared/types'
 import { ObjectTree } from './ObjectTree'
 import { ConsoleTable } from './ConsoleTable'
+import { ArrowLeft } from 'lucide-react'
 
 const METHOD_COLORS: Record<string, string> = {
   log: 'var(--text-primary)',
@@ -57,7 +58,7 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
   if (isLastExpression(firstArg)) {
     return (
       <div style={{ ...fontStyle, color: 'var(--text-tertiary)' }}>
-        <span style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 6, userSelect: 'none' }}>{'<-'}</span>
+        <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 4, flexShrink: 0, display: 'inline' }} />
         {isPrimitive(firstArg.value) ? (
           <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
         ) : (
