@@ -92,6 +92,7 @@ export function OutputPane() {
   const outputMode = useUIStore((s) => s.outputMode)
   const toggleOutputMode = useUIStore((s) => s.toggleOutputMode)
   const lineHeight = Math.round(fontSize * 1.5)
+  const lineHeights = useScrollSync((s) => s.lineHeights)
   const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
   const errorEntries = useMemo(() => unlined.filter((e) => e.method === 'error'), [unlined])
   const nonErrorUnlined = useMemo(() => unlined.filter((e) => e.method !== 'error'), [unlined])
@@ -238,12 +239,13 @@ export function OutputPane() {
             <div className="relative" style={{ paddingTop: editorPaddingTop }}>
               {Array.from({ length: totalLines }, (_, i) => {
                 const lineNum = i + 1
+                const actualHeight = lineHeights?.get(lineNum) ?? lineHeight
                 const lineEntries = lined.get(lineNum)
                 if (!lineEntries) {
-                  return <div key={`line-${lineNum}`} style={{ height: lineHeight }} />
+                  return <div key={`line-${lineNum}`} style={{ height: actualHeight }} />
                 }
                 return (
-                  <div key={`line-${lineNum}`} style={{ minHeight: lineHeight }} className="flex items-start">
+                  <div key={`line-${lineNum}`} style={{ minHeight: actualHeight }} className="flex items-start">
                     <div className="flex-1 min-w-0">
                       {lineEntries.map((entry) => (
                         <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} lineHeight={lineHeight} />

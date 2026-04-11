@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { Play, Zap } from 'lucide-react'
 import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -29,6 +29,7 @@ export function EditorPane() {
 
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const ignoreScrollRef = useRef(false)
+  const [editorVersion, setEditorVersion] = useState(0)
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
@@ -51,6 +52,7 @@ export function EditorPane() {
 
   const handleMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
+    setEditorVersion((v) => v + 1)
     editor.addCommand(2048 | 3, () => run()) // eslint-disable-line no-bitwise
 
     // Broadcast scroll position to output pane
@@ -72,6 +74,44 @@ export function EditorPane() {
     })
     return unsub
   }, [outputMode])
+
+  // Compute per-line visual heights for output alignment (accounts for word wrap)
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || outputMode !== 'aligned' || !wordWrap) {
+      useScrollSync.getState().setLineHeights(null)
+      return
+    }
+
+    function compute() {
+      const ed = editorRef.current
+      if (!ed) return
+      const model = ed.getModel()
+      if (!model) return
+      const totalLines = model.getLineCount()
+      const baseLineHeight = Math.round(fontSize * 1.5)
+      const heights = new Map<number, number>()
+      for (let i = 1; i <= totalLines; i++) {
+        const top = ed.getTopForLineNumber(i)
+        const nextTop = i < totalLines
+          ? ed.getTopForLineNumber(i + 1)
+          : top + baseLineHeight
+        heights.set(i, nextTop - top)
+      }
+      useScrollSync.getState().setLineHeights(heights)
+    }
+
+    requestAnimationFrame(compute)
+
+    const d1 = editor.onDidLayoutChange(() => requestAnimationFrame(compute))
+    const d2 = editor.onDidChangeModelContent(() => requestAnimationFrame(compute))
+
+    return () => {
+      d1.dispose()
+      d2.dispose()
+      useScrollSync.getState().setLineHeights(null)
+    }
+  }, [editorVersion, outputMode, fontSize, wordWrap])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
