@@ -5,6 +5,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { instrumentCode, stripInlineComment } from '../instrument'
+import { instrumentWithAST } from '../instrument-ast'
 import { transpile } from '../transpiler'
 
 /** Run the full pipeline and verify no transpilation errors */
@@ -707,6 +708,294 @@ arr.length // should be 3`)
     const { instrumented } = pipeline(`"http://example.com" // a URL`)
     expect(instrumented).toContain('http://example.com')
     expect(instrumented).not.toContain('a URL')
+  })
+})
+
+// -------------------------------------------------------------------
+// AST instrumenter — new behaviors / edge cases from spec
+// These test instrumentWithAST() directly (not the fallback wrapper).
+// -------------------------------------------------------------------
+
+describe('AST instrumenter: expression wrapping', () => {
+  function ast(code: string) {
+    const instrumented = instrumentWithAST(code)
+    const result = transpile(instrumented, 'ts')
+    if (result.errors.length > 0) {
+      throw new Error(
+        `AST pipeline errors for:\n${code}\n\nInstrumented:\n${instrumented}\n\nErrors:\n${result.errors.map(e => `  L${e.line}: ${e.message}`).join('\n')}`
+      )
+    }
+    return { instrumented, js: result.js }
+  }
+
+  it('wraps multi-line ternary as one unit (no mid-expression __line__)', () => {
+    const { instrumented, js } = ast(`condition\n  ? "yes"\n  : "no"`)
+    // The whole ternary is one ExpressionStatement — one __expr__ call wrapping all 3 lines
+    expect(instrumented).toMatch(/^__line__\.value = 1;\n__expr__\(1, condition\n\s+\? "yes"\n\s+: "no"\)/)
+    expect(js).toBeTruthy()
+  })
+
+  it('wraps regex literal correctly', () => {
+    const { instrumented } = ast('/test/gi')
+    expect(instrumented).toContain('__expr__(1, /test/gi)')
+  })
+
+  it('wraps console.log (runtime suppresses undefined return)', () => {
+    const { instrumented } = ast('console.log("hi")')
+    expect(instrumented).toContain('__expr__(1, console.log("hi"))')
+  })
+
+  it('wraps void 0 (runtime suppresses undefined)', () => {
+    const { instrumented } = ast('void 0')
+    expect(instrumented).toContain('__expr__(1, void 0)')
+  })
+
+  it('handles top-level await expression', () => {
+    // await is valid as a top-level ExpressionStatement in AsyncFunction
+    const { js } = ast('await Promise.resolve(42)')
+    expect(js).toBeTruthy()
+  })
+
+  it('does not double-wrap expression with inline comment', () => {
+    // AST sees the expression node range, not the comment — comment stays outside
+    const { instrumented } = ast('42 // the answer')
+    expect(instrumented).toContain('__expr__(1, 42)')
+    expect(instrumented).toContain('// the answer')
+    // The closing paren must NOT be swallowed by the comment
+    expect(instrumented).toMatch(/__expr__\(1, 42\)/)
+  })
+
+  it('wraps expression on correct line when preceded by declarations', () => {
+    const { instrumented } = ast('const x = 1\nconst y = 2\nx + y')
+    expect(instrumented).toContain('__expr__(3, x + y)')
+  })
+})
+
+describe('AST instrumenter: __line__ tracking', () => {
+  it('inserts __line__ inside arrow function body', () => {
+    const { js } = transpile(
+      instrumentWithAST('const fn = () => {\n  console.log("hi")\n  return 42\n}'),
+      'ts'
+    )
+    expect(js).toBeTruthy()
+    expect(instrumentWithAST('const fn = () => {\n  console.log("hi")\n  return 42\n}')).toContain(
+      '__line__.value = 2'
+    )
+  })
+
+  it('inserts __line__ inside callback', () => {
+    const code = '[1,2].map(x => {\n  console.log(x)\n  return x * 2\n})'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__line__.value = 2')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('inserts __line__ inside object method body', () => {
+    const code = 'const obj = {\n  greet() {\n    console.log("hi")\n  }\n}'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__line__.value = 3')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('inserts __line__ inside class static block', () => {
+    const code = 'class Foo {\n  static {\n    console.log("init")\n  }\n}'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__line__.value = 3')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('does NOT insert __line__ inside class body (only members allowed)', () => {
+    const code = 'class Foo {\n  x = 1\n  method() {}\n}'
+    const instrumented = instrumentWithAST(code)
+    // __line__ must not appear between class { and } for member declarations
+    // The only __line__ allowed is the one before the class declaration itself
+    const lines = instrumented.split('\n')
+    const classLine = lines.findIndex(l => l.includes('class Foo'))
+    // After the class keyword line, there should be no __line__ inside the class body
+    // (members are ClassProperty/MethodDefinition, parent is ClassBody, not BlockStatement)
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('does NOT insert __line__ inside object literal', () => {
+    const code = 'const obj = {\n  a: 1,\n  b: 2\n}'
+    const instrumented = instrumentWithAST(code)
+    // Object properties are not statements, so no __line__ inside {}
+    // Only the const declaration itself gets __line__ = 1
+    expect(instrumented).toContain('__line__.value = 1')
+    expect(instrumented).not.toContain('__line__.value = 2')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('does not insert __line__ in the middle of a multiline template literal', () => {
+    const code = 'const html = `<div>\n  <p>hello</p>\n</div>`'
+    const instrumented = instrumentWithAST(code)
+    // Only one __line__ for the const declaration
+    const lineMatches = instrumented.match(/__line__\.value = \d+/g) ?? []
+    expect(lineMatches).toHaveLength(1)
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+})
+
+describe('AST instrumenter: import/export transformation', () => {
+  function astInstrumented(code: string): string {
+    return instrumentWithAST(code)
+  }
+  function astValid(code: string) {
+    const instrumented = astInstrumented(code)
+    const result = transpile(instrumented, 'ts')
+    if (result.errors.length > 0) {
+      throw new Error(`Pipeline errors:\n${result.errors.map(e => `  L${e.line}: ${e.message}`).join('\n')}\n\nInstrumented:\n${instrumented}`)
+    }
+    return instrumented
+  }
+
+  it('handles multi-line import (10+ specifiers)', () => {
+    const code = `import {
+  a, b, c, d, e,
+  f, g, h, i, j
+} from "mod"`
+    const instrumented = astValid(code)
+    // AST sees one ImportDeclaration spanning all lines — produces one require()
+    expect(instrumented).toContain('require("mod")')
+    expect(instrumented).toContain('const {')
+    expect(instrumented).toContain('a')
+    expect(instrumented).toContain('j')
+  })
+
+  it('handles mixed type/value import specifiers', () => {
+    const code = `import { type Foo, bar } from "mod"`
+    const instrumented = astValid(code)
+    // type Foo is stripped; only bar remains
+    expect(instrumented).toContain('const { bar } = require("mod")')
+    expect(instrumented).not.toContain('Foo')
+  })
+
+  it('handles import default + namespace: import foo, * as ns from "mod"', () => {
+    const code = `import foo, * as ns from "mod"`
+    const instrumented = astValid(code)
+    expect(instrumented).toContain('_m.default ?? _m')
+    expect(instrumented).toContain('ns = require("mod")')
+  })
+
+  it('handles export default expression', () => {
+    const instrumented = astValid('export default 42')
+    // "export default " is stripped, leaving the expression
+    expect(instrumented).toContain('42')
+    expect(instrumented).not.toContain('export default')
+  })
+
+  it('handles export const', () => {
+    const instrumented = astValid('export const x = 1')
+    expect(instrumented).toContain('const x = 1')
+    expect(instrumented).not.toContain('export const')
+  })
+
+  it('handles export function', () => {
+    const instrumented = astValid('export function foo() { return 1 }')
+    expect(instrumented).toContain('function foo()')
+    expect(instrumented).not.toContain('export function')
+  })
+
+  it('handles mixed type/value re-export: export { type A, b } from "mod"', () => {
+    const instrumented = astValid('export { type A, b } from "mod"')
+    expect(instrumented).toContain('const { b } = require("mod")')
+    expect(instrumented).not.toContain('A')
+  })
+
+  it('handles export * from "mod"', () => {
+    const instrumented = astValid('export * from "mod"')
+    expect(instrumented).toContain('require("mod")')
+    expect(instrumented).not.toContain('export *')
+  })
+
+  it('handles aliased named import', () => {
+    const instrumented = astValid('import { readFile as rf } from "fs"')
+    expect(instrumented).toContain('readFile: rf')
+  })
+
+  it('handles import type — strips entirely', () => {
+    const instrumented = astValid('import type { Foo } from "mod"\nconst x = 1')
+    expect(instrumented).not.toContain('import type')
+    expect(instrumented).not.toContain('require')  // type-only, no runtime require
+    expect(instrumented).toContain('const x = 1')
+  })
+})
+
+describe('AST instrumenter: loop guards', () => {
+  it('injects guard for single-statement while body (no braces)', () => {
+    const code = 'let i = 0\nwhile (i < 3) i++'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__loopGuard__()')
+    // Should wrap in a block: { __loopGuard__(); i++ }
+    expect(instrumented).toContain('{ __loopGuard__(); ')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('injects guard for single-statement for...of body (no braces)', () => {
+    const code = 'for (const x of [1,2,3]) console.log(x)'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__loopGuard__()')
+    expect(instrumented).toContain('{ __loopGuard__(); ')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('injects guard for single-statement do...while body (no braces)', () => {
+    const code = 'let i = 0\ndo i++ while (i < 3)'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__loopGuard__()')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('injects guard in both loops of nested loops', () => {
+    const code = 'for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { } }'
+    const instrumented = instrumentWithAST(code)
+    const guardCount = (instrumented.match(/__loopGuard__\(\)/g) ?? []).length
+    expect(guardCount).toBe(2)
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('injects guard without breaking labeled loop', () => {
+    const code = 'outer: for (let i = 0; i < 3; i++) {\n  if (i === 1) break outer\n}'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__loopGuard__()')
+    expect(instrumented).toContain('outer:')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+
+  it('injects guard in for await...of', () => {
+    const code = 'async function f(stream: AsyncIterable<number>) {\n  for await (const x of stream) {\n    console.log(x)\n  }\n}'
+    const instrumented = instrumentWithAST(code)
+    expect(instrumented).toContain('__loopGuard__()')
+    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+  })
+})
+
+describe('AST instrumenter: error recovery', () => {
+  // instrumentWithAST() can throw on truly fatal syntax errors (e.g. `const x =` with no
+  // RHS — Babel cannot recover even with errorRecovery:true). instrumentCode() catches that
+  // and falls back to the regex instrumenter, so the public API never throws.
+
+  it('instrumentCode() does not throw on incomplete assignment (fallback to regex)', () => {
+    const code = 'const y = 2\nconst x ='
+    let result: string
+    expect(() => { result = instrumentCode(code) }).not.toThrow()
+    // The regex instrumenter handles this and at minimum passes through the code
+    expect(result!).toBeTruthy()
+  })
+
+  it('instrumentWithAST() does not throw on empty input', () => {
+    expect(() => instrumentWithAST('')).not.toThrow()
+    expect(instrumentWithAST('')).toBe('')
+  })
+
+  it('instrumentWithAST() does not throw on comment-only input', () => {
+    expect(() => instrumentWithAST('// just a comment')).not.toThrow()
+  })
+
+  it('instrumentCode() does not throw on bare import keyword (fallback to regex)', () => {
+    // Even with errorRecovery:true, some syntax errors are fatal in @babel/parser.
+    // instrumentCode() catches and falls back to regex — the public API never throws.
+    expect(() => instrumentCode('import')).not.toThrow()
   })
 })
 

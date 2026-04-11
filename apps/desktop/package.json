@@ -25,10 +25,13 @@
     "dist": "pnpm run build && electron-builder"
   },
   "dependencies": {
+    "@babel/parser": "^7.29.2",
+    "@babel/traverse": "^7.29.0",
     "@monaco-editor/react": "^4.7.0",
     "electron-store": "^11.0.2",
     "esbuild": "^0.28.0",
     "lucide-react": "^1.7.0",
+    "magic-string": "^0.30.21",
     "nanoid": "^5.1.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -36,6 +39,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@babel/types": "^7.29.0",
     "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

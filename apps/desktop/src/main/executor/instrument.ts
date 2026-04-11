@@ -253,8 +253,21 @@ export function transformImports(line: string): string {
  *
  * MUST run on the ORIGINAL source code (before transpilation) so line
  * numbers match the editor.
+ *
+ * Tries the AST-based instrumenter first; falls back to the regex-based
+ * implementation if parsing fails entirely.
  */
 export function instrumentCode(code: string): string {
+  try {
+    const { instrumentWithAST } = require('./instrument-ast') as typeof import('./instrument-ast')
+    return instrumentWithAST(code)
+  } catch {
+    return instrumentWithRegex(code)
+  }
+}
+
+/** @internal Regex-based instrumenter — kept as fallback. */
+function instrumentWithRegex(code: string): string {
   const lines = code.split('\n')
   const result: string[] = []
   const stack: (StackEntry | BraceContext)[] = []
