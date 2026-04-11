@@ -170,13 +170,13 @@ export function PackageDialog({ open, onClose }: Props) {
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>Installed</span>
                   ) : (
                     <button
-                      onClick={() => install(pkg.name)}
+                      onClick={() => install(`${pkg.name}@${pkg.version}`)}
                       disabled={installing !== null}
                       className="btn btn-primary"
                       style={{ padding: '3px 8px', flexShrink: 0, fontSize: 11 }}
                     >
                       <Download size={10} />
-                      {installing === pkg.name ? 'Installing...' : 'Install'}
+                      {installing === `${pkg.name}@${pkg.version}` ? 'Installing...' : 'Install'}
                     </button>
                   )}
                 </div>

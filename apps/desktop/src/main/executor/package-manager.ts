@@ -95,18 +95,26 @@ export function installPackage(name: string): PackageOperationResult {
   ensurePackagesDir()
   try {
     const npm = getNpm()
-    execSync(`"${npm}" install ${name}`, {
+    // --save-exact pins the version (no ^ or ~ range prefix)
+    execSync(`"${npm}" install --save-exact ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 60000,
       env: { ...process.env, NODE_ENV: '' }
     })
 
+    // name may be "axios@1.7.9" — extract bare name for lookup
+    const bareName = name.includes('@') && !name.startsWith('@')
+      ? name.split('@')[0]
+      : name.startsWith('@')
+        ? '@' + name.slice(1).split('@')[0]  // scoped: @scope/pkg@version
+        : name
+
     const pkgJson = JSON.parse(readFileSync(join(PACKAGES_DIR, 'package.json'), 'utf-8'))
     const deps = pkgJson.dependencies ?? {}
-    const version = deps[name] ?? deps[name.split('/').pop()!] ?? 'unknown'
+    const version = deps[bareName] ?? deps[bareName.split('/').pop()!] ?? 'unknown'
 
-    return { success: true, name, version: version.replace(/^\^|~/, '') }
+    return { success: true, name: bareName, version: version.replace(/^\^|~/, '') }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return { success: false, name, error: msg }
