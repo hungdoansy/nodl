@@ -13,7 +13,7 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const settings = useSettingsStore()
   const { mounted, visible, close } = useDialogTransition(open)
-  const [packagePaths, setPackagePaths] = useState<{ npmPath: string; packagesDir: string } | null>(null)
+  const [packagePaths, setPackagePaths] = useState<{ npmPath: string; packagesDir: string; userDataDir: string } | null>(null)
 
   const handleClose = useCallback(() => close(onClose), [close, onClose])
 
@@ -103,7 +103,8 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setTheme(v as ThemeMode)} />
           </Section>
 
-          <Section title="Packages" last>
+          <Section title="Storage" last>
+            <PathRow label="User data" value={packagePaths?.userDataDir ?? '…'} />
             <PathRow label="npm" value={packagePaths?.npmPath ?? '…'} />
             <PathRow label="Packages dir" value={packagePaths?.packagesDir ?? '…'} />
           </Section>
