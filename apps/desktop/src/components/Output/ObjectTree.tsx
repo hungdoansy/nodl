@@ -44,15 +44,14 @@ function getTypeTag(data: unknown): string | null {
 function renderPrimitive(data: unknown): JSX.Element {
   if (data === null) return <span style={TYPE_STYLES.null}>null</span>
   if (data === undefined) return <span style={TYPE_STYLES.undefined}>undefined</span>
-  if (typeof data === 'string') return <span style={TYPE_STYLES.string}>"{data}"</span>
   if (typeof data === 'number') return <span style={TYPE_STYLES.number}>{String(data)}</span>
   if (typeof data === 'boolean') return <span style={TYPE_STYLES.boolean}>{String(data)}</span>
-  if (typeof data === 'string' && data.startsWith('[Function:'))
-    return <span style={TYPE_STYLES.function}>{data}</span>
-  if (typeof data === 'string' && data.startsWith('Symbol('))
-    return <span style={TYPE_STYLES.symbol}>{data}</span>
-  if (typeof data === 'string' && data.endsWith('n'))
-    return <span style={TYPE_STYLES.bigint}>{data}</span>
+  if (typeof data === 'string') {
+    if (/^-?\d+n$/.test(data)) return <span style={TYPE_STYLES.bigint}>{data}</span>
+    if (data.startsWith('[Function:')) return <span style={TYPE_STYLES.function}>{data}</span>
+    if (data.startsWith('Symbol(')) return <span style={TYPE_STYLES.symbol}>{data}</span>
+    return <span style={TYPE_STYLES.string}>"{data}"</span>
+  }
   return <span>{String(data)}</span>
 }
 

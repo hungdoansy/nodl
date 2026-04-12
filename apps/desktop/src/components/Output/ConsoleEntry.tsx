@@ -24,9 +24,14 @@ function isPrimitive(arg: unknown): boolean {
 function renderTypedPrimitive(arg: unknown): JSX.Element {
   if (arg === null) return <span style={{ color: 'var(--text-tertiary)' }}>null</span>
   if (arg === undefined) return <span style={{ color: 'var(--text-tertiary)' }}>undefined</span>
-  if (typeof arg === 'string') return <span style={{ color: 'var(--type-string)' }}>"{arg}"</span>
   if (typeof arg === 'number') return <span style={{ color: 'var(--type-number)' }}>{String(arg)}</span>
   if (typeof arg === 'boolean') return <span style={{ color: 'var(--type-boolean)' }}>{String(arg)}</span>
+  if (typeof arg === 'string') {
+    if (/^-?\d+n$/.test(arg)) return <span style={{ color: 'var(--type-number)' }}>{arg}</span>
+    if (arg.startsWith('[Function:')) return <span style={{ color: 'var(--type-function)' }}>{arg}</span>
+    if (arg.startsWith('Symbol(')) return <span style={{ color: 'var(--type-function)' }}>{arg}</span>
+    return <span style={{ color: 'var(--type-string)' }}>"{arg}"</span>
+  }
   return <span>{String(arg)}</span>
 }
 
