@@ -162,15 +162,10 @@ git push
 git push origin "$TAG"
 echo "Pushed commit and tag $TAG"
 
-# --- Create GitHub release ---
-DMG=$(find dist -name "*.dmg" -type f 2>/dev/null | head -1)
-if [[ -n "$DMG" ]]; then
-  gh release create "$TAG" "$DMG" --title "$TAG" --notes "$NOTES"
-  echo "Created GitHub release $TAG with $DMG"
-else
-  gh release create "$TAG" --title "$TAG" --notes "$NOTES"
-  echo "Created GitHub release $TAG (no DMG found to attach)"
-fi
+# --- Create draft GitHub release (CI attaches platform artifacts) ---
+gh release create "$TAG" --title "$TAG" --notes "$NOTES" --draft
+echo "Created draft GitHub release $TAG — CI will attach artifacts"
 
 echo ""
 echo "Released $TAG"
+echo "CI is building platform artifacts. Publish the draft release when all builds pass."
