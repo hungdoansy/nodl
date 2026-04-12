@@ -1,3 +1,4 @@
+import type { JSX } from 'react'
 import type { OutputEntry } from '../../../shared/types'
 import { ObjectTree } from './ObjectTree'
 import { ConsoleTable } from './ConsoleTable'
@@ -20,11 +21,13 @@ function isPrimitive(arg: unknown): boolean {
   return arg === null || arg === undefined || typeof arg !== 'object'
 }
 
-function formatPrimitive(arg: unknown): string {
-  if (arg === null) return 'null'
-  if (arg === undefined) return 'undefined'
-  if (typeof arg === 'string') return arg
-  return String(arg)
+function renderTypedPrimitive(arg: unknown): JSX.Element {
+  if (arg === null) return <span style={{ color: 'var(--text-tertiary)' }}>null</span>
+  if (arg === undefined) return <span style={{ color: 'var(--text-tertiary)' }}>undefined</span>
+  if (typeof arg === 'string') return <span style={{ color: 'var(--type-string)' }}>{arg}</span>
+  if (typeof arg === 'number') return <span style={{ color: 'var(--type-number)' }}>{String(arg)}</span>
+  if (typeof arg === 'boolean') return <span style={{ color: 'var(--type-boolean)' }}>{String(arg)}</span>
+  return <span>{String(arg)}</span>
 }
 
 function isErrorType(arg: unknown): arg is { __type: 'Error'; message: string; stack?: string } {
@@ -61,7 +64,7 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 2px' }}>
           <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, flexShrink: 0 }} />
           {isPrimitive(firstArg.value) ? (
-            <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
+            renderTypedPrimitive(firstArg.value)
           ) : (
             <ObjectTree data={firstArg.value} />
           )}
@@ -79,7 +82,7 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
           {isErrorType(arg) ? (
             <span style={{ whiteSpace: 'pre-wrap' }}>{arg.message}{arg.stack ? `\n${arg.stack}` : ''}</span>
           ) : isPrimitive(arg) ? (
-            <span>{formatPrimitive(arg)}</span>
+            renderTypedPrimitive(arg)
           ) : (
             <ObjectTree data={arg} />
           )}
