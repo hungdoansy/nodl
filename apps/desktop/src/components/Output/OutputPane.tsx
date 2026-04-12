@@ -48,6 +48,29 @@ function entriesToText(entries: OutputEntry[]): string {
   }).join('\n')
 }
 
+function estimateContentHeight(entries: OutputEntry[], lh: number): number {
+  let total = 0
+  for (const entry of entries) {
+    if (entry.method === 'table') { total += 1; continue }
+    const first = entry.args[0]
+    if (typeof first === 'object' && first !== null && (first as { __type?: string }).__type === 'LastExpression') {
+      total += 1; continue
+    }
+    let newlines = 0
+    for (const arg of entry.args) {
+      if (typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'Error') {
+        const e = arg as { message: string; stack?: string }
+        const text = e.message + (e.stack ? '\n' + e.stack : '')
+        newlines += (text.match(/\n/g) ?? []).length
+      } else if (typeof arg === 'string') {
+        newlines += (arg.match(/\n/g) ?? []).length
+      }
+    }
+    total += newlines + 1
+  }
+  return total * lh
+}
+
 const STOP_BUTTON_DELAY = 3000
 
 export function OutputPane() {
@@ -97,6 +120,25 @@ export function OutputPane() {
   const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
   const errorEntries = useMemo(() => unlined.filter((e) => e.method === 'error'), [unlined])
   const nonErrorUnlined = useMemo(() => unlined.filter((e) => e.method !== 'error'), [unlined])
+  const adjustedHeights = useMemo(() => {
+    const heights = new Map<number, number>()
+    let overflow = 0
+    for (let i = 1; i <= totalLines; i++) {
+      const actualHeight = lineHeights?.get(i) ?? lineHeight
+      const lineEntries = lined.get(i)
+      if (lineEntries) {
+        overflow = 0
+        heights.set(i, actualHeight)
+        overflow = Math.max(0, estimateContentHeight(lineEntries, lineHeight) - actualHeight)
+      } else {
+        const absorbed = Math.min(overflow, actualHeight)
+        heights.set(i, actualHeight - absorbed)
+        overflow -= absorbed
+      }
+    }
+    return heights
+  }, [totalLines, lineHeights, lineHeight, lined])
+
   const editorPaddingTop = 12
   const hasOutput = entries.length > 0
 
@@ -240,13 +282,13 @@ export function OutputPane() {
             <div className="relative" style={{ paddingTop: editorPaddingTop }}>
               {Array.from({ length: totalLines }, (_, i) => {
                 const lineNum = i + 1
-                const actualHeight = lineHeights?.get(lineNum) ?? lineHeight
+                const adjustedHeight = adjustedHeights.get(lineNum) ?? lineHeight
                 const lineEntries = lined.get(lineNum)
                 if (!lineEntries) {
-                  return <div key={`line-${lineNum}`} style={{ height: actualHeight }} />
+                  return <div key={`line-${lineNum}`} style={{ height: adjustedHeight }} />
                 }
                 return (
-                  <div key={`line-${lineNum}`} style={{ minHeight: actualHeight }} className="flex items-start">
+                  <div key={`line-${lineNum}`} style={{ minHeight: adjustedHeight }} className="flex items-start">
                     <div className="flex-1 min-w-0">
                       {lineEntries.map((entry) => (
                         <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} lineHeight={lineHeight} />

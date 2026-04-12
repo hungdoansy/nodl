@@ -139,11 +139,14 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   const toggleStyle: React.CSSProperties = {
     cursor: 'pointer', borderRadius: 3, padding: '0 2px',
     display: 'inline-flex', alignItems: 'center', gap: 4,
+    verticalAlign: 'top',
     ...meta,
   }
 
+  const Root = expanded ? 'div' : 'span'
+
   return (
-    <div>
+    <Root>
       <span
         style={toggleStyle}
         onClick={() => { setExpanded(!expanded); if (expanded) setVisibleCount(PAGE_SIZE) }}
@@ -189,6 +192,6 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
           </div>
         )
       })()}
-    </div>
+    </Root>
   )
 }
