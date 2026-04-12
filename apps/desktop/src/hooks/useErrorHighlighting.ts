@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { useOutputStore } from '../store/output'
 import type { OutputEntry } from '../../shared/types'
@@ -7,6 +7,9 @@ const EMPTY_ENTRIES: OutputEntry[] = []
 
 /**
  * Extract error line numbers from output entries.
+ * Uses entry.line (set from __line__ tracking during execution) when available,
+ * which maps to the original source. Only falls back to stack trace parsing
+ * when entry.line is not set.
  * Exported for testing.
  */
 export function extractErrorLines(entries: OutputEntry[], maxLine: number): number[] {
@@ -14,6 +17,16 @@ export function extractErrorLines(entries: OutputEntry[], maxLine: number): numb
 
   for (const entry of entries) {
     if (entry.method !== 'error') continue
+
+    // Prefer entry.line — set from __line__.value during execution,
+    // maps to original source lines (not transpiled code)
+    if (entry.line && entry.line > 0 && entry.line <= maxLine) {
+      errorLines.add(entry.line)
+      continue
+    }
+
+    // Fallback: parse line numbers from error text (stack traces etc.)
+    // These line numbers are from transpiled code so may be inaccurate
     for (const arg of entry.args) {
       if (typeof arg !== 'string') continue
       const linePatterns = [
@@ -46,7 +59,9 @@ export function useErrorHighlighting(
   const activeTabId = useOutputStore((s) => s.activeTabId)
   const lastResult = useOutputStore((s) => s.outputs[s.activeTabId]?.lastResult ?? null)
   const entries = useOutputStore((s) => s.outputs[s.activeTabId]?.entries ?? EMPTY_ENTRIES)
+  const decorationsRef = useRef<monacoEditor.IEditorDecorationsCollection | null>(null)
 
+  // Apply or clear error decorations when execution results change
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
@@ -54,20 +69,17 @@ export function useErrorHighlighting(
     const model = editor.getModel()
     if (!model) return
 
-    // If no error, clear decorations
-    if (!lastResult || lastResult.success) {
-      editor.removeDecorations(
-        editor.getDecorationsInRange(model.getFullModelRange())
-          ?.filter((d) => d.options.className === 'error-line-decoration')
-          .map((d) => d.id) ?? []
-      )
-      return
-    }
+    // Clear previous decorations
+    decorationsRef.current?.clear()
+    decorationsRef.current = null
+
+    // If no error, we're done
+    if (!lastResult || lastResult.success) return
 
     const errorLines = extractErrorLines(entries, model.getLineCount())
     if (errorLines.length === 0) return
 
-    editor.createDecorationsCollection(
+    decorationsRef.current = editor.createDecorationsCollection(
       errorLines.map((line) => ({
         range: {
           startLineNumber: line,
@@ -87,4 +99,19 @@ export function useErrorHighlighting(
       }))
     )
   }, [lastResult, entries, editorRef, activeTabId])
+
+  // Clear error decorations when the user edits code
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const model = editor.getModel()
+    if (!model) return
+
+    const disposable = model.onDidChangeContent(() => {
+      decorationsRef.current?.clear()
+      decorationsRef.current = null
+    })
+
+    return () => disposable.dispose()
+  }, [editorRef, activeTabId])
 }

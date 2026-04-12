@@ -70,6 +70,8 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **Zustand selectors**: Use module-level constants for empty defaults (`const EMPTY_ENTRIES: OutputEntry[] = []`), never `?? []` inline — causes infinite re-renders in React StrictMode.
 - **IPC subscriptions**: Must use `useOutputStore.getState()` in callbacks, not selector-derived values. Subscribed once in `useOutputListener()` at App level.
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
+- **Error line highlighting**: Uses `entry.line` (from `__line__` tracking) not stack trace parsing — stack traces have transpiled line numbers. Decorations stored in a ref with `.clear()` to avoid duplicates. `onDidChangeContent` listener clears stale decorations when the user edits code.
+- **IPC serialization**: Worker fork uses `serialization: 'advanced'` (V8 structured clone) to preserve `undefined` through IPC. Also has `{ __type: 'Undefined' }` sentinel in `serializeArg` as defense-in-depth.
 
 ## File Structure
 
