@@ -1,35 +1,39 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { X, ExternalLink } from 'lucide-react'
 import { useDialogTransition } from '../../hooks/useDialogTransition'
 import * as bridge from '../../ipc/bridge'
+import changelogMd from '../../../CHANGELOG.md?raw'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
-const CHANGELOG = [
-  {
-    version: '1.0.0',
-    date: '2025-04-08',
-    changes: [
-      'Monaco editor with TypeScript support',
-      'Line-aligned and console output modes',
-      'Inline expression evaluation',
-      'npm package management',
-      'Async code support (setTimeout, Promises, async/await)',
-      'ESM import support (auto-converted to require)',
-      'Multi-tab workspace with persistence',
-      'Dark and light themes',
-      'Scroll-synced editor and output panels',
-      'Update checker via GitHub Releases',
-    ],
-  },
-]
+interface Release {
+  version: string
+  date: string
+  changes: string[]
+}
+
+function parseChangelog(md: string): Release[] {
+  const releases: Release[] = []
+  const sections = md.split(/^## /m).slice(1) // split on ## headings, skip preamble
+  for (const section of sections) {
+    const headerMatch = section.match(/^v?([\d.]+)\s*\((\d{4}-\d{2}-\d{2})\)/)
+    if (!headerMatch) continue
+    const changes = section
+      .split('\n')
+      .filter((line) => line.startsWith('- '))
+      .map((line) => line.slice(2).trim())
+    releases.push({ version: headerMatch[1], date: headerMatch[2], changes })
+  }
+  return releases
+}
 
 export function AboutDialog({ open, onClose }: Props) {
   const { mounted, visible, close } = useDialogTransition(open)
   const handleClose = useCallback(() => close(onClose), [close, onClose])
+  const CHANGELOG = useMemo(() => parseChangelog(changelogMd), [])
 
   if (!mounted) return null
 

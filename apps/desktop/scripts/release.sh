@@ -6,14 +6,14 @@ set -e
 #
 # Flow:
 #   1. Ask for version
-#   2. Generate draft changelog section in CHANGELOG.draft.md
+#   2. Generate draft changelog in CHANGELOG.draft.md
 #   3. Wait for you to edit it in your IDE, then press Enter
-#   4. Prepend to CHANGELOG.md, update AboutDialog.tsx, package.json, Header.tsx
-#   5. Commit + lint + test
-#   6. Build + package
-#   7. Tag, push, create GitHub release
+#   4. Prepend to CHANGELOG.md (AboutDialog reads it at build time)
+#   5. Update package.json, Header.tsx
+#   6. Commit + lint + test
+#   7. Build + package
+#   8. Tag, push, create GitHub release
 
-ABOUT_DIALOG="src/components/Header/AboutDialog.tsx"
 HEADER="src/components/Header/Header.tsx"
 CHANGELOG="CHANGELOG.md"
 DRAFT="CHANGELOG.draft.md"
@@ -97,13 +97,12 @@ done
 echo ""
 echo "This will:"
 echo "  1. Prepend to CHANGELOG.md"
-echo "  2. Update AboutDialog.tsx changelog"
-echo "  3. Update package.json version to $VERSION"
-echo "  4. Update Header.tsx version to v$SHORT_VERSION"
-echo "  5. Commit as 'release: $TAG'"
-echo "  6. Run lint + tests"
-echo "  7. Build + package (DMG)"
-echo "  8. Tag, push, create GitHub release"
+echo "  2. Update package.json version to $VERSION"
+echo "  3. Update Header.tsx version to v$SHORT_VERSION"
+echo "  4. Commit as 'release: $TAG'"
+echo "  5. Run lint + tests"
+echo "  6. Build + package (DMG)"
+echo "  7. Tag, push, create GitHub release"
 echo ""
 read -rp "Continue? (y/N) " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
@@ -114,37 +113,13 @@ fi
 
 # --- Prepend to CHANGELOG.md ---
 if [[ -f "$CHANGELOG" ]]; then
-  # Prepend draft + blank line + existing content
   { cat "$DRAFT"; echo ""; cat "$CHANGELOG"; } > "$CHANGELOG.tmp"
   mv "$CHANGELOG.tmp" "$CHANGELOG"
 else
-  # First release — create with header
   { echo "# Changelog"; echo ""; cat "$DRAFT"; } > "$CHANGELOG"
 fi
 rm -f "$DRAFT"
 echo "Updated CHANGELOG.md"
-
-# --- Update AboutDialog.tsx changelog ---
-node -e "
-  const fs = require('fs');
-  let src = fs.readFileSync('$ABOUT_DIALOG', 'utf8');
-  const changes = JSON.parse(process.argv[1]);
-  const indent = '    ';
-  const items = changes.map(c => indent + \"  '\" + c.replace(/'/g, \"\\\\'\") + \"',\").join('\n');
-  const entry = indent + '{\n' +
-    indent + \"  version: '$VERSION',\n\" +
-    indent + \"  date: '$TODAY',\n\" +
-    indent + '  changes: [\n' +
-    items + '\n' +
-    indent + '  ],\n' +
-    indent + '},';
-  src = src.replace('const CHANGELOG = [', 'const CHANGELOG = [\n' + entry);
-  fs.writeFileSync('$ABOUT_DIALOG', src);
-" "$(printf '%s\n' "${CHANGES[@]}" | node -e "
-  const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\n');
-  process.stdout.write(JSON.stringify(lines));
-")"
-echo "Updated AboutDialog.tsx changelog"
 
 # --- Update package.json version ---
 node -e "
@@ -160,7 +135,7 @@ sed -i '' "s/v[0-9]*\.[0-9]*/v$SHORT_VERSION/" "$HEADER"
 echo "Updated Header.tsx to v$SHORT_VERSION"
 
 # --- Commit release changes ---
-git add package.json "$HEADER" "$ABOUT_DIALOG" "$CHANGELOG"
+git add package.json "$HEADER" "$CHANGELOG"
 git commit -m "release: $TAG"
 echo "Committed release changes"
 

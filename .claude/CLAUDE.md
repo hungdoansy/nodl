@@ -215,7 +215,7 @@ Always add pipeline tests that run `instrumentCode() → transpile()` and verify
 - App checks GitHub Releases API on launch (3s delay)
 - If newer version found, shows "v1.x.0 available" pill in header
 - Clicking opens UpdateDialog with instructions + download link
-- AboutDialog shows changelog (edit `CHANGELOG` array in `AboutDialog.tsx`)
+- AboutDialog reads `CHANGELOG.md` via Vite `?raw` import, parsed at render time by `parseChangelog()`
 
 ## Common Tasks
 
@@ -236,12 +236,13 @@ Always add pipeline tests that run `instrumentCode() → transpile()` and verify
 2. Use stable selector references (module-level constants for defaults)
 3. Add tests in `src/store/__tests__/`
 
-### Bumping version for release:
-1. Update `version` in `package.json`
-2. Update header version in `Header.tsx`
-3. Add changelog entry in `AboutDialog.tsx` CHANGELOG array
-4. `git tag vX.Y.Z && git push --tags`
-5. `pnpm run dist` → create GitHub Release with artifacts
+### Releasing a version:
+Run `pnpm run release` — the script handles everything:
+1. Prompts for version, generates `CHANGELOG.draft.md` from git log
+2. Waits for you to edit the draft in your IDE
+3. Prepends to `CHANGELOG.md`, updates `package.json` + `Header.tsx`
+4. Commits, runs lint + tests, builds DMG
+5. Tags, pushes, creates GitHub Release with artifacts
 
 ## UI/UX Conventions
 
