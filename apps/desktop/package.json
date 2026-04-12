@@ -8,6 +8,7 @@
     "email": "hungdoansy@gmail.com",
     "url": "https://github.com/hungdoansy"
   },
+  "homepage": "https://github.com/hungdoansy/nodl",
   "license": "MIT",
   "type": "module",
   "scripts": {
