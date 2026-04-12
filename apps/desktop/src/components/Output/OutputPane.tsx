@@ -48,7 +48,8 @@ function entriesToText(entries: OutputEntry[]): string {
   }).join('\n')
 }
 
-function estimateContentHeight(entries: OutputEntry[], lh: number): number {
+/** Estimate the visual pixel height of entries on a line by counting newlines. Exported for testing. */
+export function estimateContentHeight(entries: OutputEntry[], lh: number): number {
   let total = 0
   for (const entry of entries) {
     if (entry.method === 'table') { total += 1; continue }
@@ -71,6 +72,34 @@ function estimateContentHeight(entries: OutputEntry[], lh: number): number {
   return total * lh
 }
 
+/**
+ * Compute overflow-adjusted line heights so multi-line output consumes subsequent blank lines.
+ * Exported for testing.
+ */
+export function computeAdjustedHeights(
+  totalLines: number,
+  lineHeights: Map<number, number> | null,
+  lineHeight: number,
+  lined: Map<number, OutputEntry[]>
+): Map<number, number> {
+  const heights = new Map<number, number>()
+  let overflow = 0
+  for (let i = 1; i <= totalLines; i++) {
+    const actualHeight = lineHeights?.get(i) ?? lineHeight
+    const lineEntries = lined.get(i)
+    if (lineEntries) {
+      overflow = 0
+      heights.set(i, actualHeight)
+      overflow = Math.max(0, estimateContentHeight(lineEntries, lineHeight) - actualHeight)
+    } else {
+      const absorbed = Math.min(overflow, actualHeight)
+      heights.set(i, actualHeight - absorbed)
+      overflow -= absorbed
+    }
+  }
+  return heights
+}
+
 const STOP_BUTTON_DELAY = 3000
 
 export function OutputPane() {
@@ -83,6 +112,7 @@ export function OutputPane() {
 
   const [showStop, setShowStop] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [containerHeight, setContainerHeight] = useState(0)
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ignoreScrollRef = useRef(false)
 
@@ -120,24 +150,10 @@ export function OutputPane() {
   const { lined, unlined } = useMemo(() => groupByLine(entries), [entries])
   const errorEntries = useMemo(() => unlined.filter((e) => e.method === 'error'), [unlined])
   const nonErrorUnlined = useMemo(() => unlined.filter((e) => e.method !== 'error'), [unlined])
-  const adjustedHeights = useMemo(() => {
-    const heights = new Map<number, number>()
-    let overflow = 0
-    for (let i = 1; i <= totalLines; i++) {
-      const actualHeight = lineHeights?.get(i) ?? lineHeight
-      const lineEntries = lined.get(i)
-      if (lineEntries) {
-        overflow = 0
-        heights.set(i, actualHeight)
-        overflow = Math.max(0, estimateContentHeight(lineEntries, lineHeight) - actualHeight)
-      } else {
-        const absorbed = Math.min(overflow, actualHeight)
-        heights.set(i, actualHeight - absorbed)
-        overflow -= absorbed
-      }
-    }
-    return heights
-  }, [totalLines, lineHeights, lineHeight, lined])
+  const adjustedHeights = useMemo(
+    () => computeAdjustedHeights(totalLines, lineHeights, lineHeight, lined),
+    [totalLines, lineHeights, lineHeight, lined]
+  )
 
   const editorPaddingTop = 12
   const hasOutput = entries.length > 0
@@ -159,6 +175,16 @@ export function OutputPane() {
     })
     return unsub
   }, [outputMode])
+
+  // Track scroll container height for scroll-beyond-last-line spacer
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setContainerHeight(el.clientHeight))
+    ro.observe(el)
+    setContainerHeight(el.clientHeight)
+    return () => ro.disconnect()
+  }, [])
 
   // Auto-scroll when new entries arrive
   useEffect(() => {
@@ -304,6 +330,8 @@ export function OutputPane() {
                   ))}
                 </div>
               )}
+              {/* Spacer to match Monaco's scrollBeyondLastLine */}
+              <div style={{ height: containerHeight - lineHeight }} />
             </div>
           </>
         )}

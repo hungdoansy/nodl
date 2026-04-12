@@ -72,6 +72,9 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
 - **Error line highlighting**: Uses `entry.line` (from `__line__` tracking) not stack trace parsing — stack traces have transpiled line numbers. Decorations stored in a ref with `.clear()` to avoid duplicates. `onDidChangeContent` listener clears stale decorations when the user edits code.
 - **IPC serialization**: Worker fork uses `serialization: 'advanced'` (V8 structured clone) to preserve `undefined` through IPC. Also has `{ __type: 'Undefined' }` sentinel in `serializeArg` as defense-in-depth.
+- **Output overflow tracking**: When multi-line output (e.g., string with `\n`) overflows past its line's height, subsequent empty lines absorb the overflow via `computeAdjustedHeights()` in OutputPane. The `estimateContentHeight()` function counts newlines in string/error args to estimate visual height. Both are exported pure functions with unit tests.
+- **ObjectTree inline rendering**: ObjectTree's root element is `<span>` when collapsed, `<div>` when expanded. The toggle uses `verticalAlign: 'top'` to prevent the inline-flex chevron icon from expanding the line box beyond `lineHeight` (baseline alignment adds ~1-2px per object/array entry, which accumulates).
+- **Scroll-beyond-last-line sync**: Output panel includes a bottom spacer (`containerHeight - lineHeight`) in aligned mode to match Monaco's `scrollBeyondLastLine: true`. Without it, the output can't scroll as far as the editor, breaking scroll sync at the bottom.
 
 ## File Structure
 
@@ -194,6 +197,7 @@ pnpm run test       # 243 tests across 11 files
 - Executor tests: `src/main/executor/__tests__/`
 - Pipeline tests: `executor/__tests__/pipeline.test.ts` — full instrument → transpile chain
 - Hook tests: `src/hooks/__tests__/`
+- Component tests: `src/components/Output/__tests__/` — ConsoleEntry rendering, output alignment logic
 
 ### When adding instrumenter changes:
 Always add pipeline tests that run `instrumentCode() → transpile()` and verify no transpilation errors. This catches cases where `__line__` insertion breaks syntax.
