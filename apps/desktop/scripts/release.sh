@@ -154,13 +154,15 @@ echo "Updated package.json to $VERSION"
 # --- Commit + tag + push ---
 git add package.json "$CHANGELOG"
 git commit -m "release: $TAG"
-git tag "$TAG"
+NOTES=$(printf '%s\n' "${CHANGES[@]}" | sed 's/^/- /')
+git tag -m "$TAG
+
+$NOTES" "$TAG"
 git push
 git push origin "$TAG"
 echo "Pushed commit and tag $TAG"
 
 # --- Create GitHub release ---
-NOTES=$(printf '%s\n' "${CHANGES[@]}" | sed 's/^/- /')
 DMG=$(find dist -name "*.dmg" -type f 2>/dev/null | head -1)
 if [[ -n "$DMG" ]]; then
   gh release create "$TAG" "$DMG" --title "$TAG" --notes "$NOTES"
