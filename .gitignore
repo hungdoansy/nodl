@@ -5,3 +5,4 @@ dist/
 .turbo/
 *.log
 .DS_Store
+CHANGELOG.draft.md
