@@ -150,7 +150,7 @@ export function EditorPane() {
         currentLibs.set(def.packageName, lib)
       }
     })
-  }, [packages])
+  }, [packages, editorVersion])
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
