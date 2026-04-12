@@ -84,7 +84,7 @@ export function Header() {
             nodl
           </span>
           <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
-            v1.0
+            v2.0
           </span>
         </button>
 
