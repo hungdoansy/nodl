@@ -11,7 +11,8 @@ const MAX_ARRAY_ITEMS = 1000
 const MAX_OBJECT_KEYS = 200
 
 export function serializeArg(arg: unknown, seen = new WeakSet(), depth = 0): unknown {
-  if (arg === null || arg === undefined) return arg
+  if (arg === null) return arg
+  if (arg === undefined) return { __type: 'Undefined' }
   if (typeof arg === 'function') return `[Function: ${arg.name || 'anonymous'}]`
   if (typeof arg === 'symbol') return arg.toString()
   if (typeof arg === 'bigint') return `${arg}n`

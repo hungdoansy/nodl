@@ -120,6 +120,7 @@ export function ObjectTree({ data, depth = 0, maxDepth = 10 }: ObjectTreeProps) 
   // Special serialized types with direct display
   if (typeof data === 'object' && data !== null) {
     const typed = data as { __type?: string; value?: string; message?: string; stack?: string }
+    if (typed.__type === 'Undefined') return <span style={TYPE_STYLES.undefined}>undefined</span>
     if (typed.__type === 'Date') return <span style={TYPE_STYLES.number}>{typed.value}</span>
     if (typed.__type === 'RegExp') return <span style={{ color: 'var(--type-regexp)' }}>{typed.value}</span>
   }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest'
-import { createConsoleCapturer } from '../console-capture'
+import { createConsoleCapturer, serializeArg } from '../console-capture'
 import type { OutputEntry } from '../../../../shared/types'
 
 describe('createConsoleCapturer', () => {
@@ -290,5 +290,87 @@ describe('createConsoleCapturer', () => {
       current = current[0] as unknown[]
     }
     expect(current[0]).toBe('[Array (1)]')
+  })
+})
+
+/** Simulate what process.send() does with default JSON serialization */
+function jsonRoundTrip<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value))
+}
+
+describe('serializeArg — undefined handling', () => {
+  it('serializes top-level undefined as sentinel', () => {
+    expect(serializeArg(undefined)).toEqual({ __type: 'Undefined' })
+  })
+
+  it('undefined sentinel survives JSON round-trip', () => {
+    const serialized = serializeArg(undefined)
+    const afterIPC = jsonRoundTrip(serialized)
+    expect(afterIPC).toEqual({ __type: 'Undefined' })
+  })
+
+  it('null stays null (not converted to sentinel)', () => {
+    expect(serializeArg(null)).toBeNull()
+  })
+
+  it('serializes undefined inside arrays', () => {
+    const result = serializeArg([1, undefined, 'a'])
+    expect(result).toEqual([1, { __type: 'Undefined' }, 'a'])
+  })
+
+  it('undefined in array survives JSON round-trip', () => {
+    const result = jsonRoundTrip(serializeArg([1, undefined, 'a']))
+    expect(result).toEqual([1, { __type: 'Undefined' }, 'a'])
+  })
+
+  it('serializes undefined inside objects', () => {
+    const result = serializeArg({ a: 1, b: undefined, c: 'x' })
+    expect(result).toEqual({ a: 1, b: { __type: 'Undefined' }, c: 'x' })
+  })
+
+  it('undefined in object survives JSON round-trip', () => {
+    const result = jsonRoundTrip(serializeArg({ a: 1, b: undefined }))
+    expect(result).toEqual({ a: 1, b: { __type: 'Undefined' } })
+  })
+
+  it('serializes undefined inside Set values', () => {
+    const result = serializeArg(new Set([1, null, undefined])) as { __type: string; values: unknown[] }
+    expect(result.__type).toBe('Set')
+    expect(result.values).toEqual([1, null, { __type: 'Undefined' }])
+  })
+
+  it('undefined in Set survives JSON round-trip', () => {
+    const result = jsonRoundTrip(serializeArg(new Set([1, null, undefined]))) as { __type: string; values: unknown[] }
+    expect(result.values).toEqual([1, null, { __type: 'Undefined' }])
+  })
+
+  it('serializes undefined as Map value', () => {
+    const result = serializeArg(new Map([['key', undefined]])) as { __type: string; entries: unknown[][] }
+    expect(result.__type).toBe('Map')
+    expect(result.entries).toEqual([['key', { __type: 'Undefined' }]])
+  })
+
+  it('console.log with mixed args including undefined survives JSON round-trip', () => {
+    const entries: OutputEntry[] = []
+    const send = vi.fn((entry: OutputEntry) => entries.push(entry))
+    const capturedConsole = createConsoleCapturer(send)
+
+    capturedConsole.log('string', 42, true, null, undefined)
+
+    // Simulate what IPC does
+    const afterIPC = jsonRoundTrip(entries[0])
+    expect(afterIPC.args).toEqual([
+      'string',
+      42,
+      true,
+      null,
+      { __type: 'Undefined' },
+    ])
+  })
+
+  it('bigint serializes as string with n suffix', () => {
+    expect(serializeArg(BigInt(0))).toBe('0n')
+    expect(serializeArg(BigInt(9007199254740991))).toBe('9007199254740991n')
+    expect(serializeArg(BigInt(-42))).toBe('-42n')
   })
 })

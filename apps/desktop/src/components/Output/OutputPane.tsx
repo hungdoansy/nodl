@@ -29,6 +29,7 @@ function stringifyArg(arg: unknown): string {
   if (typeof arg === 'string') return arg
   if (typeof arg !== 'object') return String(arg)
   const typed = arg as { __type?: string; value?: unknown; message?: string; stack?: string; entries?: unknown[]; values?: unknown[] }
+  if (typed.__type === 'Undefined') return 'undefined'
   if (typed.__type === 'LastExpression') return stringifyArg(typed.value)
   if (typed.__type === 'Error') return typed.stack ? `${typed.message}\n${typed.stack}` : typed.message ?? 'Error'
   if (typed.__type === 'Date' || typed.__type === 'RegExp') return String(typed.value)

@@ -73,6 +73,7 @@ export function createRunner(): Runner {
 
       child = fork(WORKER_PATH, [], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        serialization: 'advanced',
         env: {
           ...process.env,
           NODE_PATH: nodeModulesPath || process.env.NODE_PATH || ''

@@ -17,13 +17,17 @@ function isLastExpression(arg: unknown): arg is { __type: 'LastExpression'; valu
   return typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'LastExpression'
 }
 
+function isUndefinedSentinel(arg: unknown): boolean {
+  return typeof arg === 'object' && arg !== null && (arg as { __type?: string }).__type === 'Undefined'
+}
+
 function isPrimitive(arg: unknown): boolean {
-  return arg === null || arg === undefined || typeof arg !== 'object'
+  return arg === null || arg === undefined || isUndefinedSentinel(arg) || typeof arg !== 'object'
 }
 
 function renderTypedPrimitive(arg: unknown): JSX.Element {
   if (arg === null) return <span style={{ color: 'var(--text-tertiary)' }}>null</span>
-  if (arg === undefined) return <span style={{ color: 'var(--text-tertiary)' }}>undefined</span>
+  if (arg === undefined || isUndefinedSentinel(arg)) return <span style={{ color: 'var(--text-tertiary)' }}>undefined</span>
   if (typeof arg === 'number') return <span style={{ color: 'var(--type-number)' }}>{String(arg)}</span>
   if (typeof arg === 'boolean') return <span style={{ color: 'var(--type-boolean)' }}>{String(arg)}</span>
   if (typeof arg === 'string') {
