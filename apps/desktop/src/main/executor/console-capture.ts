@@ -19,7 +19,7 @@ export function serializeArg(arg: unknown, seen = new WeakSet(), depth = 0): unk
   if (arg instanceof Error) {
     return { __type: 'Error', message: arg.message, stack: arg.stack }
   }
-  if (arg instanceof Date) return { __type: 'Date', value: arg.toISOString() }
+  if (arg instanceof Date) return { __type: 'Date', value: isNaN(arg.getTime()) ? 'Invalid Date' : arg.toISOString() }
   if (arg instanceof RegExp) return { __type: 'RegExp', value: arg.toString() }
   if (arg instanceof Map) {
     if (depth >= MAX_DEPTH) return '[Map (truncated)]'
