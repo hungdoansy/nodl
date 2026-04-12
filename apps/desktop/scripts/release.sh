@@ -63,7 +63,7 @@ fi
   echo ""
 
   if [[ -n "$LAST_TAG" ]]; then
-    git log "$LAST_TAG"..HEAD --pretty=format:'%s' --no-merges | while IFS= read -r line; do
+    git log "$LAST_TAG"..HEAD --pretty=tformat:'%s' --no-merges | while IFS= read -r line || [[ -n "$line" ]]; do
       case "$line" in
         release:*|docs:*) continue ;;
       esac
@@ -71,7 +71,7 @@ fi
       echo "- $clean"
     done
   else
-    git log --pretty=format:'- %s' --no-merges -20
+    git log --pretty=tformat:'- %s' --no-merges -20
   fi
 
   echo ""
@@ -89,7 +89,7 @@ read -rp "Press Enter when done editing... "
 
 # --- Parse changelog entries ---
 CHANGES=()
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "$line" ]]; do
   if [[ "$line" == "- "* ]]; then
     CHANGES+=("${line#- }")
   fi
