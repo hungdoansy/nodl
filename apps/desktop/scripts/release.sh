@@ -5,18 +5,38 @@ set -e
 # Usage: pnpm run release
 #
 # Flow:
-#   1. Ask for version
-#   2. Generate draft changelog in CHANGELOG.draft.md
-#   3. Wait for you to edit it in your IDE, then press Enter
-#   4. Prepend to CHANGELOG.md (AboutDialog reads it at build time)
-#   5. Update package.json, Header.tsx
-#   6. Commit + lint + test
-#   7. Build + package
-#   8. Tag, push, create GitHub release
+#   1. Lint + test + build first (catch errors before any release work)
+#   2. Ask for version
+#   3. Generate draft changelog in CHANGELOG.draft.md
+#   4. Wait for you to edit it in your IDE, then press Enter
+#   5. Prepend to CHANGELOG.md, update package.json, Header.tsx
+#   6. Commit, tag, push, create GitHub release
 
 HEADER="src/components/Header/Header.tsx"
 CHANGELOG="CHANGELOG.md"
 DRAFT="CHANGELOG.draft.md"
+
+# --- Check for clean working tree ---
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Working tree is dirty. Commit or stash changes first."
+  exit 1
+fi
+
+# --- Lint + test + build first ---
+echo "Running lint..."
+pnpm run lint
+
+echo ""
+echo "Running tests..."
+pnpm run test
+
+echo ""
+echo "Building and packaging..."
+pnpm run dist
+
+echo ""
+echo "=== Lint, tests, and build passed ==="
+echo ""
 
 # --- Prompt for version ---
 CURRENT=$(node -p "require('./package.json').version")
@@ -32,12 +52,6 @@ fi
 TAG="v$VERSION"
 SHORT_VERSION=$(echo "$VERSION" | sed 's/\.[0-9]*$//')  # 1.1.0 -> 1.1
 TODAY=$(date +%Y-%m-%d)
-
-# --- Check for clean working tree ---
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Working tree is dirty. Commit or stash changes first."
-  exit 1
-fi
 
 # --- Check tag doesn't exist ---
 if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -96,13 +110,11 @@ for c in "${CHANGES[@]}"; do
 done
 echo ""
 echo "This will:"
-echo "  1. Prepend to CHANGELOG.md"
+echo "  1. Insert into CHANGELOG.md"
 echo "  2. Update package.json version to $VERSION"
 echo "  3. Update Header.tsx version to v$SHORT_VERSION"
-echo "  4. Commit as 'release: $TAG'"
-echo "  5. Run lint + tests"
-echo "  6. Build + package (DMG)"
-echo "  7. Tag, push, create GitHub release"
+echo "  4. Commit, tag, push"
+echo "  5. Create GitHub release with DMG"
 echo ""
 read -rp "Continue? (y/N) " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
@@ -111,10 +123,22 @@ if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   exit 1
 fi
 
-# --- Prepend to CHANGELOG.md ---
+# --- Insert into CHANGELOG.md after the title line ---
 if [[ -f "$CHANGELOG" ]]; then
-  { cat "$DRAFT"; echo ""; cat "$CHANGELOG"; } > "$CHANGELOG.tmp"
-  mv "$CHANGELOG.tmp" "$CHANGELOG"
+  node -e "
+    const fs = require('fs');
+    const changelog = fs.readFileSync('$CHANGELOG', 'utf8');
+    const draft = fs.readFileSync('$DRAFT', 'utf8').trimEnd();
+    // Insert after '# Changelog' heading (first line)
+    const lines = changelog.split('\n');
+    const titleIdx = lines.findIndex(l => l.startsWith('# '));
+    if (titleIdx >= 0) {
+      lines.splice(titleIdx + 1, 0, '', draft);
+    } else {
+      lines.unshift(draft, '');
+    }
+    fs.writeFileSync('$CHANGELOG', lines.join('\n'));
+  "
 else
   { echo "# Changelog"; echo ""; cat "$DRAFT"; } > "$CHANGELOG"
 fi
@@ -134,25 +158,9 @@ echo "Updated package.json to $VERSION"
 sed -i '' "s/v[0-9]*\.[0-9]*/v$SHORT_VERSION/" "$HEADER"
 echo "Updated Header.tsx to v$SHORT_VERSION"
 
-# --- Commit release changes ---
+# --- Commit + tag + push ---
 git add package.json "$HEADER" "$CHANGELOG"
 git commit -m "release: $TAG"
-echo "Committed release changes"
-
-# --- Lint + test ---
-echo ""
-echo "Running lint..."
-pnpm run lint
-
-echo "Running tests..."
-pnpm run test
-
-# --- Build + package ---
-echo ""
-echo "Building and packaging..."
-pnpm run dist
-
-# --- Tag + push ---
 git tag "$TAG"
 git push
 git push origin "$TAG"
