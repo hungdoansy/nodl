@@ -90,6 +90,8 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
         <span key={i} style={i > 0 ? { marginLeft: 8 } : undefined}>
           {isErrorType(arg) ? (
             <span style={{ whiteSpace: 'pre-wrap' }}>{arg.message}{arg.stack ? `\n${arg.stack}` : ''}</span>
+          ) : entry.method === 'error' && typeof arg === 'string' ? (
+            <span>{arg}</span>
           ) : isPrimitive(arg) ? (
             renderTypedPrimitive(arg)
           ) : (
