@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.1 (2026-04-12)
+
+- release script missing last line from git log and draft
+- copy esbuild platform binary into packaged app
+
 ## v2.0.0 (2026-04-12)
 
 - AST-based code instrumenter replacing the regex-based implementation
