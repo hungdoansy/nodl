@@ -35,25 +35,82 @@ export function EditorPane() {
   const monacoRef = useRef<Monaco | null>(null)
   const ignoreScrollRef = useRef(false)
   const typeLibsRef = useRef<Map<string, { dispose: () => void }>>(new Map())
+  const typePathsRef = useRef<string[]>([])
   const [editorVersion, setEditorVersion] = useState(0)
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
 
-  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+  const handleBeforeMount: BeforeMount = useCallback((monaco: Monaco) => {
     monacoRef.current = monaco
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ESNext,
       module: monaco.languages.typescript.ModuleKind.ESNext,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
       allowJs: true,
-      strict: false,
+      strict: true,
       noEmit: true,
       esModuleInterop: true,
       allowSyntheticDefaultImports: true,
+      allowNonTsExtensions: true,
     })
     monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
       // Suppress module-not-found errors — packages are resolved at runtime via require()
       diagnosticCodesToIgnore: [2792, 2307, 1259, 1471, 7016],
+    })
+
+    // Register import path completion provider.
+    // Monaco's built-in TS service doesn't support import path completion
+    // (missing readDirectory/getDirectories in the worker), so we provide our own.
+    monaco.languages.registerCompletionItemProvider('typescript', {
+      triggerCharacters: ['/', '"', "'"],
+      provideCompletionItems: (model, position) => {
+        const line = model.getValueInRange({
+          startLineNumber: position.lineNumber,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        })
+
+        // Detect cursor inside import/require string
+        const match = line.match(/(?:from\s+|import\s+|require\s*\(\s*)(['"])([^'"]*?)$/)
+        if (!match) return { suggestions: [] }
+
+        const typed = match[2] // e.g. "lodash/" or "lodash/jo"
+
+        // Build module list from registered type paths
+        const modules = new Set<string>()
+        for (const p of typePathsRef.current) {
+          // p is like "@types/lodash/join.d.ts" or "axios/index.d.ts"
+          let mod = p
+            .replace(/^@types\//, '')  // strip @types/ prefix
+            .replace(/\.d\.ts$/, '')   // strip extension
+            .replace(/\/index$/, '')   // lodash/index → lodash
+          if (mod.endsWith('/package')) continue // skip package.json entries
+
+          if (typed && !mod.startsWith(typed)) continue
+          modules.add(mod)
+        }
+
+        // Build replacement range (from after the opening quote to cursor)
+        const quoteCol = line.lastIndexOf(match[1])
+        const range = {
+          startLineNumber: position.lineNumber,
+          startColumn: quoteCol + 2,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        }
+
+        const suggestions = Array.from(modules).map((mod) => ({
+          label: mod,
+          kind: mod.includes('/') ? monaco.languages.CompletionItemKind.File : monaco.languages.CompletionItemKind.Module,
+          insertText: mod,
+          range,
+          sortText: mod,
+        }))
+
+        return { suggestions }
+      },
     })
   }, [])
 
@@ -127,28 +184,29 @@ export function EditorPane() {
 
     bridge.getTypeDefs().then((defs) => {
       const currentLibs = typeLibsRef.current
-      const newNames = new Set(defs.map((d) => d.packageName))
 
-      // Dispose libs for removed packages
-      for (const [name, lib] of currentLibs) {
-        if (!newNames.has(name)) {
-          lib.dispose()
-          currentLibs.delete(name)
-        }
+      // Dispose all existing libs (full refresh on each load)
+      for (const [, lib] of currentLibs) {
+        lib.dispose()
       }
+      currentLibs.clear()
 
-      // Add or update libs for current packages
+      // Register each file via addExtraLib at the correct virtual path.
+      // Path format must match what TypeScript's module resolution generates.
+      // The editor model is at file:///src/<id>.ts, so TS looks for
+      // file:///node_modules/... — extraLib paths must use the same scheme.
+      // Keep @types/ prefix — TS Node resolution checks @types/ automatically.
+      const paths: string[] = []
       for (const def of defs) {
-        const existing = currentLibs.get(def.packageName)
-        if (existing) {
-          existing.dispose()
-        }
+        const virtualPath = `file:///node_modules/${def.filePath}`
         const lib = monaco.languages.typescript.typescriptDefaults.addExtraLib(
           def.content,
-          `file:///node_modules/${def.packageName}/index.d.ts`
+          virtualPath
         )
-        currentLibs.set(def.packageName, lib)
+        currentLibs.set(def.filePath, lib)
+        paths.push(def.filePath)
       }
+      typePathsRef.current = paths
     })
   }, [packages, editorVersion])
 
@@ -173,6 +231,7 @@ export function EditorPane() {
         <Editor
           key={tab.id}
           height="100%"
+          path={`file:///src/${tab.id}.ts`}
           language="typescript"
           theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
           value={tab.code}
@@ -183,7 +242,7 @@ export function EditorPane() {
             lineHeight: Math.round(fontSize * 1.5),
             minimap: { enabled: minimap },
             padding: { top: 12, bottom: 4 },
-            scrollBeyondLastLine: false,
+            scrollBeyondLastLine: true,
             stickyScroll: { enabled: false },
             wordWrap: wordWrap ? 'on' : 'off',
             tabSize,
@@ -195,6 +254,13 @@ export function EditorPane() {
             smoothScrolling: true,
             cursorSmoothCaretAnimation: 'on',
             cursorBlinking: 'smooth',
+            quickSuggestions: { other: true, comments: false, strings: true },
+            inlineSuggest:  {
+              enabled: true,
+            },
+            suggest: {
+              insertMode: 'replace',
+            }
           }}
           beforeMount={handleBeforeMount}
           onMount={handleMount}

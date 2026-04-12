@@ -155,15 +155,15 @@ function isNewer(latest: string, installed: string): boolean {
   return lPatch > iPatch
 }
 
-/** Returns the resolved npm binary path and packages storage directory. */
-export function getPackagePaths(): { npmPath: string; packagesDir: string } {
+/** Returns the resolved npm binary path, packages storage directory, and user data directory. */
+export function getPackagePaths(): { npmPath: string; packagesDir: string; userDataDir: string } {
   let npmPath: string
   try {
     npmPath = getNpm()
   } catch {
     npmPath = 'npm not found'
   }
-  return { npmPath, packagesDir: PACKAGES_DIR }
+  return { npmPath, packagesDir: PACKAGES_DIR, userDataDir: app.getPath('userData') }
 }
 
 export function removePackage(name: string): PackageOperationResult {
@@ -221,8 +221,50 @@ export async function searchPackages(query: string): Promise<PackageSearchResult
 }
 
 /**
- * Read .d.ts entry points from installed packages that ship their own types.
- * Returns the content of the top-level type definition file for each package.
+ * Recursively scan a directory for all .d.ts files.
+ * Returns each file with its path relative to nodeModulesDir.
+ * This handles packages like @types/lodash which have:
+ *   - index.d.ts (entry with /// <reference path> to common/*.d.ts)
+ *   - common/*.d.ts (module augmentation files)
+ *   - join.d.ts, map.d.ts, etc. (per-method files for "lodash/join" imports)
+ */
+export function collectAllDtsFiles(
+  pkgDir: string,
+  nodeModulesDir: string
+): { relativePath: string; content: string }[] {
+  const files: { relativePath: string; content: string }[] = []
+  const nmPrefix = nodeModulesDir.replace(/\\/g, '/') + '/'
+
+  function scan(dir: string) {
+    let entries: string[]
+    try { entries = readdirSync(dir) } catch { return }
+
+    for (const entry of entries) {
+      if (entry === 'node_modules') continue
+      const fullPath = join(dir, entry)
+      try {
+        const stat = require('fs').statSync(fullPath)
+        if (stat.isDirectory()) {
+          scan(fullPath)
+        } else if (entry.endsWith('.d.ts')) {
+          const content = readFileSync(fullPath, 'utf-8')
+          const relative = fullPath.replace(/\\/g, '/').replace(nmPrefix, '')
+          files.push({ relativePath: relative, content })
+        }
+      } catch { /* skip unreadable entries */ }
+    }
+  }
+
+  scan(pkgDir)
+  return files
+}
+
+/**
+ * Read .d.ts files from installed packages that ship their own types.
+ * Scans ALL .d.ts files in the package directory so both entry-referenced
+ * files (common/*.d.ts) and per-method files (join.d.ts, map.d.ts) are
+ * loaded. This supports both `import _ from "lodash"` and
+ * `import join from "lodash/join"` style imports.
  */
 export function getTypeDefinitions(): TypeDefInfo[] {
   const nodeModules = join(PACKAGES_DIR, 'node_modules')
@@ -240,16 +282,19 @@ export function getTypeDefinitions(): TypeDefInfo[] {
       const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
       const typesField = pkgJson.types ?? pkgJson.typings
 
-      let dtsPath: string | null = null
-      if (typesField) {
-        dtsPath = join(pkgDir, typesField)
-      } else if (existsSync(join(pkgDir, 'index.d.ts'))) {
-        dtsPath = join(pkgDir, 'index.d.ts')
-      }
+      // Only load types if the package has a types entry or index.d.ts
+      const hasTypes = typesField
+        ? existsSync(join(pkgDir, typesField))
+        : existsSync(join(pkgDir, 'index.d.ts'))
 
-      if (dtsPath && existsSync(dtsPath)) {
-        const content = readFileSync(dtsPath, 'utf-8')
-        results.push({ packageName: pkg.name, filePath: dtsPath, content })
+      if (hasTypes) {
+        // Include package.json so TypeScript's module resolution finds the types field
+        results.push({ packageName: pkg.name, filePath: `${pkg.name}/package.json`, content: readFileSync(pkgJsonPath, 'utf-8') })
+        // Include all .d.ts files
+        const files = collectAllDtsFiles(pkgDir, nodeModules)
+        for (const file of files) {
+          results.push({ packageName: pkg.name, filePath: file.relativePath, content: file.content })
+        }
       }
     } catch {
       // Skip packages whose types can't be read

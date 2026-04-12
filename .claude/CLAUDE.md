@@ -251,6 +251,94 @@ These are established patterns from the design process. Follow them for consiste
 - **System font for UI, monospace for code only.** `-apple-system` for UI text, JetBrains Mono only in editor/output.
 - **Warm neutral dark theme.** Not blue-tinted, not sci-fi. Reference aesthetic: Codex/OpenAI UI.
 
+## Monaco Type Definitions — How IntelliSense Works
+
+Loading type definitions into Monaco for installed npm packages is non-trivial. Here's how it works and the pitfalls.
+
+### Architecture
+
+```
+User installs lodash + @types/lodash
+        ↓
+getTypeDefinitions() in package-manager.ts
+        ↓
+Scans ALL .d.ts files in package dir + includes package.json
+Returns each file with its path relative to node_modules
+        ↓
+EditorPane useEffect → addExtraLib() for each file
+at file:///node_modules/<relative-path>
+        ↓
+TS Node resolution: import "lodash" → @types/lodash → IntelliSense works
+        ↓
+Custom CompletionItemProvider → import path suggestions ("lodash/join")
+```
+
+### Compiler Options (Critical)
+
+These must ALL be set in `handleBeforeMount`. `setCompilerOptions` **replaces** (not merges) Monaco's defaults — omitting any option loses it.
+
+- **`moduleResolution: NodeJs`** — Without it, TypeScript won't look in `@types/` directories.
+- **`allowNonTsExtensions: true`** — Without it, TS reports "Type annotations can only be used in TypeScript files" because `@monaco-editor/react` model URIs don't always have `.ts` extensions.
+- **`esModuleInterop: true`** + **`allowSyntheticDefaultImports: true`** — Required for `import _ from "lodash"` syntax.
+
+### URI Scheme Consistency (Root Cause of Many Failures)
+
+The editor model URI and `addExtraLib` paths must share the same scheme for module resolution to work.
+
+- Editor model: `path="file:///src/${tab.id}.ts"` on the `<Editor>` component
+- Extra libs: `file:///node_modules/@types/lodash/index.d.ts`
+- TypeScript resolves `import "lodash"` from `file:///src/...` → walks up to `file:///node_modules/...` → matches extraLib paths
+
+If the model has no `file:///` scheme (e.g., bare `abc123.ts`), TypeScript generates candidate paths without `file:///` and nothing matches. **This was the hardest bug to find.**
+
+### Type Loading Rules
+
+1. **Use `addExtraLib` (not `createModel`).** `createModel` triggers per-file validation — with 300+ files in `@types/lodash`, it's extremely slow. `addExtraLib` is lightweight and designed for type definitions.
+
+2. **Keep `@types/` prefix in paths.** Never strip it. TypeScript's Node resolution checks `@types/` automatically. Aliasing `@types/lodash/...` to `lodash/...` creates split module identity — `declare module "../index"` augments the `@types/` module but `import _ from "lodash"` resolves to the alias (different module), so augmentations don't apply.
+
+3. **Each .d.ts file is a separate `addExtraLib` at its correct virtual path.** Packages like `@types/lodash` use module augmentation across files:
+   ```ts
+   // @types/lodash/common/array.d.ts
+   import _ = require("../index");
+   declare module "../index" { interface LoDashStatic { join(...): string; } }
+   ```
+   The `"../index"` resolves relative to the file's virtual path. If the file isn't at the right path, augmentation silently fails.
+
+4. **Include the real `package.json` from disk.** TypeScript's resolver probes `package.json` for the `types` field. `getTypeDefinitions()` includes each package's actual `package.json`.
+
+5. **Scan ALL `.d.ts` files, not just the reference tree.** `collectAllDtsFiles()` scans the entire package directory. This picks up both `common/*.d.ts` (module augmentation) and per-method files like `join.d.ts` (for `import join from "lodash/join"`).
+
+6. **Type loading `useEffect` must depend on `editorVersion`.** Monaco loads asynchronously. If `packages` stabilizes before Monaco is ready, `monacoRef.current` is null and types never load. `editorVersion` (set in `handleMount`) ensures re-run.
+
+### Why Concatenation Doesn't Work
+
+Tempting to concat all `.d.ts` files into one string. Fails because:
+- `import _ = require("../index")` is a relative import needing correct file location
+- `declare module "../index"` augments by resolved path — wrong path = wrong module
+- `/// <reference path>` directives try to resolve external files that don't exist
+
+### Import Path Completion
+
+Monaco's built-in TypeScript service does NOT support import path completion. The TS worker is missing `readDirectory()`, `getDirectories()`, and `directoryExists()` (needed by TypeScript's `stringCompletions.ts`). The `SuggestAdapter` only triggers on `"."`, not `"/"`.
+
+Solution: a custom `CompletionItemProvider` registered in `handleBeforeMount` that:
+- Triggers on `/`, `"`, `'`
+- Detects cursor inside `import`/`require` string via regex
+- Scans `typePathsRef.current` (populated when type defs load) for matching submodules
+- Strips `@types/` prefix and `.d.ts`/`/index` suffixes to produce clean module names
+
+Also requires `quickSuggestions: { strings: true }` in editor options.
+
+### Suppressed Diagnostic Codes
+
+These are suppressed because packages resolve at runtime via `require()`:
+- **2792** — Cannot find module (import)
+- **2307** — Cannot find module (require)
+- **1259** — Can only be default-imported with esModuleInterop
+- **1471** — Module can only be default-imported using allowSyntheticDefaultImports
+- **7016** — Could not find declaration file
+
 ## Key Design Decisions
 
 - **Manual update via GitHub Releases** — no auto-update (requires paid code signing)
