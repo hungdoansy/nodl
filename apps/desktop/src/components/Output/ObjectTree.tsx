@@ -58,7 +58,6 @@ function renderPrimitive(data: unknown): JSX.Element {
 function isExpandable(data: unknown): boolean {
   if (data === null || data === undefined) return false
   if (typeof data !== 'object') return false
-  if (data === '[Circular]') return false
   const typed = data as { __type?: string; value?: string }
   if (typed.__type === 'Date' || typed.__type === 'RegExp') return false
   return true

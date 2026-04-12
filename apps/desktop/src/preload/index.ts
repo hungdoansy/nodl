@@ -100,7 +100,7 @@ const api: ElectronAPI = {
     return ipcRenderer.invoke(IPC.CHECK_PACKAGE_UPDATES, packages)
   },
 
-  getPackagePaths(): Promise<{ npmPath: string; packagesDir: string }> {
+  getPackagePaths(): Promise<{ npmPath: string; packagesDir: string; userDataDir: string }> {
     return ipcRenderer.invoke(IPC.GET_PACKAGE_PATHS)
   },
 

@@ -87,8 +87,8 @@ export async function checkPackageUpdates(packages: { name: string; version: str
   return (await getAPI()?.checkPackageUpdates(packages)) ?? {}
 }
 
-export async function getPackagePaths(): Promise<{ npmPath: string; packagesDir: string }> {
-  return (await getAPI()?.getPackagePaths()) ?? { npmPath: 'unknown', packagesDir: 'unknown' }
+export async function getPackagePaths(): Promise<{ npmPath: string; packagesDir: string; userDataDir: string }> {
+  return (await getAPI()?.getPackagePaths()) ?? { npmPath: 'unknown', packagesDir: 'unknown', userDataDir: 'unknown' }
 }
 
 export async function getTypeDefs(): Promise<TypeDefInfo[]> {

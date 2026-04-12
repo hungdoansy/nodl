@@ -38,7 +38,7 @@ const PARSER_OPTIONS = {
   allowAwaitOutsideFunction: true,   // Top-level await support
   allowReturnOutsideFunction: true,  // Bare return is valid in scratchpad
   errorRecovery: true,               // Partial AST on incomplete/invalid code
-  plugins: ['typescript', 'jsx'] as const,
+  plugins: ['typescript', 'jsx'] as ('typescript' | 'jsx')[],
   ranges: true,                      // Provide start/end character offsets
 }
 

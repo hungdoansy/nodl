@@ -64,7 +64,7 @@ export function EditorPane() {
     // (missing readDirectory/getDirectories in the worker), so we provide our own.
     monaco.languages.registerCompletionItemProvider('typescript', {
       triggerCharacters: ['/', '"', "'"],
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: monacoEditor.ITextModel, position: { lineNumber: number; column: number }) => {
         const line = model.getValueInRange({
           startLineNumber: position.lineNumber,
           startColumn: 1,

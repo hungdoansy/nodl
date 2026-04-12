@@ -21,7 +21,7 @@ export default function App() {
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <Group direction="horizontal" className="flex-1">
+        <Group orientation="horizontal" className="flex-1">
           <Panel defaultSize={50} minSize={20}>
             <EditorPane />
           </Panel>

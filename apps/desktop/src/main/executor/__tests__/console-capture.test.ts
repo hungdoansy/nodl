@@ -828,7 +828,7 @@ describe('serializeArg — weird but valid edge cases', () => {
     expect(result[9]).toBe('[Function: fn]')
     expect(result[10]).toEqual({ __type: 'Date', value: '2024-01-01T00:00:00.000Z' })
     expect(result[11]).toEqual({ __type: 'RegExp', value: '/regex/g' })
-    expect(result[12].__type).toBe('Error')
+    expect((result[12] as { __type: string }).__type).toBe('Error')
     expect(result[13]).toEqual({ __type: 'Map', entries: [['k', 'v']] })
     expect(result[14]).toEqual({ __type: 'Set', values: [1, 2] })
     expect(result[15]).toEqual({ nested: true })

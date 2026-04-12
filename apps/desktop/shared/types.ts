@@ -158,7 +158,7 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<UpdateInfo>
   openExternal: (url: string) => void
   checkPackageUpdates: (packages: { name: string; version: string }[]) => Promise<Record<string, string>>
-  getPackagePaths: () => Promise<{ npmPath: string; packagesDir: string }>
+  getPackagePaths: () => Promise<{ npmPath: string; packagesDir: string; userDataDir: string }>
   getTypeDefs: () => Promise<TypeDefInfo[]>
 }
 
