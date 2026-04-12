@@ -58,12 +58,14 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
   if (isLastExpression(firstArg)) {
     return (
       <div style={{ ...fontStyle, color: 'var(--text-tertiary)' }}>
-        <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, marginRight: 4, flexShrink: 0, display: 'inline' }} />
-        {isPrimitive(firstArg.value) ? (
-          <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
-        ) : (
-          <ObjectTree data={firstArg.value} />
-        )}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 2px' }}>
+          <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, flexShrink: 0 }} />
+          {isPrimitive(firstArg.value) ? (
+            <span style={{ color: 'var(--accent)' }}>{formatPrimitive(firstArg.value)}</span>
+          ) : (
+            <ObjectTree data={firstArg.value} />
+          )}
+        </span>
       </div>
     )
   }
