@@ -70,8 +70,8 @@ export function ConsoleEntryComponent({ entry, compact, fontSize, lineHeight }: 
   if (isLastExpression(firstArg)) {
     return (
       <div style={{ ...fontStyle, color: 'var(--text-tertiary)' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 2px' }}>
-          <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, flexShrink: 0 }} />
+        <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 4, padding: '0 2px' }}>
+          <ArrowLeft size={12} style={{ color: 'var(--accent)', opacity: 0.4, flexShrink: 0, marginTop: 4.5 }} />
           {isPrimitive(firstArg.value) ? (
             renderTypedPrimitive(firstArg.value)
           ) : (
