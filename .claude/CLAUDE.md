@@ -240,7 +240,7 @@ Always add pipeline tests that run `instrumentCode() → transpile()` and verify
 Run `pnpm run release` — the script handles everything:
 1. Prompts for version, generates `CHANGELOG.draft.md` from git log
 2. Waits for you to edit the draft in your IDE
-3. Prepends to `CHANGELOG.md`, updates `package.json` + `Header.tsx`
+3. Prepends to `CHANGELOG.md`, updates `package.json` version
 4. Commits, runs lint + tests, builds DMG
 5. Tags, pushes, creates GitHub Release with artifacts
 

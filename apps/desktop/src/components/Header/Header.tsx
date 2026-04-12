@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../store/settings'
 import { useUIStore } from '../../store/ui'
 import { useUpdateCheck } from '../../hooks/useUpdateCheck'
 import type { ThemeMode } from '../../../shared/types'
+import { version } from '../../../package.json'
 
 const nextTheme: Record<ThemeMode, ThemeMode> = {
   dark: 'light',
@@ -84,7 +85,7 @@ export function Header() {
             nodl
           </span>
           <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
-            v2.0
+            v{version}
           </span>
         </button>
 

@@ -12,7 +12,6 @@ set -e
 #   5. Prepend to CHANGELOG.md, update package.json, Header.tsx
 #   6. Commit, tag, push, create GitHub release
 
-HEADER="src/components/Header/Header.tsx"
 CHANGELOG="CHANGELOG.md"
 DRAFT="CHANGELOG.draft.md"
 
@@ -50,7 +49,6 @@ if [[ -z "$VERSION" ]]; then
 fi
 
 TAG="v$VERSION"
-SHORT_VERSION=$(echo "$VERSION" | sed 's/\.[0-9]*$//')  # 1.1.0 -> 1.1
 TODAY=$(date +%Y-%m-%d)
 
 # --- Check tag doesn't exist ---
@@ -112,9 +110,8 @@ echo ""
 echo "This will:"
 echo "  1. Insert into CHANGELOG.md"
 echo "  2. Update package.json version to $VERSION"
-echo "  3. Update Header.tsx version to v$SHORT_VERSION"
-echo "  4. Commit, tag, push"
-echo "  5. Create GitHub release with DMG"
+echo "  3. Commit, tag, push"
+echo "  4. Create GitHub release with DMG"
 echo ""
 read -rp "Continue? (y/N) " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
@@ -154,12 +151,8 @@ node -e "
 "
 echo "Updated package.json to $VERSION"
 
-# --- Update Header.tsx version ---
-sed -i '' "s/v[0-9]*\.[0-9]*/v$SHORT_VERSION/" "$HEADER"
-echo "Updated Header.tsx to v$SHORT_VERSION"
-
 # --- Commit + tag + push ---
-git add package.json "$HEADER" "$CHANGELOG"
+git add package.json "$CHANGELOG"
 git commit -m "release: $TAG"
 git tag "$TAG"
 git push
