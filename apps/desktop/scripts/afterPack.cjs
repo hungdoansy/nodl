@@ -1,62 +1,89 @@
 // Post-pack hook for electron-builder:
-// 1. Copy @esbuild platform binary into the packaged app (pnpm symlinks aren't followed)
-// 2. Ad-hoc sign the app on macOS (free, no Apple Developer account needed)
+// 1. Ensure the correct @esbuild platform binary is in the packaged app
+// 2. Ad-hoc sign the app on macOS
 
 const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
 
-function copyEsbuildBinary(context) {
-  // Resolve the real esbuild module path (follows pnpm symlinks)
-  const esbuildDir = path.dirname(require.resolve('esbuild/package.json'))
-  const esbuildNodeModules = path.dirname(esbuildDir)
+// electron-builder arch enum → esbuild arch name
+const ARCH_NAME = { 0: 'ia32', 1: 'x64', 2: 'armv7l', 3: 'arm64' }
 
-  // Find the @esbuild platform binary next to the resolved esbuild package
-  const sourceEsbuildScope = path.join(esbuildNodeModules, '@esbuild')
-  if (!fs.existsSync(sourceEsbuildScope)) {
-    console.warn('  • @esbuild scope not found at', sourceEsbuildScope)
-    return
-  }
+function ensureEsbuildBinary(context) {
+  // Determine what the TARGET platform needs (not the build machine)
+  const targetPlatform = context.electronPlatformName          // 'darwin' | 'linux' | 'win32'
+  const targetArch = ARCH_NAME[context.arch]                   // 'x64' | 'arm64'
+  const esbuildPlatform = `${targetPlatform}-${targetArch}`    // e.g. 'darwin-x64'
+  const esbuildVersion = require('esbuild/package.json').version
 
-  // The packaged app's node_modules
+  console.log(`  • ensuring @esbuild/${esbuildPlatform}@${esbuildVersion} for target`)
+
+  // Where the binary must end up inside the packaged app
   const appNodeModules = path.join(
     context.appOutDir,
-    // macOS has the .app bundle structure
-    process.platform === 'darwin'
+    targetPlatform === 'darwin'
       ? `${context.packager.appInfo.productFilename}.app/Contents/Resources/app.asar.unpacked/node_modules`
       : 'resources/app.asar.unpacked/node_modules'
   )
+  const destDir = path.join(appNodeModules, '@esbuild', esbuildPlatform)
 
-  const destEsbuildScope = path.join(appNodeModules, '@esbuild')
+  // Already present? (electron-builder may have resolved it)
+  if (fs.existsSync(path.join(destDir, 'package.json'))) {
+    console.log(`  • @esbuild/${esbuildPlatform} already in packaged app`)
+    return
+  }
 
-  // Copy each platform directory (e.g., darwin-arm64, linux-x64)
-  const platforms = fs.readdirSync(sourceEsbuildScope)
-  for (const platform of platforms) {
-    const src = path.join(sourceEsbuildScope, platform)
-    const dest = path.join(destEsbuildScope, platform)
-    if (!fs.statSync(src).isDirectory()) continue
-    if (fs.existsSync(dest)) continue // already there
+  // Search local filesystem for the binary
+  const esbuildDir = path.dirname(require.resolve('esbuild/package.json'))
+  const searchPaths = [
+    // Next to resolved esbuild in pnpm store (works when build arch == target arch)
+    path.join(path.dirname(esbuildDir), '@esbuild', esbuildPlatform),
+    // Workspace node_modules (CI cross-arch install puts it here)
+    path.join(process.cwd(), 'node_modules', '@esbuild', esbuildPlatform),
+    // Monorepo root node_modules
+    path.resolve(process.cwd(), '..', '..', 'node_modules', '@esbuild', esbuildPlatform),
+    // pnpm virtual store
+    path.resolve(process.cwd(), '..', '..', 'node_modules', '.pnpm',
+      `@esbuild+${esbuildPlatform}@${esbuildVersion}`, 'node_modules', '@esbuild', esbuildPlatform),
+  ]
 
-    fs.mkdirSync(dest, { recursive: true })
-    // Copy all files from the platform package
-    for (const file of fs.readdirSync(src)) {
-      const srcFile = path.join(src, file)
-      const destFile = path.join(dest, file)
-      if (fs.statSync(srcFile).isDirectory()) {
-        fs.cpSync(srcFile, destFile, { recursive: true })
-      } else {
-        fs.copyFileSync(srcFile, destFile)
-        // Preserve executable permission for the binary
-        const mode = fs.statSync(srcFile).mode
-        fs.chmodSync(destFile, mode)
-      }
+  for (const src of searchPaths) {
+    const srcPkg = path.join(src, 'package.json')
+    if (fs.existsSync(srcPkg)) {
+      fs.mkdirSync(destDir, { recursive: true })
+      fs.cpSync(src, destDir, { recursive: true })
+      // Ensure binary is executable
+      const bin = path.join(destDir, 'bin', 'esbuild')
+      if (fs.existsSync(bin)) fs.chmodSync(bin, 0o755)
+      console.log(`  • copied @esbuild/${esbuildPlatform} from ${src}`)
+      return
     }
-    console.log(`  • copied @esbuild/${platform} into packaged app`)
+  }
+
+  // Not found locally — download it
+  console.log(`  • @esbuild/${esbuildPlatform} not found locally, downloading...`)
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'esbuild-'))
+  try {
+    execSync(
+      `npm pack @esbuild/${esbuildPlatform}@${esbuildVersion} --pack-destination "${tmpDir}"`,
+      { stdio: 'pipe' }
+    )
+    const tgz = fs.readdirSync(tmpDir).find(f => f.endsWith('.tgz'))
+    if (!tgz) throw new Error('npm pack produced no .tgz file')
+    fs.mkdirSync(destDir, { recursive: true })
+    execSync(`tar xzf "${path.join(tmpDir, tgz)}" -C "${destDir}" --strip-components=1`, { stdio: 'pipe' })
+    // Ensure binary is executable
+    const bin = path.join(destDir, 'bin', 'esbuild')
+    if (fs.existsSync(bin)) fs.chmodSync(bin, 0o755)
+    console.log(`  • downloaded and installed @esbuild/${esbuildPlatform}@${esbuildVersion}`)
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
   }
 }
 
 function adHocSign(context) {
-  if (process.platform !== 'darwin') return
+  if (context.electronPlatformName !== 'darwin') return
 
   const appPath = `${context.appOutDir}/${context.packager.appInfo.productFilename}.app`
   console.log(`  • ad-hoc signing  ${appPath}`)
@@ -69,6 +96,6 @@ function adHocSign(context) {
 }
 
 exports.default = async function (context) {
-  copyEsbuildBinary(context)
+  ensureEsbuildBinary(context)
   adHocSign(context)
 }

@@ -45,17 +45,6 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
 
-      - name: Install esbuild for target arch
-        if: runner.arch == 'ARM64' && matrix.arch == 'x64'
-        run: |
-          ESBUILD_VER=$(node -e "console.log(require('esbuild/package.json').version)")
-          echo "Installing @esbuild/darwin-x64@$ESBUILD_VER"
-          npm pack @esbuild/darwin-x64@$ESBUILD_VER
-          mkdir -p node_modules/@esbuild/darwin-x64
-          tar xzf esbuild-darwin-x64-*.tgz -C node_modules/@esbuild/darwin-x64 --strip-components=1
-          rm esbuild-darwin-x64-*.tgz
-          ls -la node_modules/@esbuild/
-
       - name: Build app
         run: pnpm run build
 
