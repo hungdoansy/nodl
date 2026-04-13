@@ -2,29 +2,14 @@ name: Deploy Landing Page
 
 on:
   push:
-    branches: [main]
-    paths: ['apps/web/**']
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install
-
-      - run: pnpm run build --filter=@nodl/web
-
-      # Add your deployment step here (Vercel, Netlify, GitHub Pages, etc.)
-      # Example for GitHub Pages:
-      # - uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: apps/web/out
+      - name: Trigger Vercel deploy
+        run: curl -sf -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
