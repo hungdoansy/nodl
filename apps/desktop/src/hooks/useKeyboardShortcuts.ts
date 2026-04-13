@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useTabsStore } from '../store/tabs'
 import { useUIStore } from '../store/ui'
 import { useCodeExecution } from './useCodeExecution'
+import * as bridge from '../ipc/bridge'
 
 export function useKeyboardShortcuts() {
   const { run } = useCodeExecution()
@@ -12,10 +13,14 @@ export function useKeyboardShortcuts() {
 
       if (!mod) return
 
-      // Cmd+S — force save (prevent default browser save dialog)
+      // Cmd+S — force save now + show toast feedback. Persistence is also
+      // auto-debounced, so this is primarily about user expectation: when
+      // someone hits Cmd+S they want confirmation their work is safe.
       if (e.key === 's' && !e.shiftKey) {
         e.preventDefault()
-        // Persistence is auto-debounced, nothing extra needed
+        const { tabs, activeTabId } = useTabsStore.getState()
+        bridge.saveState({ version: 1, tabs, activeTabId })
+        useUIStore.getState().markSaved()
         return
       }
 

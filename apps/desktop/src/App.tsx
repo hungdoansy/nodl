@@ -3,6 +3,8 @@ import { Header } from './components/Header/Header'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
+import { ShortcutHintOverlay } from './components/ShortcutHintOverlay'
+import { SaveToast } from './components/SaveToast'
 import { usePersistence } from './hooks/usePersistence'
 import { useTheme } from './hooks/useTheme'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -31,6 +33,8 @@ export default function App() {
           </Panel>
         </Group>
       </div>
+      <ShortcutHintOverlay />
+      <SaveToast />
     </div>
   )
 }
