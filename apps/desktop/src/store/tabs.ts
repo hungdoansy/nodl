@@ -10,7 +10,7 @@ export interface Tab {
   updatedAt: number
 }
 
-const WELCOME_CODE = `// Welcome to nodl — a fast JS/TS scratchpad
+export const WELCOME_CODE = `// Welcome to nodl — a fast JS/TS scratchpad
 // Hit Cmd+Enter (or Ctrl+Enter) to run your code
 
 console.log("Hello, nodl!")
@@ -23,7 +23,8 @@ const greet = (name: string): string => \`Hello, \${name}!\`
 greet("world")
 
 // Arrays, objects, promises — all rendered nicely
-[1, 2, 3].map(x => x * x)
+const squares = [1, 2, 3].map(x => x * x)
+squares
 
 // Install npm packages from the sidebar
 // import lodash from "lodash"

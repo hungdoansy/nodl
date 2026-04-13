@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { instrumentCode, stripInlineComment } from '../instrument'
 import { instrumentWithAST } from '../instrument-ast'
 import { transpile } from '../transpiler'
+import { WELCOME_CODE } from '../../../store/tabs'
 
 /** Run the full pipeline and verify no transpilation errors */
 function pipeline(code: string): { instrumented: string; js: string; errors: { message: string; line: number }[] } {
@@ -1030,5 +1031,33 @@ describe('stripInlineComment', () => {
 
   it('handles escaped quotes in strings', () => {
     expect(stripInlineComment('"she said \\"hi\\"" // quote')).toBe('"she said \\"hi\\""')
+  })
+})
+
+describe('WELCOME_CODE regression', () => {
+  it('passes the full pipeline without errors', () => {
+    expectValid(WELCOME_CODE)
+  })
+
+  it('has no bare expression line starting with `[` or `(` after a non-terminator line (ASI-trap guard)', () => {
+    const lines = WELCOME_CODE.split('\n')
+    const terminators = new Set([';', '{', '}', ','])
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim()
+      if (!/^[[(]/.test(trimmed)) continue
+
+      // Find the previous effective (non-blank, non-comment) line
+      let prev = i - 1
+      while (prev >= 0) {
+        const p = lines[prev].trim()
+        if (!p || p.startsWith('//')) { prev--; continue }
+        const last = p[p.length - 1]
+        if (terminators.has(last)) break
+        throw new Error(
+          `WELCOME_CODE ASI trap at line ${i + 1}: "${trimmed}"\n` +
+          `Previous effective line ends with "${last}" (not a terminator): "${p}"`
+        )
+      }
+    }
   })
 })
