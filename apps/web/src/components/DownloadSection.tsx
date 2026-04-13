@@ -2,11 +2,16 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Download } from 'lucide-react'
-import { DOWNLOAD_URL, RELEASES_URL, SYSTEM_REQUIREMENTS } from '@/lib/constants'
+import { DOWNLOAD_URL, RELEASES_URL } from '@/lib/constants'
 import {
   handleDownloadClick,
   useDownloadClicked
 } from '@/lib/downloadFlow'
+import {
+  PLATFORM_LABEL,
+  SYSTEM_REQUIREMENTS_BY_PLATFORM,
+  usePlatform
+} from '@/lib/platform'
 import { GridBackground } from './effects/GridBackground'
 import { RadialGlow } from './effects/RadialGlow'
 import { RevealOnScroll } from './RevealOnScroll'
@@ -14,6 +19,12 @@ import { QuarantineNote } from './QuarantineNote'
 
 export function DownloadSection() {
   const noteVisible = useDownloadClicked()
+  const platform = usePlatform()
+  const platformLabel = PLATFORM_LABEL[platform]
+  const ctaText =
+    platform === 'unknown' ? 'Download nodl' : `Download for ${platformLabel}`
+  const systemRequirements = SYSTEM_REQUIREMENTS_BY_PLATFORM[platform]
+  const showQuarantineNote = platform === 'mac' && noteVisible
 
   return (
     <section
@@ -48,7 +59,7 @@ export function DownloadSection() {
           className="group mt-10 inline-flex h-14 w-full max-w-md items-center justify-center gap-2.5 rounded-md border border-accent/40 bg-accent px-6 text-[15px] font-semibold text-bg-void shadow-[0_12px_32px_-8px_rgba(167,139,250,0.55)] transition-all hover:bg-accent-bright hover:shadow-[0_14px_36px_-8px_rgba(167,139,250,0.75)]"
         >
           <Download size={17} strokeWidth={2.4} />
-          <span>Download for macOS</span>
+          <span>{ctaText}</span>
           <ArrowRight
             size={15}
             strokeWidth={2.4}
@@ -57,11 +68,11 @@ export function DownloadSection() {
         </a>
 
         <p className="mt-4 font-mono text-[12px] text-text-tertiary">
-          {SYSTEM_REQUIREMENTS}
+          {systemRequirements}
         </p>
 
         <AnimatePresence initial={false}>
-          {noteVisible && (
+          {showQuarantineNote && (
             <motion.div
               key="quarantine"
               initial={{ opacity: 0, height: 0, y: -8 }}

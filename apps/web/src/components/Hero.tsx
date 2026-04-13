@@ -8,12 +8,22 @@ import {
   RELEASES_URL
 } from '@/lib/constants'
 import { handleDownloadClick } from '@/lib/downloadFlow'
+import { PLATFORM_LABEL, usePlatform } from '@/lib/platform'
 import { GridBackground } from './effects/GridBackground'
 import { RadialGlow } from './effects/RadialGlow'
 import { GithubIcon } from './icons/GithubIcon'
 import { Kbd } from './Kbd'
 
 export function Hero() {
+  const platform = usePlatform()
+  const platformLabel = PLATFORM_LABEL[platform]
+  const pillText =
+    platform === 'unknown'
+      ? 'Now available on macOS, Windows & Linux'
+      : `Now available for ${platformLabel}`
+  const ctaText =
+    platform === 'unknown' ? 'Download nodl' : `Download for ${platformLabel}`
+
   return (
     <section
       id="top"
@@ -41,7 +51,7 @@ export function Hero() {
             <Sparkles size={11} className="animate-sparkle-spin" />
             v{APP_VERSION}
           </span>
-          <span>Now available for macOS</span>
+          <span>{pillText}</span>
           <ArrowRight
             size={12}
             className="transition-transform group-hover:translate-x-0.5"
@@ -90,7 +100,7 @@ export function Hero() {
             className="group inline-flex h-11 items-center gap-2 rounded-md border border-accent/40 bg-accent px-5 text-[14px] font-medium text-bg-void shadow-[0_8px_24px_-8px_rgba(167,139,250,0.6)] transition-all hover:bg-accent-bright hover:shadow-[0_10px_28px_-8px_rgba(167,139,250,0.8)]"
           >
             <Download size={15} strokeWidth={2.4} />
-            <span>Download for macOS</span>
+            <span>{ctaText}</span>
             <ArrowRight
               size={14}
               strokeWidth={2.4}
