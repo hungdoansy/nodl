@@ -47,8 +47,11 @@ export function useModifierHeldListener(delayMs: number = HINT_DELAY_MS): void {
           shown = true
           setHeld(true)
         }, delayMs)
-      } else if (e.metaKey || e.ctrlKey) {
-        // A chord is being pressed — user already knows what they want
+      } else {
+        // Any other key — the user is either pressing a chord, typing in
+        // the editor, or hitting a non-bound key. In every case we hide:
+        // they don't need the hint anymore, and the ⌘ may or may not be
+        // held. hide() is a no-op if nothing was scheduled or shown.
         hide()
       }
     }
@@ -60,15 +63,19 @@ export function useModifierHeldListener(delayMs: number = HINT_DELAY_MS): void {
     const onBlur = () => hide()
     const onVisibilityChange = () => { if (document.hidden) hide() }
 
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
+    // Capture phase so we see keydowns before useKeyboardShortcuts, which
+    // calls stopPropagation() on matched chords. Without capture, a chord
+    // press would silently leave the hint visible until ⌘ was released.
+    const opts = { capture: true } as const
+    window.addEventListener('keydown', onKeyDown, opts)
+    window.addEventListener('keyup', onKeyUp, opts)
     window.addEventListener('blur', onBlur)
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
       hide()
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('keydown', onKeyDown, opts)
+      window.removeEventListener('keyup', onKeyUp, opts)
       window.removeEventListener('blur', onBlur)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }

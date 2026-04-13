@@ -1,6 +1,7 @@
 import { useModifierHeld } from '../hooks/useModifierHeld'
 import { SHORTCUTS, type ShortcutDef } from '../config/shortcuts'
-import { IS_MAC, shortcut } from '../utils/shortcut'
+import { IS_MAC } from '../utils/shortcut'
+import { ShortcutKeys } from './ShortcutKeys'
 
 /**
  * Shown when the user holds the platform modifier key (⌘ / Ctrl) for
@@ -20,7 +21,7 @@ export function ShortcutHintOverlay() {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 100,
-        padding: '10px 14px',
+        padding: '11px 16px 12px',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-md)',
@@ -28,11 +29,11 @@ export function ShortcutHintOverlay() {
         display: 'grid',
         gridTemplateColumns: 'auto 1fr',
         columnGap: 14,
-        rowGap: 6,
+        rowGap: 7,
         alignItems: 'center',
         pointerEvents: 'none',
         userSelect: 'none',
-        animation: 'nodl-hint-fade-in 120ms ease',
+        animation: 'nodl-hint-fade-in 140ms cubic-bezier(0.22, 1, 0.36, 1)',
       }}
       role="tooltip"
       aria-label="Keyboard shortcuts"
@@ -45,13 +46,16 @@ export function ShortcutHintOverlay() {
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
           color: 'var(--text-tertiary)',
-          marginBottom: 2,
+          marginBottom: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
-        Keep holding {IS_MAC ? '⌘' : 'Ctrl'} — then press…
+        Keep holding {IS_MAC ? 'Command' : 'Ctrl'} — then press…
       </div>
-      {SHORTCUTS.map((s) => (
-        <ShortcutRow key={`${s.display}-${s.opts?.shift ? 'shift' : ''}`} def={s} />
+      {SHORTCUTS.map((def) => (
+        <ShortcutRow key={`${def.display}-${def.opts?.shift ? 'shift' : ''}`} def={def} />
       ))}
       <style>{`
         @keyframes nodl-hint-fade-in {
@@ -64,28 +68,20 @@ export function ShortcutHintOverlay() {
 }
 
 function ShortcutRow({ def }: { def: ShortcutDef }) {
-  // Range display (1–9) isn't a real chord — format manually
-  const chord = def.display === '1–9'
-    ? (IS_MAC ? '⌘1–9' : 'Ctrl+1–9')
-    : shortcut(def.display, def.opts ?? { mod: true })
+  // "1–9" is a pseudo-chord: render ⌘1 with the label "Switch to tab 1…9"
+  // (the keycap can't show a range cleanly, and the label is the right
+  // place for the range notation anyway).
+  const chord = def.display === '1–9' ? '1' : def.display
+  const label = def.display === '1–9' ? 'Switch to tab (1–9)' : def.label
+
   return (
     <>
-      <kbd
-        style={{
-          justifySelf: 'start',
-          padding: '2px 7px',
-          fontSize: 11,
-          fontFamily: 'var(--font-mono)',
-          color: 'var(--text-primary)',
-          background: 'var(--bg-input)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-sm)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {chord}
-      </kbd>
-      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{def.label}</span>
+      <span style={{ justifySelf: 'start' }}>
+        <ShortcutKeys chord={chord} opts={def.opts ?? { mod: true }} />
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.2 }}>
+        {label}
+      </span>
     </>
   )
 }
