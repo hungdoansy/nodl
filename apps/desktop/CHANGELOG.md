@@ -1,5 +1,7 @@
 # Changelog
 
+
+
 ## v2.1.0 (2026-04-13)
 
 - Save shortcut (Cmd+S) with an inline "Saved" indicator next to the Auto-run button
