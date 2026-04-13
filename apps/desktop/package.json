@@ -23,8 +23,7 @@
     "test:e2e": "playwright test",
     "lint": "tsc --noEmit",
     "pack": "pnpm run build && electron-builder --dir",
-    "dist": "pnpm run build && electron-builder",
-    "release": "bash scripts/release.sh"
+    "dist": "pnpm run build && electron-builder"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",
