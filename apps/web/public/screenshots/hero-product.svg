@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" role="img" aria-label="nodl product screenshot placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e1e1e" />
+      <stop offset="1" stop-color="#171717" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#7c3aed" stop-opacity="0.05" />
+    </linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <rect width="1600" height="1000" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1600" height="320" fill="url(#accent)" opacity="0.8"/>
+
+  <!-- App layout sketch -->
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="1000" fill="#1a1a1a" stroke="rgba(255,255,255,0.06)"/>
+  <rect x="20" y="32" width="120" height="14" rx="3" fill="rgba(255,255,255,0.08)"/>
+  <rect x="20" y="80" width="180" height="10" rx="2" fill="rgba(167,139,250,0.4)"/>
+  <rect x="20" y="108" width="160" height="10" rx="2" fill="rgba(255,255,255,0.08)"/>
+  <rect x="20" y="136" width="170" height="10" rx="2" fill="rgba(255,255,255,0.08)"/>
+  <rect x="20" y="164" width="140" height="10" rx="2" fill="rgba(255,255,255,0.08)"/>
+
+  <!-- Toolbar -->
+  <rect x="220" y="0" width="1380" height="56" fill="#252525" stroke="rgba(255,255,255,0.06)"/>
+  <circle cx="252" cy="28" r="6" fill="#a78bfa"/>
+  <rect x="270" y="22" width="80" height="12" rx="3" fill="rgba(255,255,255,0.12)"/>
+
+  <!-- Editor -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" fill="#e5e5e5">
+    <text x="260" y="120">const users = [1, 2, 3].map(n =&gt; ({</text>
+    <text x="260" y="148">  id: n,</text>
+    <text x="260" y="176">  name: `user-${n}`</text>
+    <text x="260" y="204">}))</text>
+    <text x="260" y="260" fill="#999999">users.length</text>
+    <text x="260" y="288" fill="#999999">users[0]</text>
+    <text x="260" y="316" fill="#999999">await fetch('/api/health')</text>
+    <text x="260" y="372" fill="#6a9955">// Async, errors, console.log — all aligned.</text>
+  </g>
+
+  <!-- Output rail divider -->
+  <line x1="900" y1="56" x2="900" y2="1000" stroke="rgba(255,255,255,0.06)"/>
+
+  <!-- Output values -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" fill="#b5cea8">
+    <text x="940" y="260">← 3</text>
+    <text x="940" y="288" fill="#ce9178">← { id: 1, name: "user-1" }</text>
+    <text x="940" y="316" fill="#ce9178">← Response { ok: true }</text>
+  </g>
+
+  <!-- Centre placeholder watermark -->
+  <g opacity="0.55">
+    <text x="800" y="780" text-anchor="middle" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="20" fill="#666666" letter-spacing="3">PLACEHOLDER</text>
+    <text x="800" y="810" text-anchor="middle" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="14" fill="#666666">replace with real screenshot at apps/web/public/screenshots/hero-product.png</text>
+  </g>
+</svg>

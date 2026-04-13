@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     url: '/',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.svg',
         width: 1200,
         height: 630,
         alt: `${APP_NAME} — ${APP_TAGLINE}`
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${APP_NAME} — ${APP_TAGLINE}`,
     description: APP_DESCRIPTION,
-    images: ['/og-image.png']
+    images: ['/og-image.svg']
   },
   icons: {
     icon: '/favicon.svg'
