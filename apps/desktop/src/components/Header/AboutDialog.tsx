@@ -97,6 +97,35 @@ export function AboutDialog({ open, onClose }: Props) {
             <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>, with 🫶</span>
           </div>
 
+          {/* Links */}
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button
+              onClick={() => bridge.openExternal('https://github.com/hungdoansy/nodl')}
+              style={{
+                fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+            >
+              GitHub <ExternalLink size={10} />
+            </button>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: 12, lineHeight: 1 }}>•</span>
+            <button
+              onClick={() => bridge.openExternal('https://github.com/hungdoansy/nodl/issues')}
+              style={{
+                fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+            >
+              Report an issue <ExternalLink size={10} />
+            </button>
+          </div>
+
           {/* Changelog */}
           <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
             <h3 style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 12 }}>
@@ -130,35 +159,6 @@ export function AboutDialog({ open, onClose }: Props) {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Links */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button
-              onClick={() => bridge.openExternal('https://github.com/hungdoansy/nodl')}
-              style={{
-                fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none',
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: 0,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
-            >
-              GitHub <ExternalLink size={10} />
-            </button>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: 12, lineHeight: 1 }}>•</span>
-            <button
-              onClick={() => bridge.openExternal('https://github.com/hungdoansy/nodl/issues')}
-              style={{
-                fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none',
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: 0,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
-            >
-              Report an issue <ExternalLink size={10} />
-            </button>
           </div>
         </div>
       </div>
