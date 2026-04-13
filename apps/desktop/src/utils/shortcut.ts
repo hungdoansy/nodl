@@ -4,6 +4,10 @@
  * Conventions:
  *  - macOS uses the glyph form (⌘, ⇧, ⌥, ⌃) with no separator.
  *  - Other platforms use the word form (Ctrl+, Shift+, Alt+).
+ *  - Display order is Cmd/Ctrl → Shift → Alt/Option → Ctrl-on-Mac → key.
+ *    This matches what users write ("⌘⇧P", "Ctrl+Shift+P") and what most
+ *    modern Mac apps render. Apple HIG prefers physical-keyboard order
+ *    (⌃⌥⇧⌘) but it trips up users' muscle memory for spelling chords.
  *  - Trailing key is human-written (e.g. `'Enter'`, `'N'`, `','`).
  */
 
@@ -21,16 +25,16 @@ export interface ShortcutOptions {
 export function shortcut(key: string, opts: ShortcutOptions = { mod: true }): string {
   if (IS_MAC) {
     let out = ''
-    if (opts.ctrl) out += '⌃'
-    if (opts.alt) out += '⌥'
-    if (opts.shift) out += '⇧'
     if (opts.mod) out += '⌘'
+    if (opts.shift) out += '⇧'
+    if (opts.alt) out += '⌥'
+    if (opts.ctrl) out += '⌃'
     return out + key
   }
   const parts: string[] = []
   if (opts.mod || opts.ctrl) parts.push('Ctrl')
-  if (opts.alt) parts.push('Alt')
   if (opts.shift) parts.push('Shift')
+  if (opts.alt) parts.push('Alt')
   parts.push(key)
   return parts.join('+')
 }

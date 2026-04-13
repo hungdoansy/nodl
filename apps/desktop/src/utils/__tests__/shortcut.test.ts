@@ -38,9 +38,14 @@ describe('shortcut (macOS)', () => {
     expect(shortcut('Enter')).toBe('⌘Enter')
   })
 
-  it('renders ⌘⇧Key with shift', async () => {
+  it('renders ⌘⇧Key with shift (Cmd first, matching Notion/Linear/Figma)', async () => {
     const { shortcut } = await import('../shortcut')
-    expect(shortcut('P', { mod: true, shift: true })).toBe('⇧⌘P')
+    expect(shortcut('P', { mod: true, shift: true })).toBe('⌘⇧P')
+  })
+
+  it('renders all modifiers in ⌘⇧⌥⌃ order', async () => {
+    const { shortcut } = await import('../shortcut')
+    expect(shortcut('X', { mod: true, shift: true, alt: true, ctrl: true })).toBe('⌘⇧⌥⌃X')
   })
 
   it('renders ⌥Key with alt only', async () => {

@@ -25,16 +25,11 @@ export interface ShortcutKeysProps {
 export function ShortcutKeys({ chord, opts = { mod: true } }: ShortcutKeysProps) {
   const keys: ReactNode[] = []
 
-  // Canonical order (matches Apple's keyboard-shortcut conventions and
-  // what users see on physical Mac keys; Windows readers still parse it):
-  //   Ctrl (ctrl on Mac) → Alt/Option → Shift → Cmd/Ctrl (the "mod") → key
-  if (opts.ctrl && IS_MAC) keys.push(<Keycap key="ctrl-mac" ariaLabel="Control">⌃</Keycap>)
-  if (opts.alt) keys.push(<Keycap key="alt" ariaLabel={IS_MAC ? 'Option' : 'Alt'}>{IS_MAC ? '⌥' : 'Alt'}</Keycap>)
-  if (opts.shift) keys.push(
-    <Keycap key="shift" ariaLabel="Shift">
-      {IS_MAC ? <ShiftGlyph /> : 'Shift'}
-    </Keycap>
-  )
+  // Display order matches what users write and say: "⌘⇧P", "Ctrl+Shift+P".
+  // Platform mod (Cmd/Ctrl) comes first, then Shift → Option/Alt → Control
+  // (Mac-only), then the letter key. Apple HIG uses the physical-keyboard
+  // order (⌃⌥⇧⌘) but most modern Mac apps — Notion, Linear, Figma,
+  // Raycast — put Command first, which is what users intuit.
   if (opts.mod) {
     keys.push(
       <Keycap key="mod" ariaLabel={IS_MAC ? 'Command' : 'Control'}>
@@ -45,6 +40,13 @@ export function ShortcutKeys({ chord, opts = { mod: true } }: ShortcutKeysProps)
     // On Windows, ctrl without mod — still render a Ctrl cap
     keys.push(<Keycap key="ctrl-win" ariaLabel="Control">Ctrl</Keycap>)
   }
+  if (opts.shift) keys.push(
+    <Keycap key="shift" ariaLabel="Shift">
+      {IS_MAC ? <ShiftGlyph /> : 'Shift'}
+    </Keycap>
+  )
+  if (opts.alt) keys.push(<Keycap key="alt" ariaLabel={IS_MAC ? 'Option' : 'Alt'}>{IS_MAC ? '⌥' : 'Alt'}</Keycap>)
+  if (opts.ctrl && IS_MAC) keys.push(<Keycap key="ctrl-mac" ariaLabel="Control">⌃</Keycap>)
   keys.push(<Keycap key="key" ariaLabel={chord}>{chord}</Keycap>)
 
   return (
