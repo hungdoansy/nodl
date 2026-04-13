@@ -282,3 +282,7 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
+
+      - name: Trigger Vercel web deploy
+        if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' }}
+        run: curl -sf -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
