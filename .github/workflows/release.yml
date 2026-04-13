@@ -1,17 +1,149 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 2.2.0)'
+        required: true
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      changelog: ${{ steps.changelog.outputs.text }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install
+
+      - name: Validate version
+        id: meta
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be in X.Y.Z format (got: $VERSION)"
+            exit 1
+          fi
+
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Generate changelog
+        id: changelog
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          TODAY=$(date +%Y-%m-%d)
+          LAST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+
+          # Build raw commit list (same filters as old release.sh)
+          if [[ -n "$LAST_TAG" ]]; then
+            RAW=$(git log "$LAST_TAG"..HEAD --pretty=tformat:'%s' --no-merges \
+              | grep -v '^release:' | grep -v '^docs:' \
+              | sed 's/^[a-z]*: //' | sed 's/^[a-z]*(.*): //' \
+              | sed 's/^/- /')
+          else
+            RAW=$(git log --pretty=tformat:'%s' --no-merges -20 \
+              | sed 's/^/- /')
+          fi
+
+          if [[ -z "$RAW" ]]; then
+            RAW="- No notable changes"
+          fi
+
+          # Try AI polish via Gemini 1.5 Flash
+          POLISHED=""
+          if [[ -n "$GEMINI_API_KEY" ]]; then
+            PROMPT="You are a release notes writer. Given a list of git commit messages, rewrite them as concise, user-facing release notes. Use bullet points starting with '- '. Focus on what changed from the user's perspective. Remove implementation details. Fix grammar. Do not add a version header — just the bullet points.\n\nCommits:\n$RAW"
+
+            RESPONSE=$(curl -sf \
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY" \
+              -H 'Content-Type: application/json' \
+              -d "{\"contents\":[{\"parts\":[{\"text\":$(echo "$PROMPT" | jq -Rs .)}]}]}" \
+              2>&1) || true
+
+            POLISHED=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null || true)
+          fi
+
+          if [[ -n "$POLISHED" ]]; then
+            ENTRIES="$POLISHED"
+          else
+            echo "::warning::AI changelog generation failed or GEMINI_API_KEY not set — using raw git log"
+            ENTRIES="$RAW"
+          fi
+
+          # Full changelog block for CHANGELOG.md
+          BLOCK="## $TAG ($TODAY)
+
+          $ENTRIES"
+
+          # Write to output (escape newlines for GITHUB_OUTPUT)
+          {
+            echo 'text<<CHANGELOG_EOF'
+            echo "$ENTRIES"
+            echo 'CHANGELOG_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          # Job summary
+          {
+            echo "## Release $TAG"
+            echo ""
+            echo "### Changelog"
+            echo ""
+            echo "$ENTRIES"
+            echo ""
+            echo "---"
+            echo "_Review the changelog above, then approve the \`release\` environment gate to proceed._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  confirm:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Confirmed
+        run: echo "Release ${{ needs.prepare.outputs.tag }} approved — starting builds"
+
   build:
+    needs: confirm
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: macos-latest
@@ -66,27 +198,87 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: List artifacts
-        run: find artifacts -type f | head -20
+      - name: Update CHANGELOG.md
+        working-directory: apps/desktop
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          ENTRIES: ${{ needs.prepare.outputs.changelog }}
+        run: |
+          TODAY=$(date +%Y-%m-%d)
+          BLOCK="## $TAG ($TODAY)
+
+          $ENTRIES"
+
+          node -e "
+            const fs = require('fs');
+            const changelog = fs.existsSync('CHANGELOG.md')
+              ? fs.readFileSync('CHANGELOG.md', 'utf8')
+              : '# Changelog\n';
+            const block = process.env.BLOCK;
+            const lines = changelog.split('\n');
+            const titleIdx = lines.findIndex(l => l.startsWith('# '));
+            if (titleIdx >= 0) {
+              lines.splice(titleIdx + 1, 0, '', block);
+            } else {
+              lines.unshift(block, '');
+            }
+            fs.writeFileSync('CHANGELOG.md', lines.join('\n'));
+          "
+
+      - name: Update package.json version
+        working-directory: apps/desktop
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Commit, tag, and push
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/CHANGELOG.md apps/desktop/package.json
+          git commit -m "release: $TAG"
+          git tag -m "$TAG" "$TAG"
+          git push origin main
+          git push origin "$TAG"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          body: ${{ needs.prepare.outputs.changelog }}
+          draft: false
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.zip
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
-          generate_release_notes: true
-          draft: true
