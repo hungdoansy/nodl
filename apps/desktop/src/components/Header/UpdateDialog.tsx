@@ -25,7 +25,7 @@ export function UpdateDialog({ open, onClose, update }: Props) {
     >
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
+        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
         onClick={handleClose}
       />
       <div
