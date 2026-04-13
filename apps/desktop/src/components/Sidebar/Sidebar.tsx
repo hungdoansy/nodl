@@ -154,7 +154,7 @@ export function Sidebar() {
           <div
             className="flex items-center cursor-pointer"
             onClick={openPackages}
-            title={withShortcut('Packages — install, update, or remove npm packages', 'P', { mod: true, shift: true })}
+            title={withShortcut('Packages — install, update, or remove npm packages', 'P')}
             style={{
               padding: collapsed ? '6px 0' : '5px 8px',
               justifyContent: collapsed ? 'center' : 'flex-start',

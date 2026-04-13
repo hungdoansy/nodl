@@ -22,12 +22,12 @@ export const SHORTCUTS: ShortcutDef[] = [
   { display: 'S',     label: 'Save' },
   { display: 'N',     label: 'New file' },
   { display: 'W',     label: 'Close tab' },
+  { display: 'L',     label: 'Clear output' },
+  { display: 'P',     label: 'Open packages' },
   { display: ',',     label: 'Settings' },
   { display: '1–9',   label: 'Switch to tab' },
-  { display: 'K',     label: 'Clear output' },
   { display: 'C',     label: 'Copy output',         opts: { mod: true, shift: true } },
   { display: 'M',     label: 'Toggle output mode',  opts: { mod: true, shift: true } },
-  { display: 'P',     label: 'Open packages',       opts: { mod: true, shift: true } },
   { display: 'A',     label: 'Toggle auto-run',     opts: { mod: true, shift: true } },
 ]
 

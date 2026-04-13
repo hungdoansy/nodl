@@ -42,13 +42,6 @@ export function useKeyboardShortcuts() {
           return
         }
 
-        // Cmd+Shift+P — toggle packages dialog
-        if (e.key === 'P' || e.key === 'p') {
-          consume(e)
-          useUIStore.getState().togglePackages()
-          return
-        }
-
         // Cmd+Shift+A — toggle auto-run
         if (e.key === 'A' || e.key === 'a') {
           consume(e)
@@ -71,10 +64,17 @@ export function useKeyboardShortcuts() {
         return
       }
 
-      // Cmd+K — clear output (terminal convention)
-      if (e.key === 'k') {
+      // Cmd+L — clear output (Chrome DevTools convention)
+      if (e.key === 'l') {
         consume(e)
         useOutputStore.getState().clear()
+        return
+      }
+
+      // Cmd+P — toggle packages dialog
+      if (e.key === 'p') {
+        consume(e)
+        useUIStore.getState().togglePackages()
         return
       }
 

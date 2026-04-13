@@ -230,7 +230,7 @@ export function OutputPane() {
           {copied ? <Check size={14} style={{ color: 'var(--ok)' }} /> : <Copy size={14} />}
         </button>
 
-        <button onClick={clear} className="toolbar-btn" title={withShortcut('Clear output', 'K')}>
+        <button onClick={clear} className="toolbar-btn" title={withShortcut('Clear output', 'L')}>
           <Trash2 size={14} />
         </button>
       </div>
