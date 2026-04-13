@@ -1,44 +1,59 @@
 import type { Config } from 'tailwindcss'
 
+/**
+ * Helper: build a tailwind colour entry that reads from a CSS variable
+ * holding an RGB triplet (e.g. `--rgb-bg-void: 23 23 23`). Tailwind's
+ * `<alpha-value>` placeholder makes utility opacity modifiers (`bg-x/40`)
+ * work the same way they do on built-in colours.
+ */
+const themed = (varName: string) => `rgb(var(${varName}) / <alpha-value>)`
+
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Mirror desktop app design tokens (apps/desktop/src/index.css :root)
-        'bg-void': '#171717',
-        'bg-primary': '#1e1e1e',
-        'bg-surface': '#252525',
-        'bg-elevated': '#2d2d2d',
-        'bg-input': '#333333',
+        // Surfaces (theme-switchable via CSS var)
+        'bg-void': themed('--rgb-bg-void'),
+        'bg-primary': themed('--rgb-bg-primary'),
+        'bg-surface': themed('--rgb-bg-surface'),
+        'bg-elevated': themed('--rgb-bg-elevated'),
+        'bg-input': themed('--rgb-bg-input'),
 
-        'border-subtle': 'rgba(255, 255, 255, 0.06)',
-        'border-default': 'rgba(255, 255, 255, 0.10)',
-        'border-strong': 'rgba(255, 255, 255, 0.16)',
+        // Alpha-baked layers — direct CSS var, no alpha modifier support.
+        'border-subtle': 'var(--border-subtle)',
+        'border-default': 'var(--border-default)',
+        'border-strong': 'var(--border-strong)',
+        'bg-hover': 'var(--bg-hover)',
+        'bg-active': 'var(--bg-active)',
+        'accent-dim': 'var(--accent-dim)',
+        'accent-glow': 'var(--accent-glow)',
 
-        accent: '#a78bfa',
-        'accent-bright': '#c4b5fd',
-        'accent-dim': 'rgba(167, 139, 250, 0.10)',
-        'accent-glow': 'rgba(167, 139, 250, 0.05)',
+        // Brand
+        accent: themed('--rgb-accent'),
+        'accent-bright': themed('--rgb-accent-bright'),
 
-        'text-primary': '#e5e5e5',
-        'text-secondary': '#999999',
-        'text-tertiary': '#666666',
-        'text-bright': '#f5f5f5',
+        // Text
+        'text-primary': themed('--rgb-text-primary'),
+        'text-secondary': themed('--rgb-text-secondary'),
+        'text-tertiary': themed('--rgb-text-tertiary'),
+        'text-bright': themed('--rgb-text-bright'),
 
-        danger: '#ef4444',
-        warn: '#f59e0b',
-        info: '#60a5fa',
-        ok: '#22c55e',
+        // Status
+        danger: themed('--rgb-danger'),
+        warn: themed('--rgb-warn'),
+        info: themed('--rgb-info'),
+        ok: themed('--rgb-ok'),
 
-        // Monaco vs-dark token colors (for code showcase)
-        'type-string': '#ce9178',
-        'type-number': '#b5cea8',
-        'type-boolean': '#569cd6',
-        'type-function': '#ffe082',
-        'type-keyword': '#569cd6',
-        'type-comment': '#6a9955'
+        // Monaco token colours (for the static code displays)
+        'type-string': themed('--rgb-type-string'),
+        'type-number': themed('--rgb-type-number'),
+        'type-boolean': themed('--rgb-type-boolean'),
+        'type-keyword': themed('--rgb-type-boolean'),
+        'type-function': themed('--rgb-type-function'),
+        'type-comment': themed('--rgb-type-comment'),
+        'type-tstype': themed('--rgb-type-tstype')
       },
       fontFamily: {
         sans: [
@@ -63,9 +78,8 @@ const config: Config = {
         lg: '12px'
       },
       boxShadow: {
-        sm: '0 1px 4px rgba(0, 0, 0, 0.3)',
-        dialog:
-          '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06)'
+        sm: 'var(--shadow-sm)',
+        dialog: 'var(--shadow-dialog)'
       },
       transitionTimingFunction: {
         ease: 'cubic-bezier(0.16, 1, 0.3, 1)'

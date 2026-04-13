@@ -7,6 +7,7 @@ import {
   APP_VERSION,
   GITHUB_URL
 } from '@/lib/constants'
+import { NO_FLASH_SCRIPT, ThemeProvider } from '@/lib/theme'
 import './globals.css'
 
 const jetbrainsMono = JetBrains_Mono({
@@ -25,30 +26,61 @@ export const metadata: Metadata = {
   description: APP_DESCRIPTION,
   applicationName: APP_NAME,
   authors: [{ name: 'Hung Doan', url: 'https://github.com/hungdoansy' }],
+  creator: 'Hung Doan',
+  publisher: 'Hung Doan',
+  category: 'developer tools',
   keywords: [
-    'JavaScript',
-    'TypeScript',
-    'scratchpad',
-    'REPL',
-    'Node.js',
-    'desktop',
-    'macOS',
-    'developer tools',
-    'IDE',
-    'code editor'
+    'nodl',
+    'TypeScript scratchpad',
+    'JavaScript scratchpad',
+    'TypeScript REPL',
+    'JavaScript REPL',
+    'TypeScript playground',
+    'inline output',
+    'live evaluation',
+    'Node.js scratchpad',
+    'desktop REPL',
+    'macOS developer tool',
+    'Electron app',
+    'code playground',
+    'TS playground',
+    'npm package testing',
+    'RunJS alternative',
+    'Quokka alternative'
   ],
+  alternates: {
+    canonical: '/'
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1
+    }
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false
+  },
   openGraph: {
     type: 'website',
     siteName: APP_NAME,
     title: `${APP_NAME} — ${APP_TAGLINE}`,
     description: APP_DESCRIPTION,
     url: '/',
+    locale: 'en_US',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: `${APP_NAME} — ${APP_TAGLINE}`
+        alt: `${APP_NAME} — ${APP_TAGLINE}`,
+        type: 'image/svg+xml'
       }
     ]
   },
@@ -56,10 +88,13 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${APP_NAME} — ${APP_TAGLINE}`,
     description: APP_DESCRIPTION,
-    images: ['/og-image.png']
+    images: ['/og-image.svg'],
+    creator: '@hungdoansy'
   },
   icons: {
-    icon: '/favicon.svg'
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg'
   },
   other: {
     'app:version': APP_VERSION,
@@ -68,8 +103,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#171717',
-  colorScheme: 'dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#171717' },
+    { media: '(prefers-color-scheme: light)', color: '#f5f5f5' }
+  ],
   width: 'device-width',
   initialScale: 1
 }
@@ -80,9 +117,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
+    <html lang="en" className={`${jetbrainsMono.variable} dark`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
+      </head>
       <body className="bg-bg-void text-text-primary antialiased">
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   )
