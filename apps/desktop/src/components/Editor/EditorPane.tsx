@@ -8,6 +8,7 @@ import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useAutoRun } from '../../hooks/useAutoRun'
 import { useTheme } from '../../hooks/useTheme'
 import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
+import { withShortcut } from '../../utils/shortcut'
 import { useScrollSync } from '../../store/scroll-sync'
 import { useUIStore } from '../../store/ui'
 import { usePackagesStore } from '../../store/packages'
@@ -213,13 +214,17 @@ export function EditorPane() {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-primary)' }}>
       <div className="toolbar flex items-center gap-1 px-1.5" style={{ height: 36, minHeight: 36 }}>
-        <button onClick={run} disabled={isRunning} className="toolbar-btn primary" title="Run (Cmd+Enter)">
+        <button onClick={run} disabled={isRunning} className="toolbar-btn primary" title={withShortcut('Run code', 'Enter')}>
           <Play size={14} />
         </button>
         <button
           onClick={() => setSetting('autoRunEnabled', !autoRunEnabled)}
           className={`toolbar-btn ${autoRunEnabled ? 'active' : ''}`}
-          title={autoRunEnabled ? `Auto-run on (${autoRunDelay}ms)` : 'Auto-run off'}
+          title={
+            autoRunEnabled
+              ? `Auto-run on (${autoRunDelay}ms delay) — click to disable`
+              : 'Auto-run off — click to run code automatically as you type'
+          }
         >
           {autoRunEnabled
             ? <Zap size={14} fill="currentColor" />

@@ -66,7 +66,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <h2 style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
             Settings
           </h2>
-          <button onClick={handleClose} className="btn-ghost" style={{ padding: 3 }}>
+          <button onClick={handleClose} className="btn-ghost" title="Close (Esc)" style={{ padding: 3 }}>
             <X size={14} />
           </button>
         </div>

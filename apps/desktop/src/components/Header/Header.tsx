@@ -65,6 +65,7 @@ export function Header() {
         {/* Center: title — absolute so it stays centered regardless of left/right content */}
         <button
           onClick={() => setAboutOpen(true)}
+          title="About nodl — version, changelog, and links"
           style={{
             position: 'absolute', left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 6,
@@ -126,7 +127,7 @@ export function Header() {
           <button
             onClick={() => setTheme(nextTheme[theme])}
             className="toolbar-btn"
-            title={`Theme: ${theme}`}
+            title={`Theme: ${theme} — click to switch to ${nextTheme[theme]}`}
           >
             <ThemeIcon theme={theme} />
           </button>

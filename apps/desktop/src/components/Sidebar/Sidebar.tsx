@@ -4,6 +4,7 @@ import { useTabsStore } from '../../store/tabs'
 import { useUIStore } from '../../store/ui'
 import { usePackagesStore } from '../../store/packages'
 import { PackageDialog } from '../Packages/PackageDialog'
+import { withShortcut } from '../../utils/shortcut'
 
 export function Sidebar() {
   const tabs = useTabsStore((s) => s.tabs)
@@ -56,7 +57,7 @@ export function Sidebar() {
             <span style={{ color: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}>
               Files
             </span>
-            <button onClick={createTab} className="btn-ghost" title="New file" style={{ padding: 2 }}>
+            <button onClick={createTab} className="btn-ghost" title={withShortcut('New file', 'N')} style={{ padding: 2 }}>
               <Plus size={13} />
             </button>
           </div>
@@ -67,17 +68,19 @@ export function Sidebar() {
         <div className="flex-1 overflow-y-auto" style={{ padding: collapsed ? '0 4px' : '0 6px' }}>
           {collapsed && (
             <div className="flex justify-center mb-1">
-              <button onClick={createTab} className="btn-ghost" title="New file" style={{ padding: 3 }}>
+              <button onClick={createTab} className="btn-ghost" title={withShortcut('New file', 'N')} style={{ padding: 3 }}>
                 <Plus size={14} />
               </button>
             </div>
           )}
           {tabs.map((tab, index) => {
             const active = tab.id === activeTabId
+            const switchHint = index < 9 ? ` (${withShortcut('switch', String(index + 1))})` : ''
             return (
               <div
                 key={tab.id}
                 draggable
+                title={`${tab.name}${switchHint} — double-click to rename`}
                 onDragStart={() => { dragRef.current = { index } }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
@@ -129,6 +132,7 @@ export function Sidebar() {
                     <button
                       onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost"
+                      title={active ? withShortcut('Close tab', 'W') : 'Close tab'}
                       style={{ padding: 1 }}
                     >
                       <X size={12} style={{ color: 'var(--text-tertiary)' }} />
@@ -148,6 +152,7 @@ export function Sidebar() {
           <div
             className="flex items-center cursor-pointer"
             onClick={() => setPkgDialogOpen(true)}
+            title="Packages — install, update, or remove npm packages"
             style={{
               padding: collapsed ? '6px 0' : '5px 8px',
               justifyContent: collapsed ? 'center' : 'flex-start',
@@ -173,6 +178,7 @@ export function Sidebar() {
           <div
             className="flex items-center cursor-pointer"
             onClick={openSettings}
+            title={withShortcut('Settings — editor, execution, appearance', ',')}
             style={{
               padding: collapsed ? '6px 0' : '5px 8px',
               justifyContent: collapsed ? 'center' : 'flex-start',

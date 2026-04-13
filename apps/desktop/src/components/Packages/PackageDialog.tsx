@@ -107,7 +107,7 @@ export function PackageDialog({ open, onClose }: Props) {
                 <Plus size={14} />
               </button>
             )}
-            <button onClick={handleClose} className="btn-ghost" style={{ padding: 3 }}>
+            <button onClick={handleClose} className="btn-ghost" title="Close (Esc)" style={{ padding: 3 }}>
               <X size={14} />
             </button>
           </div>
