@@ -51,8 +51,9 @@ function ensureEsbuildBinary(context) {
   for (const src of searchPaths) {
     const srcPkg = path.join(src, 'package.json')
     if (fs.existsSync(srcPkg)) {
-      fs.mkdirSync(destDir, { recursive: true })
-      fs.cpSync(src, destDir, { recursive: true })
+      fs.mkdirSync(path.dirname(destDir), { recursive: true })
+      fs.rmSync(destDir, { recursive: true, force: true })
+      fs.cpSync(src, destDir, { recursive: true, dereference: true })
       // Ensure binary is executable
       const bin = path.join(destDir, 'bin', 'esbuild')
       if (fs.existsSync(bin)) fs.chmodSync(bin, 0o755)
