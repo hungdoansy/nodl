@@ -2,18 +2,19 @@
 
 import type { MouseEvent } from 'react'
 import { useEffect, useState } from 'react'
+import { detectPlatform } from './platform'
 
 /**
  * Tracks whether the user has clicked any Download button this session.
  *
- * On macOS, the *first* click anywhere on the site is intercepted —
- * `preventDefault` stops the navigation and reveals the Quarantine note
- * so the user can see the install instructions before hitting the DMG
- * download. Subsequent clicks (after the note is already shown) navigate
- * normally.
+ * The Hero button always intercepts — it funnels the user down to the
+ * DownloadSection where the full CTA, system requirements, and (on
+ * macOS) the Gatekeeper bypass note live.
  *
- * Non-macOS visitors bypass the intercept entirely — the note is
- * macOS-specific so there's nothing to surface.
+ * The DownloadSection button's first click on macOS is intercepted once
+ * to surface the QuarantineNote, then subsequent clicks navigate
+ * normally. Non-macOS visitors download immediately — there's no
+ * platform-specific note to surface for Windows or Linux yet.
  */
 
 const STORAGE_KEY = 'nodl.downloadClicked'
@@ -56,37 +57,28 @@ export function useDownloadClicked(): boolean {
   return value
 }
 
-function isMacPlatform(): boolean {
-  if (typeof window === 'undefined') return false
-  const nav = window.navigator
-  const uaData = (nav as Navigator & { userAgentData?: { platform?: string } })
-    .userAgentData
-  if (uaData?.platform) return /mac/i.test(uaData.platform)
-  return /Mac|iPhone|iPad|iPod/i.test(nav.platform || nav.userAgent || '')
-}
-
 /**
  * Shared click handler for every Download <a> in the tree.
  *
- * Behaviour matrix (macOS only — non-Mac visitors always navigate):
+ * Behaviour matrix:
  *
- *   ┌────────────────────┬───────────────┬────────────────────────────┐
- *   │ Button             │ First click   │ Subsequent clicks          │
- *   ├────────────────────┼───────────────┼────────────────────────────┤
- *   │ Hero (main)        │ scroll + note │ scroll only (note visible) │
- *   │ DownloadSection    │ scroll + note │ navigate (download DMG)    │
- *   └────────────────────┴───────────────┴────────────────────────────┘
+ *   ┌─────────────────────┬────────────────────┬────────────────────────┐
+ *   │ Button              │ First click        │ Subsequent clicks      │
+ *   ├─────────────────────┼────────────────────┼────────────────────────┤
+ *   │ Hero (any platform) │ scroll + mark seen │ scroll (never nav)     │
+ *   │ DownloadSection mac │ scroll + show note │ navigate (download)    │
+ *   │ DownloadSection Win │ navigate           │ navigate               │
+ *   │ DownloadSection Lnx │ navigate           │ navigate               │
+ *   └─────────────────────┴────────────────────┴────────────────────────┘
  *
  * Pass `{ alwaysIntercept: true }` for the Hero button — it should
  * never trigger the actual download, only point the user at the
- * DownloadSection where they can read the install note in context.
- * The DownloadSection button uses the default behaviour: intercept
- * once to surface the note, then navigate normally.
+ * DownloadSection.
  */
 export interface HandleDownloadOptions {
-  /** Always preventDefault and scroll-to-section, even after the note is
-   *  shown. Use for upstream buttons (e.g. the Hero CTA) that exist to
-   *  funnel the user to the real download instead of triggering it. */
+  /** Always preventDefault and scroll-to-section. Use for upstream
+   *  buttons (e.g. the Hero CTA) that exist to funnel the user to the
+   *  real download instead of triggering it. */
   alwaysIntercept?: boolean
 }
 
@@ -104,27 +96,31 @@ export function handleDownloadClick(
 ): void {
   hydrateFromStorage()
 
-  if (!isMacPlatform()) {
-    // Non-Mac: no quarantine note to surface, navigate directly.
-    return
-  }
-
   if (opts.alwaysIntercept) {
     // Hero / upstream button: never download, always send the user to
-    // the DownloadSection. Mark clicked so the note is rendered there.
+    // the DownloadSection. Mark clicked so the macOS quarantine note is
+    // rendered there (no-op for other platforms — the note is gated on
+    // platform === 'mac' at the render site).
     e.preventDefault()
     markDownloadClicked()
     scrollToDownloadSection()
     return
   }
 
-  if (clicked) {
-    // DownloadSection button, note already shown — navigate normally.
+  // DownloadSection button.
+  if (detectPlatform() !== 'mac') {
+    // Windows / Linux / unknown: no Gatekeeper-style note to surface,
+    // navigate directly to the releases page.
     return
   }
 
-  // First click on DownloadSection button: surface the note before
-  // navigating. The user will tap again to actually download.
+  if (clicked) {
+    // macOS, note already shown — navigate normally.
+    return
+  }
+
+  // First macOS click on DownloadSection button: surface the note
+  // before navigating. The user will tap again to actually download.
   e.preventDefault()
   markDownloadClicked()
   scrollToDownloadSection()

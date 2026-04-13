@@ -19,8 +19,6 @@ export const AUTHOR_URL = 'https://github.com/hungdoansy'
 export const LICENSE_URL =
   'https://github.com/hungdoansy/nodl/blob/main/LICENSE'
 
-export const SYSTEM_REQUIREMENTS = 'macOS 12+ · Apple Silicon & Intel'
-
 export const QUARANTINE_BYPASS_CMD =
   'xattr -cr /Applications/nodl.app'
 
