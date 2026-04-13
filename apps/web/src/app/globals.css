@@ -3,36 +3,70 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════
-   nodl.app — Warm Neutral Dark
+   nodl.app — Warm Neutral Dark + Light
    Mirrors the desktop app's design system.
    Single source of truth: apps/desktop/src/index.css
+
+   Solid colours expose RGB triplets (e.g. --rgb-bg-void: 23 23 23) so
+   tailwind can apply alpha modifiers like bg-bg-void/70.
+   Alpha-baked colours (borders, hover layers) are exposed as full
+   rgba() values in the CSS variable directly.
    ═══════════════════════════════════════ */
 
-:root {
-  --bg-void: #171717;
-  --bg-primary: #1e1e1e;
-  --bg-surface: #252525;
-  --bg-elevated: #2d2d2d;
-  --bg-input: #333333;
+:root,
+:root.dark {
+  /* Solid surfaces */
+  --rgb-bg-void: 23 23 23;          /* #171717 */
+  --rgb-bg-primary: 30 30 30;       /* #1e1e1e */
+  --rgb-bg-surface: 37 37 37;       /* #252525 */
+  --rgb-bg-elevated: 45 45 45;      /* #2d2d2d */
+  --rgb-bg-input: 51 51 51;         /* #333333 */
 
+  /* Alpha-baked layers (no tailwind alpha modifier) */
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-active: rgba(255, 255, 255, 0.07);
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.10);
   --border-strong: rgba(255, 255, 255, 0.16);
-
-  --accent: #a78bfa;
-  --accent-bright: #c4b5fd;
   --accent-dim: rgba(167, 139, 250, 0.10);
   --accent-glow: rgba(167, 139, 250, 0.05);
 
-  --text-primary: #e5e5e5;
-  --text-secondary: #999999;
-  --text-tertiary: #666666;
-  --text-bright: #f5f5f5;
+  /* Brand */
+  --rgb-accent: 167 139 250;        /* #a78bfa */
+  --rgb-accent-bright: 196 181 253; /* #c4b5fd */
 
-  --danger: #ef4444;
-  --warn: #f59e0b;
-  --info: #60a5fa;
-  --ok: #22c55e;
+  /* Text */
+  --rgb-text-primary: 229 229 229;  /* #e5e5e5 */
+  --rgb-text-secondary: 153 153 153;/* #999999 */
+  --rgb-text-tertiary: 102 102 102; /* #666666 */
+  --rgb-text-bright: 245 245 245;   /* #f5f5f5 */
+
+  /* Status */
+  --rgb-danger: 239 68 68;          /* #ef4444 */
+  --rgb-warn: 245 158 11;           /* #f59e0b */
+  --rgb-info: 96 165 250;           /* #60a5fa */
+  --rgb-ok: 34 197 94;              /* #22c55e */
+
+  /* Monaco vs-dark token colours (for code rendering) */
+  --rgb-type-string: 206 145 120;   /* #ce9178 */
+  --rgb-type-number: 181 206 168;   /* #b5cea8 */
+  --rgb-type-boolean: 86 156 214;   /* #569cd6 — keywords too */
+  --rgb-type-function: 220 220 170; /* #dcdcaa */
+  --rgb-type-comment: 106 153 85;   /* #6a9955 */
+  --rgb-type-tstype: 78 201 176;    /* #4ec9b0 — TS type names */
+
+  /* Convenience aliases for inline CSS use */
+  --bg-void: rgb(var(--rgb-bg-void));
+  --bg-primary: rgb(var(--rgb-bg-primary));
+  --bg-surface: rgb(var(--rgb-bg-surface));
+  --bg-elevated: rgb(var(--rgb-bg-elevated));
+  --bg-input: rgb(var(--rgb-bg-input));
+  --accent: rgb(var(--rgb-accent));
+  --accent-bright: rgb(var(--rgb-accent-bright));
+  --text-primary: rgb(var(--rgb-text-primary));
+  --text-secondary: rgb(var(--rgb-text-secondary));
+  --text-tertiary: rgb(var(--rgb-text-tertiary));
+  --text-bright: rgb(var(--rgb-text-bright));
 
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.5),
@@ -46,6 +80,50 @@
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Monaco, monospace;
   --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
     sans-serif;
+}
+
+/* ─── Light theme ─── */
+:root.light {
+  --rgb-bg-void: 245 245 245;       /* #f5f5f5 */
+  --rgb-bg-primary: 250 250 250;    /* #fafafa */
+  --rgb-bg-surface: 255 255 255;    /* #ffffff */
+  --rgb-bg-elevated: 255 255 255;
+  --rgb-bg-input: 240 240 240;      /* #f0f0f0 */
+
+  --bg-hover: rgba(0, 0, 0, 0.03);
+  --bg-active: rgba(0, 0, 0, 0.06);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --accent-dim: rgba(124, 58, 237, 0.08);
+  --accent-glow: rgba(124, 58, 237, 0.04);
+
+  --rgb-accent: 124 58 237;         /* #7c3aed */
+  --rgb-accent-bright: 109 40 217;  /* #6d28d9 */
+
+  --rgb-text-primary: 26 26 26;     /* #1a1a1a */
+  --rgb-text-secondary: 102 102 102;/* #666666 */
+  --rgb-text-tertiary: 153 153 153; /* #999999 */
+  --rgb-text-bright: 0 0 0;
+
+  --rgb-danger: 220 38 38;
+  --rgb-warn: 217 119 6;
+  --rgb-info: 37 99 235;
+  --rgb-ok: 22 163 74;
+
+  /* Monaco vs (light) token colours */
+  --rgb-type-string: 163 21 21;     /* #a31515 */
+  --rgb-type-number: 9 134 88;      /* #098658 */
+  --rgb-type-boolean: 0 0 255;      /* #0000ff */
+  --rgb-type-function: 121 94 38;   /* #795e26 */
+  --rgb-type-comment: 0 128 0;      /* #008000 */
+  --rgb-type-tstype: 38 127 153;    /* #267f99 */
+
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.12),
+    0 0 0 1px var(--border-subtle);
+
+  color-scheme: light;
 }
 
 html {
@@ -63,14 +141,15 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color 200ms var(--ease), color 200ms var(--ease);
 }
 
 ::selection {
-  background: rgba(167, 139, 250, 0.25);
+  background: rgb(var(--rgb-accent) / 0.25);
   color: var(--text-bright);
 }
 
-/* Scrollbars — match desktop app */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -79,16 +158,62 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border-default);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-strong);
 }
 
 /* Focus ring */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid rgb(var(--rgb-accent));
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ─── Decorative animations ─── */
+@keyframes sparkle-spin {
+  0% { transform: rotate(0deg); opacity: 0.7; }
+  50% { transform: rotate(180deg); opacity: 1; }
+  100% { transform: rotate(360deg); opacity: 0.7; }
+}
+.animate-sparkle-spin {
+  animation: sparkle-spin 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-cursor-blink {
+  animation: cursor-blink 1.05s steps(1) infinite;
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.animate-soft-pulse {
+  animation: soft-pulse 2s ease-in-out infinite;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-sparkle-spin,
+  .animate-cursor-blink,
+  .animate-float,
+  .animate-soft-pulse,
+  .animate-glow-pulse {
+    animation: none !important;
+  }
 }
