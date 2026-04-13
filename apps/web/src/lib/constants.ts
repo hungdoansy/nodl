@@ -26,7 +26,7 @@ export const DOWNLOAD_SIZE_APPROX = '~90 MB'
 export type Feature = {
   icon:
     | 'Zap'
-    | 'FileCode2'
+    | 'FileCode'
     | 'Package'
     | 'Files'
     | 'Command'
@@ -44,7 +44,7 @@ export const FEATURES: Feature[] = [
     blurb: 'See the result of every line right next to where you wrote it.'
   },
   {
-    icon: 'FileCode2',
+    icon: 'FileCode',
     title: 'TypeScript, zero config',
     blurb: 'Strip types, run code. No tsconfig. No build step. Just write.'
   },
