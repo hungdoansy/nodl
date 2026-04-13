@@ -1,3 +1,5 @@
+import { CodeShowcase } from '@/components/CodeShowcase'
+import { DownloadSection } from '@/components/DownloadSection'
 import { Features } from '@/components/Features'
 import { Footer } from '@/components/Footer'
 import { Header } from '@/components/Header'
@@ -14,6 +16,8 @@ export default function Home() {
         <ProductPreview />
         <Features />
         <HowItWorks />
+        <CodeShowcase />
+        <DownloadSection />
       </main>
       <Footer />
     </>
