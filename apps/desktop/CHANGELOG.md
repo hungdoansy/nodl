@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.1.0 (2026-04-13)
+
+- Save shortcut (Cmd+S) with an inline "Saved" indicator next to the Auto-run button
+- Clear output (Cmd+L), open packages (Cmd+P), and copy output (Cmd+Shift+C) from the keyboard
+- Toggle output mode (Cmd+Shift+M) and auto-run (Cmd+Shift+A) from the keyboard
+- Hold Cmd (or Ctrl on Windows) for one second to reveal a panel listing every available shortcut
+- Button tooltips now describe the action and show its keyboard shortcut, platform-aware
+- Faster first-time dialog opening — removed the expensive backdrop blur over the editor
+- AboutDialog: GitHub and issue reporting links moved above the changelog
+- Welcome example rewritten so it no longer triggers a TypeScript ASI false-positive error
+
 ## v2.0.1 (2026-04-12)
 
 - release script missing last line from git log and draft
