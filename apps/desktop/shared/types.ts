@@ -21,7 +21,12 @@ export const IPC = {
   OPEN_EXTERNAL: 'ipc:open-external',
   CHECK_PACKAGE_UPDATES: 'ipc:check-package-updates',
   GET_PACKAGE_PATHS: 'ipc:get-package-paths',
-  GET_TYPE_DEFS: 'ipc:get-type-defs'
+  GET_TYPE_DEFS: 'ipc:get-type-defs',
+  LOAD_TAB_INDEX: 'ipc:load-tab-index',
+  SAVE_TAB_INDEX: 'ipc:save-tab-index',
+  LOAD_TAB_CONTENT: 'ipc:load-tab-content',
+  SAVE_TAB_CONTENT: 'ipc:save-tab-content',
+  DELETE_TAB_CONTENT: 'ipc:delete-tab-content'
 } as const
 
 export interface UpdateInfo {
@@ -87,7 +92,7 @@ export interface PackageOperationResult {
   error?: string
 }
 
-/** Persisted app state */
+/** Persisted app state (legacy single-file format) */
 export interface PersistedState {
   version: number
   tabs: Array<{
@@ -99,6 +104,22 @@ export interface PersistedState {
     updatedAt: number
   }>
   activeTabId: string
+}
+
+/** Per-tab metadata stored in the index (code lives in its own file) */
+export interface TabMeta {
+  name: string
+  language: 'javascript' | 'typescript'
+  createdAt: number
+  updatedAt: number
+}
+
+/** Index file listing all tabs — code is stored in per-tab files under tabs/<id>.ts */
+export interface TabIndex {
+  version: number
+  order: string[]
+  activeTabId: string
+  meta: Record<string, TabMeta>
 }
 
 /** Console methods we capture */
@@ -160,6 +181,11 @@ export interface ElectronAPI {
   checkPackageUpdates: (packages: { name: string; version: string }[]) => Promise<Record<string, string>>
   getPackagePaths: () => Promise<{ npmPath: string; packagesDir: string; userDataDir: string }>
   getTypeDefs: () => Promise<TypeDefInfo[]>
+  loadTabIndex: () => Promise<TabIndex | null>
+  saveTabIndex: (index: TabIndex) => void
+  loadTabContent: (id: string) => Promise<string | null>
+  saveTabContent: (id: string, code: string) => void
+  deleteTabContent: (id: string) => void
 }
 
 declare global {

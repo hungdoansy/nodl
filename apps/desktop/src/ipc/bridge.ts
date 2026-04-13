@@ -1,6 +1,6 @@
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo, TabIndex
 } from '../../shared/types'
 
 function getAPI(): ElectronAPI | null {
@@ -93,4 +93,24 @@ export async function getPackagePaths(): Promise<{ npmPath: string; packagesDir:
 
 export async function getTypeDefs(): Promise<TypeDefInfo[]> {
   return (await getAPI()?.getTypeDefs()) ?? []
+}
+
+export async function loadTabIndex(): Promise<TabIndex | null> {
+  return (await getAPI()?.loadTabIndex()) ?? null
+}
+
+export function saveTabIndex(index: TabIndex): void {
+  getAPI()?.saveTabIndex(index)
+}
+
+export async function loadTabContent(id: string): Promise<string | null> {
+  return (await getAPI()?.loadTabContent(id)) ?? null
+}
+
+export function saveTabContent(id: string, code: string): void {
+  getAPI()?.saveTabContent(id, code)
+}
+
+export function deleteTabContent(id: string): void {
+  getAPI()?.deleteTabContent(id)
 }

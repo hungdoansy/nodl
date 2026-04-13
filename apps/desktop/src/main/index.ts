@@ -24,7 +24,8 @@ import { instrumentCode } from './executor/instrument'
 import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath, checkPackageUpdates, getPackagePaths, getTypeDefinitions } from './executor/package-manager'
 import { IPC } from '../../shared/types'
 import { net } from 'electron'
-import type { RunCodePayload, PersistedState, AppSettings, UpdateInfo } from '../../shared/types'
+import type { RunCodePayload, PersistedState, AppSettings, UpdateInfo, TabIndex } from '../../shared/types'
+import * as tabStorage from './tab-storage'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -172,6 +173,27 @@ ipcMain.on(IPC.SAVE_SETTINGS, (_event, settings: AppSettings) => {
 
 ipcMain.handle(IPC.LOAD_SETTINGS, () => {
   return loadSettings()
+})
+
+// --- Per-tab file storage (new format) ---
+ipcMain.handle(IPC.LOAD_TAB_INDEX, () => {
+  return tabStorage.loadTabIndex(userDataPath)
+})
+
+ipcMain.on(IPC.SAVE_TAB_INDEX, (_event, index: TabIndex) => {
+  try { tabStorage.saveTabIndex(userDataPath, index) } catch { /* non-critical */ }
+})
+
+ipcMain.handle(IPC.LOAD_TAB_CONTENT, (_event, id: string) => {
+  try { return tabStorage.loadTabContent(userDataPath, id) } catch { return null }
+})
+
+ipcMain.on(IPC.SAVE_TAB_CONTENT, (_event, id: string, code: string) => {
+  try { tabStorage.saveTabContent(userDataPath, id, code) } catch { /* non-critical */ }
+})
+
+ipcMain.on(IPC.DELETE_TAB_CONTENT, (_event, id: string) => {
+  try { tabStorage.deleteTabContent(userDataPath, id) } catch { /* non-critical */ }
 })
 
 // --- Package management ---

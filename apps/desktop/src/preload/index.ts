@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../../shared/types'
 import type {
   ElectronAPI, RunCodePayload, OutputEntry, ExecutionResult,
-  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo
+  PersistedState, AppSettings, PackageOperationResult, InstalledPackage, PackageSearchResult, UpdateInfo, TypeDefInfo, TabIndex
 } from '../../shared/types'
 
 const api: ElectronAPI = {
@@ -106,6 +106,26 @@ const api: ElectronAPI = {
 
   getTypeDefs(): Promise<TypeDefInfo[]> {
     return ipcRenderer.invoke(IPC.GET_TYPE_DEFS)
+  },
+
+  loadTabIndex(): Promise<TabIndex | null> {
+    return ipcRenderer.invoke(IPC.LOAD_TAB_INDEX)
+  },
+
+  saveTabIndex(index: TabIndex) {
+    ipcRenderer.send(IPC.SAVE_TAB_INDEX, index)
+  },
+
+  loadTabContent(id: string): Promise<string | null> {
+    return ipcRenderer.invoke(IPC.LOAD_TAB_CONTENT, id)
+  },
+
+  saveTabContent(id: string, code: string) {
+    ipcRenderer.send(IPC.SAVE_TAB_CONTENT, id, code)
+  },
+
+  deleteTabContent(id: string) {
+    ipcRenderer.send(IPC.DELETE_TAB_CONTENT, id)
   }
 }
 
