@@ -4,12 +4,12 @@ import { Sidebar } from './components/Sidebar/Sidebar'
 import { EditorPane } from './components/Editor/EditorPane'
 import { OutputPane } from './components/Output/OutputPane'
 import { ShortcutHintOverlay } from './components/ShortcutHintOverlay'
-import { SaveToast } from './components/SaveToast'
 import { usePersistence } from './hooks/usePersistence'
 import { useTheme } from './hooks/useTheme'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useMenuEvents } from './hooks/useMenuEvents'
 import { useOutputListener } from './hooks/useOutputListener'
+import { useModifierHeldListener } from './hooks/useModifierHeld'
 
 export default function App() {
   usePersistence()
@@ -17,6 +17,7 @@ export default function App() {
   useKeyboardShortcuts()
   useMenuEvents()
   useOutputListener()
+  useModifierHeldListener()
 
   return (
     <div className="flex flex-col h-screen" style={{ background: 'var(--bg-void)' }}>
@@ -34,7 +35,6 @@ export default function App() {
         </Group>
       </div>
       <ShortcutHintOverlay />
-      <SaveToast />
     </div>
   )
 }

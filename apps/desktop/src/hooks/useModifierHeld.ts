@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useUIStore } from '../store/ui'
 import { IS_MAC } from '../utils/shortcut'
 
 /**
- * Returns true once the user has held the platform modifier key (Cmd on macOS,
- * Ctrl elsewhere) for `delayMs` without pressing any other key in that window.
+ * Detect when the user holds the platform modifier key (Cmd on macOS,
+ * Ctrl elsewhere) for `delayMs` without pressing any other key.
  *
- * Goes back to false the instant:
+ * The result is broadcast through `ui.modifierHeld` so any button can
+ * subscribe without each one adding its own window listeners.
+ *
+ * Flips back to false the instant:
  *  - the modifier is released
- *  - any other key is pressed while waiting (user is actually using a chord)
- *  - the window loses focus
+ *  - any other key is pressed while waiting (user is using a chord)
+ *  - the window loses focus / becomes hidden
  *
- * The delay is intentional: experienced users who already know the shortcut
- * shouldn't see a hint flash at them every time they press a chord.
+ * The delay is intentional: experienced users who already know the chord
+ * shouldn't see a hint flash at them every time.
  */
 const MODIFIER_KEY = IS_MAC ? 'Meta' : 'Control'
 
-export function useModifierHeld(delayMs: number): boolean {
-  const [held, setHeld] = useState(false)
+export const HINT_DELAY_MS = 1000
 
+export function useModifierHeldListener(delayMs: number = HINT_DELAY_MS): void {
   useEffect(() => {
+    const setHeld = useUIStore.getState().setModifierHeld
     let timer: ReturnType<typeof setTimeout> | null = null
     let shown = false
 
@@ -35,7 +40,7 @@ export function useModifierHeld(delayMs: number): boolean {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === MODIFIER_KEY) {
-        // Repeat events fire while held — only start the timer once
+        // Keyboard repeat fires many keydowns while held — only schedule once
         if (timer || shown) return
         timer = setTimeout(() => {
           timer = null
@@ -43,8 +48,7 @@ export function useModifierHeld(delayMs: number): boolean {
           setHeld(true)
         }, delayMs)
       } else if (e.metaKey || e.ctrlKey) {
-        // A chord is being pressed — user already knows what they want,
-        // don't flash the hint at them
+        // A chord is being pressed — user already knows what they want
         hide()
       }
     }
@@ -53,8 +57,6 @@ export function useModifierHeld(delayMs: number): boolean {
       if (e.key === MODIFIER_KEY) hide()
     }
 
-    // Window blur / tab switch while holding the key: we never see keyup,
-    // so hide proactively
     const onBlur = () => hide()
     const onVisibilityChange = () => { if (document.hidden) hide() }
 
@@ -64,13 +66,16 @@ export function useModifierHeld(delayMs: number): boolean {
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
-      clearTimer()
+      hide()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [delayMs])
+}
 
-  return held
+/** Subscribe to the global modifier-held state. Safe to use in any button. */
+export function useModifierHeld(): boolean {
+  return useUIStore((s) => s.modifierHeld)
 }

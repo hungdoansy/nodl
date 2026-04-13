@@ -9,6 +9,7 @@ import { useAutoRun } from '../../hooks/useAutoRun'
 import { useTheme } from '../../hooks/useTheme'
 import { useErrorHighlighting } from '../../hooks/useErrorHighlighting'
 import { withShortcut } from '../../utils/shortcut'
+import { SavedBadge } from '../SavedBadge'
 import { useScrollSync } from '../../store/scroll-sync'
 import { useUIStore } from '../../store/ui'
 import { usePackagesStore } from '../../store/packages'
@@ -222,8 +223,8 @@ export function EditorPane() {
           className={`toolbar-btn ${autoRunEnabled ? 'active' : ''}`}
           title={
             autoRunEnabled
-              ? `Auto-run on (${autoRunDelay}ms delay) — click to disable`
-              : 'Auto-run off — click to run code automatically as you type'
+              ? withShortcut(`Auto-run on (${autoRunDelay}ms) — click to disable`, 'A', { mod: true, shift: true })
+              : withShortcut('Auto-run off — click to run automatically as you type', 'A', { mod: true, shift: true })
           }
         >
           {autoRunEnabled
@@ -231,6 +232,7 @@ export function EditorPane() {
             : <Zap size={14} />
           }
         </button>
+        <SavedBadge />
       </div>
       <div className="flex-1">
         <Editor

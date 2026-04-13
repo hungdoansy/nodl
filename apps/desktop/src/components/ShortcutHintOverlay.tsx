@@ -1,14 +1,14 @@
 import { useModifierHeld } from '../hooks/useModifierHeld'
-import { HINT_DELAY_MS, SHORTCUTS } from '../config/shortcuts'
+import { SHORTCUTS, type ShortcutDef } from '../config/shortcuts'
 import { IS_MAC, shortcut } from '../utils/shortcut'
 
 /**
- * Shown when the user holds the platform modifier key (Cmd / Ctrl) for
+ * Shown when the user holds the platform modifier key (⌘ / Ctrl) for
  * HINT_DELAY_MS. Lists available shortcut chords so they can complete one.
  * Disappears the moment the modifier is released or a chord is pressed.
  */
 export function ShortcutHintOverlay() {
-  const visible = useModifierHeld(HINT_DELAY_MS)
+  const visible = useModifierHeld()
 
   if (!visible) return null
 
@@ -51,7 +51,7 @@ export function ShortcutHintOverlay() {
         Keep holding {IS_MAC ? '⌘' : 'Ctrl'} — then press…
       </div>
       {SHORTCUTS.map((s) => (
-        <ShortcutRow key={s.display} display={s.display} label={s.label} shift={s.shift} />
+        <ShortcutRow key={`${s.display}-${s.opts?.shift ? 'shift' : ''}`} def={s} />
       ))}
       <style>{`
         @keyframes nodl-hint-fade-in {
@@ -63,11 +63,11 @@ export function ShortcutHintOverlay() {
   )
 }
 
-function ShortcutRow({ display, label, shift }: { display: string; label: string; shift?: boolean }) {
-  // The 1–9 row is special: show the range instead of a real chord
-  const chord = display === '1–9'
+function ShortcutRow({ def }: { def: ShortcutDef }) {
+  // Range display (1–9) isn't a real chord — format manually
+  const chord = def.display === '1–9'
     ? (IS_MAC ? '⌘1–9' : 'Ctrl+1–9')
-    : shortcut(display, { mod: true, shift })
+    : shortcut(def.display, def.opts ?? { mod: true })
   return (
     <>
       <kbd
@@ -85,7 +85,7 @@ function ShortcutRow({ display, label, shift }: { display: string; label: string
       >
         {chord}
       </kbd>
-      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{def.label}</span>
     </>
   )
 }

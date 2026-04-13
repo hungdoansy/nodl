@@ -16,9 +16,11 @@ export function Sidebar() {
   const reorderTabs = useTabsStore((s) => s.reorderTabs)
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const openSettings = useUIStore((s) => s.openSettings)
+  const packagesOpen = useUIStore((s) => s.packagesOpen)
+  const openPackages = useUIStore((s) => s.openPackages)
+  const closePackages = useUIStore((s) => s.closePackages)
 
   const { packages, loadPackages } = usePackagesStore()
-  const [pkgDialogOpen, setPkgDialogOpen] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -151,8 +153,8 @@ export function Sidebar() {
         }}>
           <div
             className="flex items-center cursor-pointer"
-            onClick={() => setPkgDialogOpen(true)}
-            title="Packages — install, update, or remove npm packages"
+            onClick={openPackages}
+            title={withShortcut('Packages — install, update, or remove npm packages', 'P', { mod: true, shift: true })}
             style={{
               padding: collapsed ? '6px 0' : '5px 8px',
               justifyContent: collapsed ? 'center' : 'flex-start',
@@ -195,7 +197,7 @@ export function Sidebar() {
           </div>
         </div>
       </div>
-      <PackageDialog open={pkgDialogOpen} onClose={() => setPkgDialogOpen(false)} />
+      <PackageDialog open={packagesOpen} onClose={closePackages} />
     </>
   )
 }
