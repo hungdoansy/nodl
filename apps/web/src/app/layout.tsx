@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://nodl.app'),
+  metadataBase: new URL('https://nodl-app.vercel.app'),
   title: {
     default: `${APP_NAME} — ${APP_TAGLINE}`,
     template: `%s — ${APP_NAME}`
