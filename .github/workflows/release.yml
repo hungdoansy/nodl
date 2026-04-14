@@ -130,6 +130,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nodl-${{ matrix.os }}-${{ matrix.arch }}
+          retention-days: 1
           path: |
             apps/desktop/dist/*.dmg
             apps/desktop/dist/*.zip
