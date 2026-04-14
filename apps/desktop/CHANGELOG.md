@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.1 (2026-04-14)
+
+- update metadataBase URL for deployment
+- automate package version setting in CI workflow
+- enhance changelog handling in CI workflow
+
 
 
 ## v2.1.0 (2026-04-13)
