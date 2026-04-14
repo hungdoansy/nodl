@@ -169,4 +169,46 @@ describe('computeAdjustedHeights', () => {
     expect(heights.get(2)).toBe(0)
     expect(heights.get(3)).toBe(0)
   })
+
+  it('uses measuredContentHeights over estimateContentHeight when provided', () => {
+    // Line 1: object output — estimate says 1 line, but DOM measures 4 lines (expanded ObjectTree)
+    const lined = new Map<number, OutputEntry[]>()
+    lined.set(1, [entry('log', [{ a: 1, b: 2, c: 3 }], 1)])
+    lined.set(7, [entry('log', ['hello'], 7)])
+
+    const measured = new Map<number, number>()
+    measured.set(1, 4 * LH) // expanded tree = 4 lines tall
+
+    const heights = computeAdjustedHeights(7, null, LH, lined, measured)
+
+    expect(heights.get(1)).toBe(LH)
+    // overflow = 4*20 - 20 = 60, absorb into lines 2-4
+    expect(heights.get(2)).toBe(0)
+    expect(heights.get(3)).toBe(0)
+    expect(heights.get(4)).toBe(0)
+    expect(heights.get(5)).toBe(LH)
+    expect(heights.get(6)).toBe(LH)
+    expect(heights.get(7)).toBe(LH)
+  })
+
+  it('falls back to estimateContentHeight when measuredContentHeights missing for a line', () => {
+    const lined = new Map<number, OutputEntry[]>()
+    lined.set(1, [entry('log', ['a\nb\nc'], 1)]) // estimate = 3 lines
+    lined.set(2, [entry('log', [{ x: 1 }], 2)])  // estimate = 1 line
+
+    const measured = new Map<number, number>()
+    // Only line 2 is measured (expanded tree)
+    measured.set(2, 3 * LH)
+
+    const heights = computeAdjustedHeights(6, null, LH, lined, measured)
+
+    // Line 1: uses estimate (3 lines), overflow = 2*20 = 40
+    expect(heights.get(1)).toBe(LH)
+    // Line 2: has entries → resets overflow. Uses measured (3 lines), overflow = 2*20 = 40
+    expect(heights.get(2)).toBe(LH)
+    expect(heights.get(3)).toBe(0)
+    expect(heights.get(4)).toBe(0)
+    expect(heights.get(5)).toBe(LH)
+    expect(heights.get(6)).toBe(LH)
+  })
 })

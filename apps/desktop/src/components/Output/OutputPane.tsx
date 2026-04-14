@@ -57,7 +57,8 @@ export function computeAdjustedHeights(
   totalLines: number,
   lineHeights: Map<number, number> | null,
   lineHeight: number,
-  lined: Map<number, OutputEntry[]>
+  lined: Map<number, OutputEntry[]>,
+  measuredContentHeights?: Map<number, number> | null,
 ): Map<number, number> {
   const heights = new Map<number, number>()
   let overflow = 0
@@ -67,7 +68,8 @@ export function computeAdjustedHeights(
     if (lineEntries) {
       overflow = 0
       heights.set(i, actualHeight)
-      overflow = Math.max(0, estimateContentHeight(lineEntries, lineHeight) - actualHeight)
+      const contentHeight = measuredContentHeights?.get(i) ?? estimateContentHeight(lineEntries, lineHeight)
+      overflow = Math.max(0, contentHeight - actualHeight)
     } else {
       const absorbed = Math.min(overflow, actualHeight)
       heights.set(i, actualHeight - absorbed)
@@ -90,8 +92,10 @@ export function OutputPane() {
   const [showStop, setShowStop] = useState(false)
   const [copied, setCopied] = useState(false)
   const [containerHeight, setContainerHeight] = useState(0)
+  const [measuredContentHeights, setMeasuredContentHeights] = useState<Map<number, number>>(new Map())
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ignoreScrollRef = useRef(false)
+  const contentObserverRef = useRef<ResizeObserver | null>(null)
 
   const handleCopy = useCallback(() => {
     if (entries.length === 0) return
@@ -121,6 +125,37 @@ export function OutputPane() {
   }, [isRunning])
 
   const outputMode = useUIStore((s) => s.outputMode)
+
+  // Measure actual rendered heights of output content (e.g., expanded ObjectTrees)
+  // so computeAdjustedHeights can absorb overflow into subsequent blank lines.
+  useEffect(() => {
+    if (outputMode !== 'aligned') {
+      contentObserverRef.current?.disconnect()
+      contentObserverRef.current = null
+      return
+    }
+    const observer = new ResizeObserver((observations) => {
+      setMeasuredContentHeights(prev => {
+        const next = new Map(prev)
+        let changed = false
+        for (const ob of observations) {
+          const lineNum = Number((ob.target as HTMLElement).dataset.line)
+          if (isNaN(lineNum)) continue
+          const h = Math.round(ob.contentRect.height)
+          if (next.get(lineNum) !== h) {
+            next.set(lineNum, h)
+            changed = true
+          }
+        }
+        return changed ? next : prev
+      })
+    })
+    contentObserverRef.current = observer
+    return () => {
+      observer.disconnect()
+      contentObserverRef.current = null
+    }
+  }, [outputMode])
   const toggleOutputMode = useUIStore((s) => s.toggleOutputMode)
   const lineHeight = Math.round(fontSize * 1.5)
   const lineHeights = useScrollSync((s) => s.lineHeights)
@@ -128,8 +163,8 @@ export function OutputPane() {
   const errorEntries = useMemo(() => unlined.filter((e) => e.method === 'error'), [unlined])
   const nonErrorUnlined = useMemo(() => unlined.filter((e) => e.method !== 'error'), [unlined])
   const adjustedHeights = useMemo(
-    () => computeAdjustedHeights(totalLines, lineHeights, lineHeight, lined),
-    [totalLines, lineHeights, lineHeight, lined]
+    () => computeAdjustedHeights(totalLines, lineHeights, lineHeight, lined, measuredContentHeights),
+    [totalLines, lineHeights, lineHeight, lined, measuredContentHeights]
   )
 
   const editorPaddingTop = 12
@@ -295,7 +330,11 @@ export function OutputPane() {
                 }
                 return (
                   <div key={`line-${lineNum}`} style={{ minHeight: adjustedHeight }} className="flex items-start">
-                    <div className="flex-1 min-w-0">
+                    <div
+                      className="flex-1 min-w-0"
+                      data-line={lineNum}
+                      ref={(el) => { if (el) contentObserverRef.current?.observe(el) }}
+                    >
                       {lineEntries.map((entry) => (
                         <ConsoleEntryComponent key={entry.id} entry={entry} compact fontSize={fontSize} lineHeight={lineHeight} />
                       ))}
