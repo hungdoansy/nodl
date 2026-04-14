@@ -161,6 +161,17 @@ jobs:
         working-directory: .
         run: pnpm install
 
+      - name: Set package version
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = process.env.VERSION;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
       - name: Run unit tests
         run: pnpm run test
 
