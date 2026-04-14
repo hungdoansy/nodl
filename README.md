@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://nodl-app.vercel.app/">Website</a> &nbsp;&middot;&nbsp;
+  <a href="https://www.nodlapp.site/">Website</a> &nbsp;&middot;&nbsp;
   <a href="https://github.com/hungdoansy/nodl/releases">Download</a> &nbsp;&middot;&nbsp;
   <a href="#features">Features</a> &nbsp;&middot;&nbsp;
   <a href="#installation">Installation</a> &nbsp;&middot;&nbsp;
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="https://nodl-app.vercel.app/og-image.svg" alt="nodl preview" width="720">
+  <img src="https://www.nodlapp.site/og-image.svg" alt="nodl preview" width="720">
 </p>
 
 ---
