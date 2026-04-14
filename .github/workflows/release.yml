@@ -102,15 +102,12 @@ jobs:
 
           if [[ -n "$POLISHED" ]]; then
             ENTRIES="$POLISHED"
+            GEMINI_STATUS="Successfully fetched changelog from Gemini"
           else
             echo "::warning::AI changelog generation failed or GEMINI_API_KEY not set — using raw git log"
             ENTRIES="$RAW"
+            GEMINI_STATUS="Failed to fetch from Gemini — using raw git log"
           fi
-
-          # Full changelog block for CHANGELOG.md
-          BLOCK="## $TAG ($TODAY)
-
-          $ENTRIES"
 
           # Write to output (escape newlines for GITHUB_OUTPUT)
           {
@@ -123,25 +120,15 @@ jobs:
           {
             echo "## Release $TAG"
             echo ""
+            echo "**Gemini status:** $GEMINI_STATUS"
+            echo ""
             echo "### Changelog"
             echo ""
             echo "$ENTRIES"
-            echo ""
-            echo "---"
-            echo "_Review the changelog above, then approve the \`release\` environment gate to proceed._"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  confirm:
-    needs: prepare
-    runs-on: ubuntu-latest
-    environment: release
-
-    steps:
-      - name: Confirmed
-        run: echo "Release ${{ needs.prepare.outputs.tag }} approved — starting builds"
-
   build:
-    needs: confirm
+    needs: prepare
     strategy:
       fail-fast: true
       matrix:
@@ -226,17 +213,13 @@ jobs:
           TAG: ${{ needs.prepare.outputs.tag }}
           ENTRIES: ${{ needs.prepare.outputs.changelog }}
         run: |
-          TODAY=$(date +%Y-%m-%d)
-          BLOCK="## $TAG ($TODAY)
-
-          $ENTRIES"
-
           node -e "
             const fs = require('fs');
+            const today = new Date().toISOString().slice(0, 10);
+            const block = '## ' + process.env.TAG + ' (' + today + ')\n\n' + process.env.ENTRIES;
             const changelog = fs.existsSync('CHANGELOG.md')
               ? fs.readFileSync('CHANGELOG.md', 'utf8')
               : '# Changelog\n';
-            const block = process.env.BLOCK;
             const lines = changelog.split('\n');
             const titleIdx = lines.findIndex(l => l.startsWith('# '));
             if (titleIdx >= 0) {
