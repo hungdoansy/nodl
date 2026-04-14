@@ -6,7 +6,14 @@
 - automate package version setting in CI workflow
 - enhance changelog handling in CI workflow
 
+## v2.2.0 (2026-04-13)
 
+- update deployment workflow to trigger on version tags
+- replace manual release script with CI workflow
+- adapt download CTA and system requirements per platform
+- implement landing page for MacOS
+- set up Tailwind, fonts, and design tokens
+- improve esbuild binary handling in afterPack script
 
 ## v2.1.0 (2026-04-13)
 
