@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import { Square, Trash2, AlignLeft, Terminal, Copy, Check } from 'lucide-react'
 import { useCodeExecution } from '../../hooks/useCodeExecution'
 import { useTabsStore } from '../../store/tabs'
@@ -135,19 +136,23 @@ export function OutputPane() {
       return
     }
     const observer = new ResizeObserver((observations) => {
-      setMeasuredContentHeights(prev => {
-        const next = new Map(prev)
-        let changed = false
-        for (const ob of observations) {
-          const lineNum = Number((ob.target as HTMLElement).dataset.line)
-          if (isNaN(lineNum)) continue
-          const h = Math.round(ob.contentRect.height)
-          if (next.get(lineNum) !== h) {
-            next.set(lineNum, h)
-            changed = true
+      // flushSync ensures the height adjustment renders in the same frame as the
+      // content resize (e.g., ObjectTree expand/collapse), preventing a layout shift.
+      flushSync(() => {
+        setMeasuredContentHeights(prev => {
+          const next = new Map(prev)
+          let changed = false
+          for (const ob of observations) {
+            const lineNum = Number((ob.target as HTMLElement).dataset.line)
+            if (isNaN(lineNum)) continue
+            const h = Math.round(ob.contentRect.height)
+            if (next.get(lineNum) !== h) {
+              next.set(lineNum, h)
+              changed = true
+            }
           }
-        }
-        return changed ? next : prev
+          return changed ? next : prev
+        })
       })
     })
     contentObserverRef.current = observer
