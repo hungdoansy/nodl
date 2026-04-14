@@ -64,68 +64,11 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        working-directory: .
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          TODAY=$(date +%Y-%m-%d)
-          LAST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
-
-          # Build raw commit list (same filters as old release.sh)
-          if [[ -n "$LAST_TAG" ]]; then
-            RAW=$(git log "$LAST_TAG"..HEAD --pretty=tformat:'%s' --no-merges \
-              | grep -v '^release:' | grep -v '^docs:' \
-              | sed 's/^[a-z]*: //' | sed 's/^[a-z]*(.*): //' \
-              | sed 's/^/- /')
-          else
-            RAW=$(git log --pretty=tformat:'%s' --no-merges -20 \
-              | sed 's/^/- /')
-          fi
-
-          if [[ -z "$RAW" ]]; then
-            RAW="- No notable changes"
-          fi
-
-          # Try AI polish via Gemini 1.5 Flash
-          POLISHED=""
-          if [[ -n "$GEMINI_API_KEY" ]]; then
-            PROMPT="You are a release notes writer. Given a list of git commit messages, rewrite them as concise, user-facing release notes. Use bullet points starting with '- '. Focus on what changed from the user's perspective. Remove implementation details. Fix grammar. Do not add a version header — just the bullet points.\n\nCommits:\n$RAW"
-
-            RESPONSE=$(curl -sf \
-              "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY" \
-              -H 'Content-Type: application/json' \
-              -d "{\"contents\":[{\"parts\":[{\"text\":$(echo "$PROMPT" | jq -Rs .)}]}]}" \
-              2>&1) || true
-
-            POLISHED=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null || true)
-          fi
-
-          if [[ -n "$POLISHED" ]]; then
-            ENTRIES="$POLISHED"
-            GEMINI_STATUS="Successfully fetched changelog from Gemini"
-          else
-            echo "::warning::AI changelog generation failed or GEMINI_API_KEY not set — using raw git log"
-            ENTRIES="$RAW"
-            GEMINI_STATUS="Failed to fetch from Gemini — using raw git log"
-          fi
-
-          # Write to output (escape newlines for GITHUB_OUTPUT)
-          {
-            echo 'text<<CHANGELOG_EOF'
-            echo "$ENTRIES"
-            echo 'CHANGELOG_EOF'
-          } >> "$GITHUB_OUTPUT"
-
-          # Job summary
-          {
-            echo "## Release $TAG"
-            echo ""
-            echo "**Gemini status:** $GEMINI_STATUS"
-            echo ""
-            echo "### Changelog"
-            echo ""
-            echo "$ENTRIES"
-          } >> "$GITHUB_STEP_SUMMARY"
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: node .github/scripts/generate-changelog.mjs
 
   build:
     needs: prepare
