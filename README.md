@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/icon.png" width="128" height="128" alt="nodl icon">
+  <img src="apps/desktop/resources/icon.png" width="128" height="128" alt="nodl icon">
 </p>
 
 <h1 align="center">nodl</h1>
@@ -9,10 +9,15 @@
 </p>
 
 <p align="center">
+  <a href="https://nodl-app.vercel.app/">Website</a> &nbsp;&middot;&nbsp;
   <a href="https://github.com/hungdoansy/nodl/releases">Download</a> &nbsp;&middot;&nbsp;
   <a href="#features">Features</a> &nbsp;&middot;&nbsp;
   <a href="#installation">Installation</a> &nbsp;&middot;&nbsp;
   <a href="#development">Development</a>
+</p>
+
+<p align="center">
+  <img src="https://nodl-app.vercel.app/og-image.svg" alt="nodl preview" width="720">
 </p>
 
 ---
@@ -48,29 +53,41 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 ### macOS
 
-1. Download the `.dmg` file for your architecture
-2. Open the DMG and drag **nodl** to your Applications folder
-3. On first launch, macOS may block the app because it's unsigned. Run:
+> [!WARNING]
+> nodl is **not code-signed or notarized** by Apple. macOS will block the app on first launch with a message like *"nodl is damaged and can't be opened"* or *"nodl can't be opened because Apple cannot check it for malicious software"*. You must remove the quarantine attribute manually — this is expected and only required once.
+
+1. Download the `.dmg` for your architecture:
+   - Apple Silicon (M1/M2/M3/M4) → `nodl-<version>-arm64.dmg`
+   - Intel → `nodl-<version>-x64.dmg`
+2. Open the DMG and drag **nodl** into your **Applications** folder.
+3. Remove the Gatekeeper quarantine flag:
    ```bash
    xattr -cr /Applications/nodl.app
    ```
-4. Open nodl from Applications
+4. Launch nodl from Applications (or Spotlight).
 
 ### Windows
 
-1. Download the `.exe` installer or portable version
-2. Run the installer (or just open the portable `.exe`)
-3. If Windows SmartScreen warns you, click **More info** then **Run anyway**
+1. Download `nodl-<version>-setup.exe` (installer) or the portable `.exe`.
+2. Run the installer, or double-click the portable build to launch directly.
+3. SmartScreen may show *"Windows protected your PC"* — click **More info** → **Run anyway**.
 
 ### Linux
 
-1. Download the `.AppImage` or `.deb` file
-2. For AppImage: `chmod +x nodl-*.AppImage && ./nodl-*.AppImage`
-3. For Debian/Ubuntu: `sudo dpkg -i nodl-*.deb`
+1. Download the `.AppImage` or `.deb` asset.
+2. **AppImage:**
+   ```bash
+   chmod +x nodl-*.AppImage
+   ./nodl-*.AppImage
+   ```
+3. **Debian / Ubuntu:**
+   ```bash
+   sudo dpkg -i nodl-*.deb
+   ```
 
-### Why the security warning?
+### Why the security warnings?
 
-nodl is free and open-source. Code signing certificates cost $99+/year, so the app is distributed unsigned. The `xattr -cr` step (macOS) or SmartScreen bypass (Windows) is only needed once.
+nodl is free and open-source. Apple code-signing certificates cost \$99/year and Windows EV certs are \$300+/year, so releases are distributed unsigned. The quarantine/SmartScreen bypass is a one-time step — after the first launch, the OS remembers your choice.
 
 ## Usage
 
@@ -231,6 +248,16 @@ open /Applications/nodl.app
 ## Updates
 
 nodl checks GitHub Releases on launch. When a new version is available, a badge appears in the header. Click it for download instructions. Updates are manual — download the new version and replace the old one.
+
+## Star History
+
+<a href="https://star-history.com/#hungdoansy/nodl&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=hungdoansy/nodl&type=Date&theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=hungdoansy/nodl&type=Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=hungdoansy/nodl&type=Date">
+  </picture>
+</a>
 
 ## License
 
