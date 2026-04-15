@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.2.2 (2026-04-15)
+
+- Updated website URLs.
+- Fixed a visual layout shift that could occur when interacting with the ObjectTree.
+- Improved the accuracy of UI element height adjustments.
+- Enhanced alignment of the last expression in the editor.
+- Updated the Logomark and other SVG assets for improved scalability and consistent design.
+
 ## v2.2.1 (2026-04-14)
 
 - update metadataBase URL for deployment
