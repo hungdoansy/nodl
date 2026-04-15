@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="apps/desktop/resources/icon.png" width="128" height="128" alt="nodl icon">
-</p>
-
 <h1 align="center">nodl</h1>
 
 <p align="center">
@@ -17,7 +13,11 @@
 </p>
 
 <p align="center">
-  <img src="https://www.nodlapp.site/og-image.svg" alt="nodl preview" width="720">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="images/light.png">
+    <img src="images/dark.png" alt="nodl preview" width="720">
+  </picture>
 </p>
 
 ---
