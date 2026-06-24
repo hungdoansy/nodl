@@ -33,6 +33,7 @@
     "esbuild": "^0.28.0",
     "lucide-react": "^1.7.0",
     "magic-string": "^0.30.21",
+    "monaco-vim": "^0.4.4",
     "nanoid": "^5.1.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

@@ -3,7 +3,7 @@ import { X, RotateCcw } from 'lucide-react'
 import { useSettingsStore } from '../../store/settings'
 import { useDialogTransition } from '../../hooks/useDialogTransition'
 import { getPackagePaths } from '../../ipc/bridge'
-import type { ThemeMode } from '../../../shared/types'
+import type { LineNumbersMode, ThemeMode } from '../../../shared/types'
 
 interface SettingsDialogProps {
   open: boolean
@@ -82,6 +82,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onChange={(v) => settings.setSetting('wordWrap', v)} />
             <ToggleRow label="Minimap" checked={settings.minimap}
               onChange={(v) => settings.setSetting('minimap', v)} />
+            <ToggleRow label="Vim Mode" checked={settings.vimMode}
+              onChange={(v) => settings.setSetting('vimMode', v)} />
+            <SelectRow label="Line Numbers" value={settings.lineNumbers}
+              options={[
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+                { value: 'relative', label: 'Relative' },
+                { value: 'interval', label: 'Interval' }
+              ]}
+              onChange={(v) => settings.setLineNumbers(v as LineNumbersMode)} />
           </Section>
 
           <Section title="Execution">
