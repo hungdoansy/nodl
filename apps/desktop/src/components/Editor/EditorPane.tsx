@@ -36,6 +36,7 @@ export function EditorPane() {
   const resolvedTheme = useTheme()
   const outputMode = useUIStore((s) => s.outputMode)
   const settingsOpen = useUIStore((s) => s.settingsOpen)
+  const packagesOpen = useUIStore((s) => s.packagesOpen)
 
   const packages = usePackagesStore((s) => s.packages)
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
@@ -148,20 +149,25 @@ export function EditorPane() {
     return unsub
   }, [outputMode])
 
-  // Enable or disable vim mode after settings are updated
+  // Enable or disable vim mode
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return
-    if (settingsOpen) return
-
-    editor.focus()
 
     if (vimMode) {
       setVimAdapter(initVimMode(editor, statusRef.current, VimStatusBar))
     } else {
       vimAdapter?.dispose()
     }
-  }, [editorVersion, settingsOpen])
+  }, [editorVersion, vimMode])
+
+  // Auto focus
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return
+
+    if (!settingsOpen && !packagesOpen) editor.focus()
+  }, [editorVersion, settingsOpen, packagesOpen])
 
   // Compute per-line visual heights for output alignment (accounts for word wrap)
   useEffect(() => {
