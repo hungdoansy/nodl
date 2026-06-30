@@ -1,3 +1,5 @@
+import { instrumentWithAST } from './instrument-ast'
+
 /** Prefixes that indicate a line is a statement, not an expression */
 const STATEMENT_PREFIXES = [
   'const ', 'let ', 'var ', 'function ', 'function*', 'class ', 'abstract ',
@@ -259,7 +261,6 @@ export function transformImports(line: string): string {
  */
 export function instrumentCode(code: string): string {
   try {
-    const { instrumentWithAST } = require('./instrument-ast') as typeof import('./instrument-ast')
     return instrumentWithAST(code)
   } catch {
     return instrumentWithRegex(code)
