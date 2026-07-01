@@ -37,6 +37,7 @@ export interface UpdateInfo {
 
 /** App settings */
 export type ThemeMode = 'dark' | 'light' | 'system'
+export type LineNumbersMode = 'on' | 'off' | 'relative' | 'interval'
 
 export interface AppSettings {
   // Editor
@@ -44,6 +45,8 @@ export interface AppSettings {
   tabSize: number
   wordWrap: boolean
   minimap: boolean
+  vimMode: boolean
+  lineNumbers: LineNumbersMode
   // Execution
   autoRunEnabled: boolean
   autoRunDelay: number
@@ -57,6 +60,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tabSize: 2,
   wordWrap: true,
   minimap: false,
+  vimMode: false,
+  lineNumbers: 'on',
   autoRunEnabled: false,
   autoRunDelay: 300,
   executionTimeout: 5,

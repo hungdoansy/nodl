@@ -21,6 +21,8 @@ export function usePersistence() {
   const tabSize = useSettingsStore((s) => s.tabSize)
   const wordWrap = useSettingsStore((s) => s.wordWrap)
   const minimap = useSettingsStore((s) => s.minimap)
+  const vimMode = useSettingsStore((s) => s.vimMode)
+  const lineNumbers = useSettingsStore((s) => s.lineNumbers)
   const autoRunEnabled = useSettingsStore((s) => s.autoRunEnabled)
   const autoRunDelay = useSettingsStore((s) => s.autoRunDelay)
   const executionTimeout = useSettingsStore((s) => s.executionTimeout)
@@ -67,7 +69,7 @@ export function usePersistence() {
 
     settingsTimerRef.current = setTimeout(() => {
       const settings: AppSettings = {
-        fontSize, tabSize, wordWrap, minimap,
+        fontSize, tabSize, wordWrap, minimap, vimMode, lineNumbers,
         autoRunEnabled, autoRunDelay, executionTimeout, theme
       }
       bridge.saveSettings(settings)
@@ -76,5 +78,5 @@ export function usePersistence() {
     return () => {
       if (settingsTimerRef.current) clearTimeout(settingsTimerRef.current)
     }
-  }, [fontSize, tabSize, wordWrap, minimap, autoRunEnabled, autoRunDelay, executionTimeout, theme])
+  }, [fontSize, tabSize, wordWrap, minimap, vimMode, lineNumbers, autoRunEnabled, autoRunDelay, executionTimeout, theme])
 }

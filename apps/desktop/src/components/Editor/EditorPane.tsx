@@ -15,6 +15,8 @@ import { useUIStore } from '../../store/ui'
 import { usePackagesStore } from '../../store/packages'
 import * as bridge from '../../ipc/bridge'
 import type { Monaco } from '@monaco-editor/react'
+import { initVimMode, VimAdapterInstance } from 'monaco-vim'
+import VimStatusBar from './VimStatusBar'
 
 export function EditorPane() {
   const activeTab = useTabsStore((s) => s.activeTab)
@@ -26,19 +28,25 @@ export function EditorPane() {
   const tabSize = useSettingsStore((s) => s.tabSize)
   const wordWrap = useSettingsStore((s) => s.wordWrap)
   const minimap = useSettingsStore((s) => s.minimap)
+  const vimMode = useSettingsStore((s) => s.vimMode)
+  const lineNumbers = useSettingsStore((s) => s.lineNumbers)
   const autoRunEnabled = useSettingsStore((s) => s.autoRunEnabled)
   const autoRunDelay = useSettingsStore((s) => s.autoRunDelay)
   const setSetting = useSettingsStore((s) => s.setSetting)
   const resolvedTheme = useTheme()
   const outputMode = useUIStore((s) => s.outputMode)
+  const settingsOpen = useUIStore((s) => s.settingsOpen)
+  const packagesOpen = useUIStore((s) => s.packagesOpen)
 
   const packages = usePackagesStore((s) => s.packages)
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
+  const statusRef = useRef<HTMLDivElement>(null)
   const ignoreScrollRef = useRef(false)
   const typeLibsRef = useRef<Map<string, { dispose: () => void }>>(new Map())
   const typePathsRef = useRef<string[]>([])
   const [editorVersion, setEditorVersion] = useState(0)
+  const [vimAdapter, setVimAdapter] = useState<VimAdapterInstance | null>(null);
 
   useAutoRun(run, autoRunEnabled, autoRunDelay)
   useErrorHighlighting(editorRef)
@@ -141,6 +149,26 @@ export function EditorPane() {
     return unsub
   }, [outputMode])
 
+  // Enable or disable vim mode
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return
+
+    if (vimMode) {
+      setVimAdapter(initVimMode(editor, statusRef.current, VimStatusBar))
+    } else {
+      vimAdapter?.dispose()
+    }
+  }, [editorVersion, vimMode])
+
+  // Auto focus
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return
+
+    if (!settingsOpen && !packagesOpen) editor.focus()
+  }, [editorVersion, settingsOpen, packagesOpen])
+
   // Compute per-line visual heights for output alignment (accounts for word wrap)
   useEffect(() => {
     const editor = editorRef.current
@@ -234,7 +262,7 @@ export function EditorPane() {
         </button>
         <SavedBadge />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         <Editor
           key={tab.id}
           height="100%"
@@ -244,6 +272,7 @@ export function EditorPane() {
           value={tab.code}
           onChange={(value) => updateCode(value ?? '')}
           options={{
+            lineNumbers,
             fontSize,
             fontFamily: "var(--font-mono)",
             lineHeight: Math.round(fontSize * 1.5),
@@ -262,7 +291,7 @@ export function EditorPane() {
             cursorSmoothCaretAnimation: 'on',
             cursorBlinking: 'smooth',
             quickSuggestions: { other: true, comments: false, strings: true },
-            inlineSuggest:  {
+            inlineSuggest: {
               enabled: true,
             },
             suggest: {
@@ -273,6 +302,18 @@ export function EditorPane() {
           onMount={handleMount}
         />
       </div>
-    </div>
+      {vimMode && (
+        <div
+          className="vim-status-bar"
+          style={{
+            fontSize,
+            height: fontSize * 1.5 + 12,
+            padding: '6px 12px',
+            width: '100%',
+          }}
+          ref={statusRef}
+        ></div>
+      )}
+    </div >
   )
 }
