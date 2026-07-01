@@ -8,9 +8,7 @@ directories:
 
 files:
   - out/**/*
-  - "!node_modules/**/*"
-  - node_modules/esbuild/**/*
-  - node_modules/@esbuild/**/*
+  - node_modules/**/*
 
 afterPack: ./scripts/afterPack.cjs
 
