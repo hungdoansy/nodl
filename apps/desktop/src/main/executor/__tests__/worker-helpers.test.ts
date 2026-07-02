@@ -171,10 +171,9 @@ describe('instrumentCode', () => {
     expect(result).toContain('const x = 1')
   })
 
-  it('does not wrap console.* calls', () => {
+  it('wraps console.* calls (runtime suppresses undefined return)', () => {
     const result = instrumentCode('console.log("hi")')
-    expect(result).not.toContain('__expr__')
-    expect(result).toContain('console.log("hi")')
+    expect(result).toContain('__expr__(1, console.log("hi"))')
   })
 
   it('handles simple expressions with correct line numbers', () => {
@@ -212,9 +211,10 @@ new Date()`
     expect(result).not.toContain('42;)')
   })
 
-  it('skips multi-statement lines', () => {
+  it('wraps each statement in multi-statement lines separately', () => {
     const result = instrumentCode('a(); b()')
-    expect(result).not.toContain('__expr__')
+    expect(result).toContain('__expr__(1, a())')
+    expect(result).toContain('__expr__(1, b())')
   })
 
   // --- Multi-line construct handling ---
@@ -223,13 +223,13 @@ new Date()`
   console.log("hi")
 }, 0)`
     const result = instrumentCode(code)
-    // Should NOT wrap }, 0) as an expression
-    expect(result).not.toContain('__expr__')
+    // The whole call is one top-level expression, wrapped as a unit
+    expect(result).toContain('__expr__(1, setTimeout(() => {')
     // __line__ should be inserted inside the callback body
     expect(result).toContain('__line__.value = 2;')
     // The original code structure should be preserved
     expect(result).toContain('setTimeout(() => {')
-    expect(result).toContain('}, 0)')
+    expect(result).toContain('}, 0))')
   })
 
   it('does not break Promise chains', () => {
@@ -237,8 +237,9 @@ new Date()`
   .then(() => console.log("a"))
   .then(() => console.log("b"))`
     const result = instrumentCode(code)
-    // .then lines should NOT be wrapped or have __line__ inserted before them
-    expect(result).not.toContain('__expr__')
+    // The whole chain is one top-level expression, wrapped as a unit —
+    // .then lines are not split into separate statements
+    expect(result).toContain('__expr__(1, Promise.resolve()')
     expect(result).toContain('.then(() => console.log("a"))')
     expect(result).toContain('.then(() => console.log("b"))')
   })
@@ -375,12 +376,11 @@ Promise.resolve()
 
 console.log("end")`
     const result = instrumentCode(code)
-    // Should not break — no syntax errors
-    expect(result).toContain('console.log("start")')
-    expect(result).toContain('setTimeout(() => {')
-    expect(result).toContain('console.log("end")')
-    // Should not wrap setTimeout or Promise chain as expressions
-    expect(result).not.toContain('__expr__')
+    // Should not break — no syntax errors, each top-level statement wrapped
+    expect(result).toContain('__expr__(1, console.log("start"))')
+    expect(result).toContain('__expr__(3, setTimeout(() => {')
+    expect(result).toContain('__expr__(7, Promise.resolve()')
+    expect(result).toContain('__expr__(10, console.log("end"))')
   })
 
   it('handles complex function with async patterns', () => {

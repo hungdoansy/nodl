@@ -708,7 +708,9 @@ arr.length // should be 3`)
     expectValid(`"http://example.com" // a URL`)
     const { instrumented } = pipeline(`"http://example.com" // a URL`)
     expect(instrumented).toContain('http://example.com')
-    expect(instrumented).not.toContain('a URL')
+    // AST-based wrapping closes the __expr__() call before the comment starts,
+    // so the comment stays a harmless trailing comment rather than needing to be stripped
+    expect(instrumented).toContain('// a URL')
   })
 })
 
