@@ -13,6 +13,8 @@ describe('useSettingsStore', () => {
     expect(state.tabSize).toBe(2)
     expect(state.wordWrap).toBe(true)
     expect(state.minimap).toBe(false)
+    expect(state.vimMode).toBe(false)
+    expect(state.lineNumbers).toBe('on')
     expect(state.autoRunEnabled).toBe(false)
     expect(state.autoRunDelay).toBe(300)
     expect(state.executionTimeout).toBe(5)
@@ -50,6 +52,8 @@ describe('useSettingsStore', () => {
       tabSize: 4,
       wordWrap: false,
       minimap: true,
+      vimMode: true,
+      lineNumbers: 'off' as const,
       autoRunEnabled: true,
       autoRunDelay: 500,
       executionTimeout: 10,
@@ -61,6 +65,8 @@ describe('useSettingsStore', () => {
     expect(state.tabSize).toBe(4)
     expect(state.wordWrap).toBe(false)
     expect(state.minimap).toBe(true)
+    expect(state.vimMode).toBe(true)
+    expect(state.lineNumbers).toBe('off')
     expect(state.autoRunEnabled).toBe(true)
     expect(state.autoRunDelay).toBe(500)
     expect(state.executionTimeout).toBe(10)
