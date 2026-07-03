@@ -705,12 +705,27 @@ arr.length // should be 3`)
   })
 
   it('preserves strings with // inside when followed by comment', () => {
-    expectValid(`"http://example.com" // a URL`)
-    const { instrumented } = pipeline(`"http://example.com" // a URL`)
+    // Place the string after a statement so it's an expression, not a directive
+    // prologue (a bare leading string literal is not wrapped — see the next test).
+    const code = `const x = 1\n"http://example.com" // a URL`
+    expectValid(code)
+    const { instrumented } = pipeline(code)
     expect(instrumented).toContain('http://example.com')
-    // AST-based wrapping closes the __expr__() call before the comment starts,
-    // so the comment stays a harmless trailing comment rather than needing to be stripped
-    expect(instrumented).toContain('// a URL')
+    // The // is inside the string literal, so it survives; the real trailing
+    // comment sits after the closing __expr__() paren and stays intact.
+    expect(instrumented).toContain('__expr__(2, "http://example.com") // a URL')
+  })
+
+  it('leaves a bare leading string literal unwrapped (parsed as a directive prologue)', () => {
+    // A string literal as the very first statement is a JS directive prologue, so
+    // Babel keeps it out of program.body and the __expr__ pass never wraps it.
+    // Known limitation: a scratchpad whose first line is a bare string shows no
+    // inline value. Documented here so the behavior is intentional, not silent.
+    const code = `"http://example.com" // a URL`
+    expectValid(code)
+    const { instrumented } = pipeline(code)
+    expect(instrumented).toContain('http://example.com')
+    expect(instrumented).not.toContain('__expr__')
   })
 })
 

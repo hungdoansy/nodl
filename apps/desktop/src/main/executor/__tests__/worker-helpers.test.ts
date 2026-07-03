@@ -171,6 +171,10 @@ describe('instrumentCode', () => {
     expect(result).toContain('const x = 1')
   })
 
+  // NOTE: the isExpression() tests further down say it "rejects" console.* and
+  // multi-statement lines — that governs only the legacy regex fallback. The
+  // primary AST path wraps every top-level expression uniformly; the worker's
+  // exprReporter suppresses the undefined return, so wrapping console.* is harmless.
   it('wraps console.* calls (runtime suppresses undefined return)', () => {
     const result = instrumentCode('console.log("hi")')
     expect(result).toContain('__expr__(1, console.log("hi"))')
@@ -229,6 +233,7 @@ new Date()`
     expect(result).toContain('__line__.value = 2;')
     // The original code structure should be preserved
     expect(result).toContain('setTimeout(() => {')
+    // Double )): first closes setTimeout(...), second closes the __expr__(...) wrapper
     expect(result).toContain('}, 0))')
   })
 
@@ -241,7 +246,9 @@ new Date()`
     // .then lines are not split into separate statements
     expect(result).toContain('__expr__(1, Promise.resolve()')
     expect(result).toContain('.then(() => console.log("a"))')
-    expect(result).toContain('.then(() => console.log("b"))')
+    // Trailing ))): closes console.log, .then, and the __expr__ wrapper — asserts
+    // the wrapper closes right after the final chain call, not mid-expression.
+    expect(result).toContain('.then(() => console.log("b")))')
   })
 
   it('tracks __line__ inside function bodies', () => {
