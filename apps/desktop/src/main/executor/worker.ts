@@ -4,7 +4,7 @@
  * and sends output entries + result back to the parent.
  */
 import { createConsoleCapturer } from './console-capture'
-import { serializeArg } from './console-capture'
+import { createExprReporter } from './expr-reporter'
 import type { OutputEntry, WorkerMessage } from '../../../shared/types'
 
 let idCounter = 0
@@ -98,46 +98,7 @@ process.on('message', async (msg: { code: string; language: string }) => {
 
   const pendingPromises: Promise<void>[] = []
 
-  function exprReporter(line: number, value: unknown): unknown {
-    if (value !== undefined) {
-      // If it's a Promise, wait for it and report the resolved value
-      if (value instanceof Promise) {
-        const p = (value as Promise<unknown>).then(
-          (resolved) => {
-            if (resolved !== undefined) {
-              sendConsoleEntry({
-                id: `expr-${Date.now()}-${idCounter++}`,
-                method: 'log',
-                args: [{ __type: 'LastExpression', value: serializeArg(resolved) }],
-                timestamp: Date.now(),
-                line
-              })
-            }
-          },
-          (err) => {
-            const msg = err instanceof Error ? err.message : String(err)
-            sendConsoleEntry({
-              id: `expr-err-${Date.now()}-${idCounter++}`,
-              method: 'error',
-              args: [msg],
-              timestamp: Date.now(),
-              line
-            })
-          }
-        )
-        pendingPromises.push(p)
-      } else {
-        sendConsoleEntry({
-          id: `expr-${Date.now()}-${idCounter++}`,
-          method: 'log',
-          args: [{ __type: 'LastExpression', value: serializeArg(value) }],
-          timestamp: Date.now(),
-          line
-        })
-      }
-    }
-    return value
-  }
+  const exprReporter = createExprReporter(sendConsoleEntry, pendingPromises)
 
   try {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
