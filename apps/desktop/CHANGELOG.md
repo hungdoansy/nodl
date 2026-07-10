@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.3.0 (2026-07-10)
+
+- Added Vim mode for code editing.
+- Enhanced visual presentation with responsive images that adapt to dark and light themes.
+
 ## v2.2.2 (2026-04-15)
 
 - Updated website URLs.
