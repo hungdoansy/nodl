@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   prepare:
@@ -226,3 +227,8 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: nodl-*
+
+      - name: Trigger web deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy-web.yml --ref main
