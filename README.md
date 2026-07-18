@@ -9,7 +9,8 @@
   <a href="https://github.com/hungdoansy/nodl/releases">Download</a> &nbsp;&middot;&nbsp;
   <a href="#features">Features</a> &nbsp;&middot;&nbsp;
   <a href="#installation">Installation</a> &nbsp;&middot;&nbsp;
-  <a href="docs/DEVELOPMENT.md">Development</a>
+  <a href="docs/DEVELOPMENT.md">Development</a> &nbsp;&middot;&nbsp;
+  <a href="#contributors">Contributors</a>
 </p>
 
 <p align="center">
@@ -130,6 +131,12 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup, architecture, project 
 ## Updates
 
 nodl checks GitHub Releases on launch. When a new version is available, a badge appears in the header. Click it for download instructions. Updates are manual — download the new version and replace the old one.
+
+## Contributors
+
+<a href="https://github.com/hungdoansy/nodl/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hungdoansy/nodl" alt="nodl contributors" />
+</a>
 
 ## Star History
 
