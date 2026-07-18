@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.3.1 (2026-07-18)
+
+- The web application now accurately displays its release version.
+
 ## v2.3.0 (2026-07-10)
 
 - Added Vim mode for code editing.
