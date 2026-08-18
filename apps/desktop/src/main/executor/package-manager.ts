@@ -1,6 +1,6 @@
 import { execSync } from 'child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { delimiter, dirname, isAbsolute, join } from 'path'
 import { homedir } from 'os'
 import { app } from 'electron'
 import type { InstalledPackage, PackageOperationResult, PackageSearchResult, TypeDefInfo } from '../../../shared/types'
@@ -32,16 +32,7 @@ function resolveNpm(): string {
     join(home, 'scoop', 'shims', 'npm.cmd'),
   ]
 
-  for (const bin of candidates) {
-    try {
-      execSync(`"${bin}" --version`, { stdio: 'pipe', timeout: 3000 })
-      return bin
-    } catch {
-      // not available — try next
-    }
-  }
-
-  // Last resort: scan nvm versions (macOS/Linux), newest Node first
+  // Last resort candidates: nvm versions (macOS/Linux), newest Node first
   try {
     const nvmDir = process.env.NVM_DIR ?? join(home, '.nvm')
     const versionsDir = join(nvmDir, 'versions', 'node')
@@ -54,12 +45,21 @@ function resolveNpm(): string {
           return bMaj !== aMaj ? bMaj - aMaj : bMin - aMin
         })
       for (const v of versions) {
-        const npmPath = join(versionsDir, v, 'bin', 'npm')
-        if (existsSync(npmPath)) return npmPath
+        candidates.push(join(versionsDir, v, 'bin', 'npm'))
       }
     }
   } catch {
     // nvm not present
+  }
+
+  for (const bin of candidates) {
+    try {
+      // Probe with the same env the install gets — a shebang launcher fails otherwise
+      execSync(`"${bin}" --version`, { stdio: 'pipe', timeout: 3000, env: getNpmEnv(bin) })
+      return bin
+    } catch {
+      // not available — try next
+    }
   }
 
   throw new Error('npm not found. Install Node.js from https://nodejs.org')
@@ -70,6 +70,24 @@ let _npm: string | null = null
 function getNpm(): string {
   if (!_npm) _npm = resolveNpm()
   return _npm
+}
+
+/**
+ * Packaged macOS apps are launched with a minimal PATH. When npm comes from
+ * nvm, its launcher uses `#!/usr/bin/env node`, so Node's sibling bin
+ * directory must be available to the child process.
+ */
+function getNpmEnv(npm: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: '' }
+  if (!isAbsolute(npm)) return env
+
+  // Windows spells the key "Path" — adding a separate "PATH" would leave two keys
+  // and Node keeps only the first, wiping the real search path
+  const pathKey = Object.keys(env).find(k => k.toUpperCase() === 'PATH') ?? 'PATH'
+  const npmBinDir = dirname(npm)
+  const current = env[pathKey]
+  env[pathKey] = current ? `${npmBinDir}${delimiter}${current}` : npmBinDir
+  return env
 }
 
 function ensurePackagesDir(): void {
@@ -100,7 +118,7 @@ export function installPackage(name: string): PackageOperationResult {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
       timeout: 60000,
-      env: { ...process.env, NODE_ENV: '' }
+      env: getNpmEnv(npm)
     })
 
     // name may be "axios@1.7.9" — extract bare name for lookup
@@ -173,7 +191,8 @@ export function removePackage(name: string): PackageOperationResult {
     execSync(`"${npm}" uninstall ${name}`, {
       cwd: PACKAGES_DIR,
       stdio: 'pipe',
-      timeout: 30000
+      timeout: 30000,
+      env: getNpmEnv(npm)
     })
     return { success: true, name }
   } catch (err: unknown) {
