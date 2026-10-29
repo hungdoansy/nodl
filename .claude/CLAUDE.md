@@ -67,6 +67,9 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **Worker builds to `out/worker/worker.cjs`**: electron-vite wipes `out/main/` on rebuild, so worker is built separately. Production build copies it to `out/main/`.
 - **Instrument BEFORE transpile**: esbuild strips empty lines and rewrites code, breaking line alignment. Instrumentation must run on the original source.
 - **No `format: 'esm'` in esbuild**: Would reject `require()` calls from import transforms.
+- **`ts` loader only, no JSX**: `tsx` mode parses valid TS like `<T>(x: T) => x` and `<string>v` as JSX and fails. Babel in `instrument-ast.ts` also runs without the `jsx` plugin for the same reason.
+- **Instrumentation must not add or remove lines**: `__line__`/`__loopGuard__` are inserted on the same line, and replaced imports/exports are padded to their original newline count. esbuild error/warning lines are then editor lines. If the instrumented code fails to transpile, `transpileInstrumented()` reports the source's own errors instead (the regex fallback can mangle invalid code).
+- **esbuild warnings are not errors**: valid code like `x === -0` emits warnings. They're shown as `warn` entries and execution continues.
 - **Zustand selectors**: Use module-level constants for empty defaults (`const EMPTY_ENTRIES: OutputEntry[] = []`), never `?? []` inline — causes infinite re-renders in React StrictMode.
 - **IPC subscriptions**: Must use `useOutputStore.getState()` in callbacks, not selector-derived values. Subscribed once in `useOutputListener()` at App level.
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
