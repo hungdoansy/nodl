@@ -4,7 +4,7 @@ Technical details for contributors and anyone curious about how nodl works under
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 22
+- [Node.js](https://nodejs.org/) 24.22.2 (see `.nvmrc`)
 - [pnpm](https://pnpm.io/) (v9+)
 
 ## Setup
