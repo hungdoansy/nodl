@@ -19,7 +19,7 @@ if (__dirname.includes('app.asar')) {
   }
 }
 import { createRunner, setNodeModulesPath } from './executor/runner'
-import { transpile } from './executor/transpiler'
+import { transpileInstrumented } from './executor/transpiler'
 import { instrumentCode } from './executor/instrument'
 import { installPackage, removePackage, listPackages, searchPackages, getNodeModulesPath, checkPackageUpdates, getPackagePaths, getTypeDefinitions } from './executor/package-manager'
 import { IPC } from '../../shared/types'
@@ -266,14 +266,25 @@ ipcMain.on(IPC.RUN_CODE, (_event, payload: RunCodePayload) => {
   // 2. Transpile instrumented code (TS → JS)
   let codeToRun = instrumented
   if (payload.language === 'typescript') {
-    const result = transpile(instrumented, 'ts')
+    const result = transpileInstrumented(payload.code, instrumented)
+    // Instrumentation preserves line numbers, so esbuild's lines are editor lines
+    for (const warn of result.warnings) {
+      mainWindow.webContents.send(IPC.OUTPUT_ENTRY, {
+        id: `transpile-warn-${Date.now()}-${warn.line}`,
+        method: 'warn',
+        args: [`Warning (line ${warn.line}): ${warn.message}`],
+        timestamp: Date.now(),
+        line: warn.line || undefined
+      })
+    }
     if (result.errors.length > 0) {
       for (const err of result.errors) {
         mainWindow.webContents.send(IPC.OUTPUT_ENTRY, {
           id: `transpile-err-${Date.now()}-${err.line}`,
           method: 'error',
           args: [`TypeScript error (line ${err.line}): ${err.message}`],
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          line: err.line || undefined
         })
       }
       mainWindow.webContents.send(IPC.EXECUTION_DONE, {

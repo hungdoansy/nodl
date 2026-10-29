@@ -67,11 +67,6 @@ describe('transpiler', () => {
     expect(result.errors).toHaveLength(0)
   })
 
-  it('supports tsx loader for JSX', () => {
-    const result = transpile('const el = <div>hello</div>;', 'tsx')
-    expect(result.errors).toHaveLength(0)
-    expect(result.js).toBeTruthy()
-  })
 
   it('error includes line number', () => {
     const result = transpile('const x = 1;\nconst y: = ;')
@@ -165,15 +160,28 @@ describe('transpiler', () => {
     // esbuild may compact, but instrumented code relies on this
   })
 
-  it('auto-detects JSX in ts mode and transpiles successfully', () => {
-    const result = transpile('const el = <div>hello</div>')
+  it('transpiles generic arrow functions (not parsed as JSX)', () => {
+    const result = transpile('const id = <T>(x: T): T => x')
     expect(result.errors).toHaveLength(0)
-    expect(result.js).toBeTruthy()
+    expect(result.js).toContain('(x) => x')
   })
 
-  it('auto-detects JSX fragments', () => {
-    const result = transpile('const el = <>fragment</>')
+  it('transpiles angle-bracket type assertions', () => {
+    const result = transpile('const s = <string>v')
     expect(result.errors).toHaveLength(0)
+    expect(result.js).toContain('const s = v')
+  })
+
+  it('rejects JSX (not supported)', () => {
+    expect(transpile('const el = <div>hello</div>').errors.length).toBeGreaterThan(0)
+  })
+
+  it('returns lint warnings separately from errors', () => {
+    const result = transpile('const x = 0\nx === -0')
+    expect(result.errors).toHaveLength(0)
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0].line).toBe(2)
+    expect(result.js).toContain('x === -0')
   })
 
   it('does not false-positive on comparison operators', () => {

@@ -6,13 +6,13 @@
 import { describe, it, expect } from 'vitest'
 import { instrumentCode, stripInlineComment } from '../instrument'
 import { instrumentWithAST } from '../instrument-ast'
-import { transpile } from '../transpiler'
+import { transpile, transpileInstrumented } from '../transpiler'
 import { WELCOME_CODE } from '../../../store/tabs'
 
 /** Run the full pipeline and verify no transpilation errors */
 function pipeline(code: string): { instrumented: string; js: string; errors: { message: string; line: number }[] } {
   const instrumented = instrumentCode(code)
-  const result = transpile(instrumented, 'ts')
+  const result = transpile(instrumented)
   return { instrumented, js: result.js, errors: result.errors }
 }
 
@@ -737,7 +737,7 @@ arr.length // should be 3`)
 describe('AST instrumenter: expression wrapping', () => {
   function ast(code: string) {
     const instrumented = instrumentWithAST(code)
-    const result = transpile(instrumented, 'ts')
+    const result = transpile(instrumented)
     if (result.errors.length > 0) {
       throw new Error(
         `AST pipeline errors for:\n${code}\n\nInstrumented:\n${instrumented}\n\nErrors:\n${result.errors.map(e => `  L${e.line}: ${e.message}`).join('\n')}`
@@ -749,7 +749,7 @@ describe('AST instrumenter: expression wrapping', () => {
   it('wraps multi-line ternary as one unit (no mid-expression __line__)', () => {
     const { instrumented, js } = ast(`condition\n  ? "yes"\n  : "no"`)
     // The whole ternary is one ExpressionStatement — one __expr__ call wrapping all 3 lines
-    expect(instrumented).toMatch(/^__line__\.value = 1;\n__expr__\(1, condition\n\s+\? "yes"\n\s+: "no"\)/)
+    expect(instrumented).toMatch(/^__line__\.value = 1; __expr__\(1, condition\n\s+\? "yes"\n\s+: "no"\)/)
     expect(js).toBeTruthy()
   })
 
@@ -792,8 +792,7 @@ describe('AST instrumenter: expression wrapping', () => {
 describe('AST instrumenter: __line__ tracking', () => {
   it('inserts __line__ inside arrow function body', () => {
     const { js } = transpile(
-      instrumentWithAST('const fn = () => {\n  console.log("hi")\n  return 42\n}'),
-      'ts'
+      instrumentWithAST('const fn = () => {\n  console.log("hi")\n  return 42\n}')
     )
     expect(js).toBeTruthy()
     expect(instrumentWithAST('const fn = () => {\n  console.log("hi")\n  return 42\n}')).toContain(
@@ -805,21 +804,21 @@ describe('AST instrumenter: __line__ tracking', () => {
     const code = '[1,2].map(x => {\n  console.log(x)\n  return x * 2\n})'
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__line__.value = 2')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('inserts __line__ inside object method body', () => {
     const code = 'const obj = {\n  greet() {\n    console.log("hi")\n  }\n}'
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__line__.value = 3')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('inserts __line__ inside class static block', () => {
     const code = 'class Foo {\n  static {\n    console.log("init")\n  }\n}'
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__line__.value = 3')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('does NOT insert __line__ inside class body (only members allowed)', () => {
@@ -831,7 +830,7 @@ describe('AST instrumenter: __line__ tracking', () => {
     const classLine = lines.findIndex(l => l.includes('class Foo'))
     // After the class keyword line, there should be no __line__ inside the class body
     // (members are ClassProperty/MethodDefinition, parent is ClassBody, not BlockStatement)
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('does NOT insert __line__ inside object literal', () => {
@@ -841,7 +840,7 @@ describe('AST instrumenter: __line__ tracking', () => {
     // Only the const declaration itself gets __line__ = 1
     expect(instrumented).toContain('__line__.value = 1')
     expect(instrumented).not.toContain('__line__.value = 2')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('does not insert __line__ in the middle of a multiline template literal', () => {
@@ -850,7 +849,7 @@ describe('AST instrumenter: __line__ tracking', () => {
     // Only one __line__ for the const declaration
     const lineMatches = instrumented.match(/__line__\.value = \d+/g) ?? []
     expect(lineMatches).toHaveLength(1)
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 })
 
@@ -860,7 +859,7 @@ describe('AST instrumenter: import/export transformation', () => {
   }
   function astValid(code: string) {
     const instrumented = astInstrumented(code)
-    const result = transpile(instrumented, 'ts')
+    const result = transpile(instrumented)
     if (result.errors.length > 0) {
       throw new Error(`Pipeline errors:\n${result.errors.map(e => `  L${e.line}: ${e.message}`).join('\n')}\n\nInstrumented:\n${instrumented}`)
     }
@@ -946,7 +945,7 @@ describe('AST instrumenter: loop guards', () => {
     expect(instrumented).toContain('__loopGuard__()')
     // Should wrap in a block: { __loopGuard__(); i++ }
     expect(instrumented).toContain('{ __loopGuard__(); ')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('injects guard for single-statement for...of body (no braces)', () => {
@@ -954,14 +953,14 @@ describe('AST instrumenter: loop guards', () => {
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__loopGuard__()')
     expect(instrumented).toContain('{ __loopGuard__(); ')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('injects guard for single-statement do...while body (no braces)', () => {
     const code = 'let i = 0\ndo i++ while (i < 3)'
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__loopGuard__()')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('injects guard in both loops of nested loops', () => {
@@ -969,7 +968,7 @@ describe('AST instrumenter: loop guards', () => {
     const instrumented = instrumentWithAST(code)
     const guardCount = (instrumented.match(/__loopGuard__\(\)/g) ?? []).length
     expect(guardCount).toBe(2)
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('injects guard without breaking labeled loop', () => {
@@ -977,14 +976,14 @@ describe('AST instrumenter: loop guards', () => {
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__loopGuard__()')
     expect(instrumented).toContain('outer:')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 
   it('injects guard in for await...of', () => {
     const code = 'async function f(stream: AsyncIterable<number>) {\n  for await (const x of stream) {\n    console.log(x)\n  }\n}'
     const instrumented = instrumentWithAST(code)
     expect(instrumented).toContain('__loopGuard__()')
-    expect(transpile(instrumented, 'ts').errors).toHaveLength(0)
+    expect(transpile(instrumented).errors).toHaveLength(0)
   })
 })
 
@@ -1048,6 +1047,64 @@ describe('stripInlineComment', () => {
 
   it('handles escaped quotes in strings', () => {
     expect(stripInlineComment('"she said \\"hi\\"" // quote')).toBe('"she said \\"hi\\""')
+  })
+})
+
+describe('valid TS that node runs must not error', () => {
+  it('generic arrow function (was parsed as JSX)', () => {
+    expectValid('const id = <T>(x: T): T => x\nid(1)')
+  })
+
+  it('generic arrow with constraint and default', () => {
+    expectValid('const f = <T extends object = {}>(x: T) => x\nf({})')
+  })
+
+  it('angle-bracket type assertion', () => {
+    expectValid('const v: unknown = "hi"\nconst s = <string>v\ns.length')
+  })
+
+  it('esbuild warnings are returned separately, not as errors', () => {
+    for (const code of [
+      'const x = 0\nx === -0',
+      'const o = { a: 1, a: 2 }\no',
+      'const x = 1\ntypeof x === "nope"',
+    ]) {
+      const { errors } = pipeline(code)
+      expect(errors).toHaveLength(0)
+      expect(transpile(instrumentCode(code)).warnings).toHaveLength(1)
+    }
+  })
+
+  it('JSX is not supported (ts loader only)', () => {
+    expect(pipeline('const el = <div>hi</div>').errors.length).toBeGreaterThan(0)
+  })
+})
+
+describe('instrumented code keeps source line numbers', () => {
+  const cases: Record<string, string> = {
+    'plain statements': 'const a = 1\nconst b = 2\na + b',
+    'multi-line import': 'import {\n  a,\n  b\n} from "x"\nconst c = 1',
+    'multi-line type import': 'import type {\n  A,\n  B\n} from "x"\nconst c = 1',
+    'multi-line export': 'export {\n  a\n} from "x"\nconst c = 1',
+    'loops': 'for (let i = 0; i < 1; i++) {\n  i\n}\nwhile (false) {\n}\nfor (const x of []) x',
+    'functions and blocks': 'function f() {\n  const a = 1\n  if (a) {\n    return a\n  }\n}\nf()',
+  }
+  for (const [name, code] of Object.entries(cases)) {
+    it(name, () => {
+      expect(instrumentCode(code).split('\n').length).toBe(code.split('\n').length)
+    })
+  }
+
+  it('reports syntax errors at the source line', () => {
+    const code = 'import {\n  a\n} from "x"\nfor (const i of [1]) {\n  i\n}\nconst x: number = ;'
+    const { errors } = transpileInstrumented(code, instrumentCode(code))
+    expect(errors).toHaveLength(1)
+    expect(errors[0].line).toBe(7)
+  })
+
+  it('reports warnings at the source line', () => {
+    const code = 'const a = 1\nconst b = 2\nfunction f() {\n  return a === -0\n}'
+    expect(transpile(instrumentCode(code)).warnings[0].line).toBe(4)
   })
 })
 

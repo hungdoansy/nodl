@@ -7,8 +7,9 @@
  *   3. require()            — transforms ESM import/export → require() (AsyncFunction context)
  *   4. __loopGuard__()      — injects loop guard into every loop body (infinite loop protection)
  *
- * Uses magic-string to manipulate the source by character offsets, preserving original
- * line numbers so esbuild's output matches the editor.
+ * Uses magic-string to manipulate the source by character offsets. Every insertion is
+ * newline-free and every replacement keeps the replaced span's newline count, so line N
+ * of the output is line N of the source — esbuild error/warning lines match the editor.
  */
 
 import { parse } from '@babel/parser'
@@ -38,7 +39,7 @@ const PARSER_OPTIONS = {
   allowAwaitOutsideFunction: true,   // Top-level await support
   allowReturnOutsideFunction: true,  // Bare return is valid in scratchpad
   errorRecovery: true,               // Partial AST on incomplete/invalid code
-  plugins: ['typescript', 'jsx'] as ('typescript' | 'jsx')[],
+  plugins: ['typescript'] as 'typescript'[], // no 'jsx': it makes `<T>(x) => x` and `<string>v` ambiguous
   ranges: true,                      // Provide start/end character offsets
 }
 
@@ -130,6 +131,15 @@ function buildReexportRequire(node: ExportNamedDeclaration): string {
   return `const { ${specStr} } = require(${sourceRaw})`
 }
 
+/**
+ * Overwrite [start, end) with `text`, padded with the newlines the original span had,
+ * so lines after a multi-line import/export keep their numbers.
+ */
+function overwriteKeepLines(s: MagicString, code: string, start: number, end: number, text: string): void {
+  const newlines = code.slice(start, end).split('\n').length - 1
+  s.overwrite(start, end, text + '\n'.repeat(newlines))
+}
+
 // -------------------------------------------------------------------
 // Main instrumenter
 // -------------------------------------------------------------------
@@ -145,7 +155,7 @@ export function instrumentWithAST(code: string): string {
 
     if (body.type === 'BlockStatement') {
       // Insert after the opening {
-      s.appendLeft(body.start + 1, '\n__loopGuard__();')
+      s.appendLeft(body.start + 1, ' __loopGuard__();')
     } else {
       // Single-statement body — wrap in a block
       s.appendLeft(body.start, '{ __loopGuard__(); ')
@@ -179,7 +189,7 @@ export function instrumentWithAST(code: string): string {
       ) {
         const line = path.node.loc?.start.line
         if (line != null && path.node.start != null) {
-          s.appendLeft(path.node.start, `__line__.value = ${line};\n`)
+          s.appendLeft(path.node.start, `__line__.value = ${line}; `)
         }
       }
     },
@@ -191,12 +201,12 @@ export function instrumentWithAST(code: string): string {
 
       // import type { Foo } → strip entirely (no runtime effect)
       if (node.importKind === 'type') {
-        s.overwrite(node.start, node.end, '')
+        overwriteKeepLines(s, code, node.start, node.end, '')
         return
       }
 
       const sourceRaw = rawSource(node.source)
-      s.overwrite(node.start, node.end, buildRequire(node.specifiers, sourceRaw))
+      overwriteKeepLines(s, code, node.start, node.end, buildRequire(node.specifiers, sourceRaw))
     },
 
     // Transform export named → strip export keyword or require() for re-exports
@@ -207,16 +217,16 @@ export function instrumentWithAST(code: string): string {
       if (node.source) {
         // export { a, b } from "mod" or export type { ... } from "mod"
         if (node.exportKind === 'type') {
-          s.overwrite(node.start, node.end, '')
+          overwriteKeepLines(s, code, node.start, node.end, '')
           return
         }
         const replacement = buildReexportRequire(node)
-        s.overwrite(node.start, node.end, replacement)
+        overwriteKeepLines(s, code, node.start, node.end, replacement)
       } else if (node.declaration) {
         // export const x = 1 → const x = 1 (strip "export ")
         const decl = node.declaration as any
         if (decl.start != null) {
-          s.overwrite(node.start, decl.start, '')
+          overwriteKeepLines(s, code, node.start, decl.start, '')
         }
       }
       // export { a, b } without source: local re-export, unusual in scratchpad
@@ -230,7 +240,7 @@ export function instrumentWithAST(code: string): string {
       if (node.start == null || node.end == null) return
       const decl = node.declaration as any
       if (decl.start != null) {
-        s.overwrite(node.start, decl.start, '')
+        overwriteKeepLines(s, code, node.start, decl.start, '')
       }
     },
 
@@ -239,11 +249,11 @@ export function instrumentWithAST(code: string): string {
       const node = path.node
       if (node.start == null || node.end == null) return
       if (node.exportKind === 'type') {
-        s.overwrite(node.start, node.end, '')
+        overwriteKeepLines(s, code, node.start, node.end, '')
         return
       }
       const sourceRaw = rawSource(node.source)
-      s.overwrite(node.start, node.end, `require(${sourceRaw})`)
+      overwriteKeepLines(s, code, node.start, node.end, `require(${sourceRaw})`)
     },
 
     // Inject loop guards into all loop types

@@ -298,21 +298,22 @@ function instrumentWithRegex(code: string): string {
     // Inserting a statement between `(x)` and `=> ...` would break arrow syntax
     const nextIsContinuation = nextNonEmptyIsContinuation(lines, i)
     if (stmtCtx && !isContinuation && !nextIsContinuation) {
-      // Safe to insert __line__ tracking
-      result.push(`__line__.value = ${lineNum};`)
+      // Safe to insert __line__ tracking — on the same line, so output line N
+      // stays source line N (esbuild error lines must match the editor)
+      const track = `__line__.value = ${lineNum}; `
 
       // Transform import/export-from statements to require() calls
       if (trimmed.startsWith('import ') || (trimmed.startsWith('export ') && trimmed.includes(' from '))) {
         const transformed = transformImports(trimmed)
-        result.push(transformed)
+        result.push(track + transformed)
       } else if (stack.length === 0 && isExpression(trimmed) && !nextIsContinuation) {
         // Only wrap with __expr__ at top level (stack empty) and not starting a chain
         // Strip inline comments first — otherwise `expr // comment` becomes
         // `__expr__(N, expr // comment);` and the ); is swallowed by the comment
         const expr = stripInlineComment(trimmed).replace(/;$/, '')
-        result.push(`__expr__(${lineNum}, ${expr});`)
+        result.push(`${track}__expr__(${lineNum}, ${expr});`)
       } else {
-        result.push(line)
+        result.push(track + line)
       }
     } else {
       // Inside expression/class/object/switch context or chain continuation — pass through
@@ -323,7 +324,7 @@ function instrumentWithRegex(code: string): string {
 
     // Inject loop guard inside for/while/do loop bodies to detect infinite loops
     if (/^(for|while|do)\b/.test(trimmed) && trimmed.endsWith('{')) {
-      result.push('__loopGuard__();')
+      result[result.length - 1] += ' __loopGuard__();'
     }
   }
 

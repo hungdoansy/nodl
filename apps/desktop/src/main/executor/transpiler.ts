@@ -9,22 +9,19 @@ export interface TranspileError {
 export interface TranspileResult {
   js: string
   errors: TranspileError[]
+  /** Non-fatal lint hints (e.g. `x === -0`) — valid code, must not block execution */
+  warnings: TranspileError[]
 }
 
-function detectJsx(code: string): boolean {
-  // Detect JSX: <Component or <div or <>
-  return /<[A-Za-z>]/.test(code)
-}
-
-export function transpile(code: string, loader: 'ts' | 'tsx' = 'ts'): TranspileResult {
-  // Auto-upgrade to tsx if JSX syntax is detected
-  const effectiveLoader = loader === 'ts' && detectJsx(code) ? 'tsx' : loader
-
+/**
+ * Always the plain `ts` loader — JSX is not supported. In `tsx` mode valid TS
+ * like `<T>(x: T) => x` and `<string>v` is parsed as JSX and fails.
+ */
+export function transpile(code: string): TranspileResult {
   try {
     const result = transformSync(code, {
-      loader: effectiveLoader,
+      loader: 'ts',
       target: 'esnext',
-      jsx: 'automatic',
       sourcemap: false
     })
 
@@ -35,19 +32,22 @@ export function transpile(code: string, loader: 'ts' | 'tsx' = 'ts'): TranspileR
 
     return {
       js,
-      errors: result.warnings.map(messageToError)
+      errors: [],
+      warnings: result.warnings.map(messageToError)
     }
   } catch (err: unknown) {
     const buildError = err as { errors?: Message[] }
     if (buildError.errors?.length) {
       return {
         js: '',
-        errors: buildError.errors.map(messageToError)
+        errors: buildError.errors.map(messageToError),
+        warnings: []
       }
     }
     return {
       js: '',
-      errors: [{ line: 0, column: 0, message: String(err) }]
+      errors: [{ line: 0, column: 0, message: String(err) }],
+      warnings: []
     }
   }
 }
@@ -58,4 +58,18 @@ function messageToError(msg: Message): TranspileError {
     column: msg.location?.column ?? 0,
     message: msg.text
   }
+}
+
+/**
+ * Transpile instrumented code, but report errors against the user's source.
+ * When the source itself is invalid, Babel can't parse it and the regex fallback
+ * instrumenter may mangle it further (e.g. multi-line imports), producing errors
+ * at unrelated lines — so if the instrumented code fails and the source fails too,
+ * the source's errors are the ones the user needs to see.
+ */
+export function transpileInstrumented(source: string, instrumented: string): TranspileResult {
+  const result = transpile(instrumented)
+  if (result.errors.length === 0) return result
+  const original = transpile(source)
+  return original.errors.length > 0 ? original : result
 }
