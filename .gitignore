@@ -7,3 +7,5 @@ dist/
 .DS_Store
 CHANGELOG.draft.md
 tsconfig.tsbuildinfo
+test-results/
+playwright-report/
