@@ -1,6 +1,7 @@
 import { _electron, type ElectronApplication, type Page } from '@playwright/test'
 import { join, dirname } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, mkdtempSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -27,16 +28,20 @@ function getAppPath(): string {
  */
 export async function launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
   const executablePath = getAppPath()
+  // A fresh profile per launch: the app's default userData is the real one,
+  // so tests would otherwise overwrite the user's saved tabs and settings
+  const userDataDir = mkdtempSync(join(tmpdir(), 'nodl-e2e-'))
 
   const app = await _electron.launch({
     executablePath,
-    args: [],
+    args: [`--user-data-dir=${userDataDir}`],
     env: {
       ...process.env,
       // Ensure clean state for testing
       NODE_ENV: 'production'
     }
   })
+  app.on('close', () => rmSync(userDataDir, { recursive: true, force: true }))
 
   const page = await app.firstWindow()
   // Wait for the app to be fully loaded
