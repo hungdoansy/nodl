@@ -70,6 +70,9 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **`ts` loader only, no JSX**: `tsx` mode parses valid TS like `<T>(x: T) => x` and `<string>v` as JSX and fails. Babel in `instrument-ast.ts` also runs without the `jsx` plugin for the same reason.
 - **Instrumentation must not add or remove lines**: `__line__`/`__loopGuard__` are inserted on the same line, and replaced imports/exports are padded to their original newline count. esbuild error/warning lines are then editor lines. If the instrumented code fails to transpile, `transpileInstrumented()` reports the source's own errors instead (the regex fallback can mangle invalid code).
 - **esbuild warnings are not errors**: valid code like `x === -0` emits warnings. They're shown as `warn` entries and execution continues.
+- **Loop guard is time-based** (`loop-guard.ts`): it throws only when a loop is still running just before the execution timeout (the Settings value, passed renderer → runner → worker). Never an iteration cap: a 1M-iteration cap broke ordinary benchmarks and nested loops.
+- **Decorators are lowered by esbuild** (`supported: { decorators: false }`): V8 can't run them and `esnext` passes them through. Standard (TS 5 default) decorators and `accessor` only; legacy/parameter decorators aren't supported. Babel needs the `decorators` + `decoratorAutoAccessors` plugins or it throws and the regex fallback runs.
+- **Import/export rewriting is top-level only**: inside `namespace`/`declare module`, `export` declares a member. Stripping it there leaves the member undefined.
 - **Zustand selectors**: Use module-level constants for empty defaults (`const EMPTY_ENTRIES: OutputEntry[] = []`), never `?? []` inline — causes infinite re-renders in React StrictMode.
 - **IPC subscriptions**: Must use `useOutputStore.getState()` in callbacks, not selector-derived values. Subscribed once in `useOutputListener()` at App level.
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
@@ -163,6 +166,14 @@ The `instrumentCode()` function is the most complex and bug-prone part. It uses 
 - `import * as foo from "bar"` → `const foo = require("bar")`
 - `import "bar"` → `require("bar")`
 - `import type { ... }` → stripped (no runtime)
+- `import { "a-b" as ab }` → `const { "a-b": ab } = require(...)` (string names become quoted keys)
+- `export { a, b as c }` (local, no `from`) → stripped: the names already exist
+- `export { a, b as c } from "bar"` → `const { a, b: c } = require("bar")`. This is a scratchpad convenience that binds the *exported* names. A name is skipped when it can't be a binding (`default`, string names) or is already declared at the top level. With nothing left to bind it becomes plain `require("bar")`.
+- `export * as ns from "bar"` → `const ns = require("bar")`
+- `export default function f() {}` → `function f() {}`. Anonymous declarations and expressions → `(…)`, because `export default { a: 1 }` stripped to `{ a: 1 }` parses as a block.
+- `import.meta` → `__importMeta__`, an object the worker injects (`url`, `filename`, `dirname`, `resolve`)
+- A `#!` shebang on line 1 → `//!` comment (the worker's wrapper code sits above it)
+- Rewriting applies at the top level only. Babel traverses with `noScope: true`, because its scope crawl throws "Duplicate declaration" on valid TS.
 
 ## Design System
 
