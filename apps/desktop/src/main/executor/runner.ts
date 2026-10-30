@@ -137,10 +137,10 @@ export function createRunner(): Runner {
       })
 
       // Send code to worker
-      child.send({ code: payload.code, language: payload.language })
-
-      // Execution timeout
+      // Execution timeout — also sent to the worker so its loop guard fires just before it
       const timeout = payload.timeout ?? DEFAULT_TIMEOUT
+      child.send({ code: payload.code, language: payload.language, timeout })
+
       timeoutId = setTimeout(() => {
         if (!stopped && !gotResult && child && !child.killed) {
           cleanup()

@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useOutputStore } from '../store/output'
 import { useTabsStore } from '../store/tabs'
+import { useSettingsStore } from '../store/settings'
 import * as bridge from '../ipc/bridge'
 import type { OutputEntry, ExecutionResult } from '../../shared/types'
 
@@ -21,7 +22,8 @@ export function useCodeExecution() {
     // Ensure output store knows the active tab before clearing
     useOutputStore.getState().setActiveTabId(useTabsStore.getState().activeTabId)
     useOutputStore.getState().setRunning()
-    bridge.runCode({ code: tab.code, language: tab.language })
+    const timeout = useSettingsStore.getState().executionTimeout * 1000
+    bridge.runCode({ code: tab.code, language: tab.language, timeout })
   }, [])
 
   const stop = useCallback(() => {

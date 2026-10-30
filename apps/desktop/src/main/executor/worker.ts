@@ -5,6 +5,10 @@
  */
 import { createConsoleCapturer } from './console-capture'
 import { createExprReporter } from './expr-reporter'
+import { createLoopGuard } from './loop-guard'
+import { isBuiltin } from 'module'
+import { join } from 'path'
+import { pathToFileURL } from 'url'
 import type { OutputEntry, WorkerMessage } from '../../../shared/types'
 
 let idCounter = 0
@@ -89,7 +93,7 @@ function waitForAsyncDrain(maxWaitMs = 5000): Promise<void> {
   })
 }
 
-process.on('message', async (msg: { code: string; language: string }) => {
+process.on('message', async (msg: { code: string; language: string; timeout: number }) => {
   const lineTracker = { value: 0 }
 
   const capturedConsole = createConsoleCapturer((entry) => {
@@ -103,25 +107,30 @@ process.on('message', async (msg: { code: string; language: string }) => {
   try {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
-    // Loop guard: throws after too many iterations to detect infinite loops
-    const MAX_ITERATIONS = 1_000_000
-    let loopCount = 0
-    function loopGuard(): void {
-      if (++loopCount > MAX_ITERATIONS) {
-        throw new Error(`Infinite loop detected (exceeded ${MAX_ITERATIONS.toLocaleString()} iterations)`)
-      }
-    }
+    const loopGuard = createLoopGuard(msg.timeout)
 
     const wrappedCode = `
       const console = __console__;
       ${msg.code}
     `
 
+    // Stand-in for `import.meta` (rewritten to __importMeta__ by the instrumenter):
+    // the scratchpad has no file, so it's described as one in the working directory
+    const filename = join(process.cwd(), 'scratchpad.ts')
+    const importMeta = {
+      url: pathToFileURL(filename).href,
+      filename,
+      dirname: process.cwd(),
+      // Built-ins resolve to `node:` URLs like in node; require.resolve returns them bare
+      resolve: (specifier: string) =>
+        isBuiltin(specifier) ? `node:${specifier.replace(/^node:/, '')}` : pathToFileURL(require.resolve(specifier)).href
+    }
+
     const fn = new AsyncFunction(
-      '__console__', 'require', '__expr__', '__line__', '__loopGuard__',
+      '__console__', 'require', '__expr__', '__line__', '__loopGuard__', '__importMeta__',
       wrappedCode
     )
-    await fn(capturedConsole, require, exprReporter, lineTracker, loopGuard)
+    await fn(capturedConsole, require, exprReporter, lineTracker, loopGuard, importMeta)
 
     // Wait for pending Promises from expression results (e.g., async function calls)
     if (pendingPromises.length > 0) {
