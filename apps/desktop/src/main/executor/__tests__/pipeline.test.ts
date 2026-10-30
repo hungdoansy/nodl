@@ -7,6 +7,8 @@ import { describe, it, expect } from 'vitest'
 import { instrumentCode, stripInlineComment } from '../instrument'
 import { instrumentWithAST } from '../instrument-ast'
 import { transpile, transpileInstrumented } from '../transpiler'
+import vm from 'vm'
+import { WRAPPER_PARAMS } from '../wrapper'
 import { WELCOME_CODE } from '../../../store/tabs'
 
 /** Run the full pipeline and verify no transpilation errors */
@@ -33,8 +35,26 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 function expectRunnable(code: string): string {
   expect(() => instrumentWithAST(code)).not.toThrow()
   const js = expectValid(code)
-  expect(() => new AsyncFunction('__console__', 'require', '__expr__', '__line__', '__loopGuard__', '__importMeta__', js)).not.toThrow()
+  expect(() => new AsyncFunction(...WRAPPER_PARAMS, js)).not.toThrow()
   return js
+}
+
+/**
+ * Run code through the pipeline and the worker's wrapper; collect expression values and
+ * console.log lines. A vm context stands in for the worker's globals (console, require)
+ */
+async function runPipeline(code: string) {
+  const js = expectRunnable(code)
+  const exprs: [number, unknown][] = []
+  const logs: [number, unknown[]][] = []
+  const line = { value: 0 }
+  const console = { log: (...args: unknown[]) => logs.push([line.value, args]) }
+  const require = (id: string) => ({ id }) // stub module: exports its own id
+  const expr = (n: number, v: unknown) => { exprs.push([n, v]); return v }
+  const ctx = vm.createContext({ console, require })
+  const ContextAsyncFunction = vm.runInContext('(async function () {}).constructor', ctx)
+  await new ContextAsyncFunction(...WRAPPER_PARAMS, js)(expr, line, () => {}, {}, require)
+  return { exprs, logs }
 }
 
 describe('pipeline: instrument → transpile', () => {
@@ -1232,5 +1252,28 @@ describe('WELCOME_CODE regression', () => {
         )
       }
     }
+  })
+})
+
+describe('worker wrapper semantics', () => {
+  it('user code may declare console and require', async () => {
+    const { logs, exprs } = await runPipeline('const console = { log: () => {} }\nconsole.log("x")\nconst require = 5\nrequire')
+    expect(logs).toEqual([])
+    expect(exprs).toContainEqual([4, 5])
+    await expect(runPipeline('var console = 1\nlet require = 2')).resolves.toBeDefined()
+  })
+
+  it('imports still load when user code declares require (createRequire idiom)', async () => {
+    const code = "import { id } from 'mod'\nconst require = () => 0\nid"
+    expect(instrumentCode(code)).toContain("__require__('mod')")
+    expect((await runPipeline(code)).exprs).toEqual([[3, 'mod']])
+  })
+
+  it("honors a 'use strict' directive", async () => {
+    const isStrict = '(function () { return this === undefined })()'
+    // sloppy-mode `this` is the global object
+    expect((await runPipeline(`'use strict';\n${isStrict}`)).exprs).toEqual([[2, true]])
+    expect((await runPipeline(`// comment\n"use strict";\n${isStrict}`)).exprs).toEqual([[3, true]])
+    expect((await runPipeline(isStrict)).exprs).toEqual([[1, false]])
   })
 })

@@ -6,6 +6,7 @@
 import { createConsoleCapturer } from './console-capture'
 import { createExprReporter } from './expr-reporter'
 import { createLoopGuard } from './loop-guard'
+import { WRAPPER_PARAMS } from './wrapper'
 import { isBuiltin } from 'module'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
@@ -109,11 +110,6 @@ process.on('message', async (msg: { code: string; language: string; timeout: num
 
     const loopGuard = createLoopGuard(msg.timeout)
 
-    const wrappedCode = `
-      const console = __console__;
-      ${msg.code}
-    `
-
     // Stand-in for `import.meta` (rewritten to __importMeta__ by the instrumenter):
     // the scratchpad has no file, so it's described as one in the working directory
     const filename = join(process.cwd(), 'scratchpad.ts')
@@ -126,11 +122,12 @@ process.on('message', async (msg: { code: string; language: string; timeout: num
         isBuiltin(specifier) ? `node:${specifier.replace(/^node:/, '')}` : pathToFileURL(require.resolve(specifier)).href
     }
 
-    const fn = new AsyncFunction(
-      '__console__', 'require', '__expr__', '__line__', '__loopGuard__', '__importMeta__',
-      wrappedCode
-    )
-    await fn(capturedConsole, require, exprReporter, lineTracker, loopGuard, importMeta)
+    // Globals, not parameters, so user code can declare its own (see wrapper.ts).
+    // This process runs one scratchpad and exits, so nothing else sees them
+    Object.assign(globalThis, { console: capturedConsole, require })
+
+    const fn = new AsyncFunction(...WRAPPER_PARAMS, msg.code)
+    await fn(exprReporter, lineTracker, loopGuard, importMeta, require)
 
     // Wait for pending Promises from expression results (e.g., async function calls)
     if (pendingPromises.length > 0) {

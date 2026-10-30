@@ -69,10 +69,11 @@ function rawSource(node: { value: string; extra?: Record<string, unknown> }): st
  */
 function buildRequire(
   specifiers: ImportDeclaration['specifiers'],
-  sourceRaw: string
+  sourceRaw: string,
+  req: string
 ): string {
   if (specifiers.length === 0) {
-    return `require(${sourceRaw})`
+    return `${req}(${sourceRaw})`
   }
 
   const parts: string[] = []
@@ -91,12 +92,12 @@ function buildRequire(
   if (defaultSpec) {
     const name = defaultSpec.local.name
     parts.push(
-      `const ${name} = (() => { const _m = require(${sourceRaw}); return _m.default ?? _m; })()`
+      `const ${name} = (() => { const _m = ${req}(${sourceRaw}); return _m.default ?? _m; })()`
     )
   }
 
   if (namespaceSpec) {
-    parts.push(`const ${namespaceSpec.local.name} = require(${sourceRaw})`)
+    parts.push(`const ${namespaceSpec.local.name} = ${req}(${sourceRaw})`)
   }
 
   if (namedSpecs.length > 0) {
@@ -108,7 +109,7 @@ function buildRequire(
         return importedName === localName ? importedName : `${propertyKey(importedName)}: ${localName}`
       })
       .join(', ')
-    parts.push(`const { ${specStr} } = require(${sourceRaw})`)
+    parts.push(`const { ${specStr} } = ${req}(${sourceRaw})`)
   }
 
   return parts.join('; ')
@@ -133,7 +134,7 @@ function propertyKey(name: string): string {
  * SyntaxError. `export * as ns from "mod"` → `const ns = require("mod")`.
  * With no bindings left it's just `require("mod")`, which still loads the module.
  */
-function buildReexportRequire(node: ExportNamedDeclaration, declared: Set<string>): string {
+function buildReexportRequire(node: ExportNamedDeclaration, declared: Set<string>, req: string): string {
   const sourceRaw = rawSource(node.source!)
   const valueSpecs = node.specifiers.filter((s) => (s as ExportSpecifier).exportKind !== 'type')
   if (valueSpecs.length === 0) return '' // all type exports → strip
@@ -145,14 +146,14 @@ function buildReexportRequire(node: ExportNamedDeclaration, declared: Set<string
     if (!isValidIdentifier(exported) || declared.has(exported)) continue
     declared.add(exported)
     if (spec.type === 'ExportNamespaceSpecifier') {
-      parts.push(`const ${exported} = require(${sourceRaw})`)
+      parts.push(`const ${exported} = ${req}(${sourceRaw})`)
     } else if (spec.type === 'ExportSpecifier') {
       const imported = moduleExportName(spec.local)
       props.push(imported === exported ? exported : `${propertyKey(imported)}: ${exported}`)
     }
   }
-  if (props.length > 0) parts.push(`const { ${props.join(', ')} } = require(${sourceRaw})`)
-  return parts.length > 0 ? parts.join('; ') : `require(${sourceRaw})`
+  if (props.length > 0) parts.push(`const { ${props.join(', ')} } = ${req}(${sourceRaw})`)
+  return parts.length > 0 ? parts.join('; ') : `${req}(${sourceRaw})`
 }
 
 /** Names declared at the top level — re-export bindings must not collide with them */
@@ -206,6 +207,10 @@ export function instrumentWithAST(code: string): string {
   const ast = parse(code, PARSER_OPTIONS) as File
   const s = new MagicString(code)
   const declared = topLevelNames(ast.program)
+  // `import { createRequire } from 'module'; const require = createRequire(…)` declares
+  // its own require — imports rewritten above it would hit its TDZ, so they use the
+  // worker's alias instead
+  const req = declared.has('require') ? '__require__' : 'require'
 
   // Shared loop body handler for all loop types
   const injectLoopGuard = (path: any): void => {
@@ -273,7 +278,7 @@ export function instrumentWithAST(code: string): string {
       }
 
       const sourceRaw = rawSource(node.source)
-      overwriteKeepLines(s, code, node.start, node.end, buildRequire(node.specifiers, sourceRaw))
+      overwriteKeepLines(s, code, node.start, node.end, buildRequire(node.specifiers, sourceRaw, req))
     },
 
     // Transform export named → strip export keyword or require() for re-exports
@@ -287,7 +292,7 @@ export function instrumentWithAST(code: string): string {
           overwriteKeepLines(s, code, node.start, node.end, '')
           return
         }
-        const replacement = buildReexportRequire(node, declared)
+        const replacement = buildReexportRequire(node, declared, req)
         overwriteKeepLines(s, code, node.start, node.end, replacement)
       } else if (node.declaration) {
         // export const x = 1 → const x = 1 (strip "export ")
@@ -331,7 +336,7 @@ export function instrumentWithAST(code: string): string {
         return
       }
       const sourceRaw = rawSource(node.source)
-      overwriteKeepLines(s, code, node.start, node.end, `require(${sourceRaw})`)
+      overwriteKeepLines(s, code, node.start, node.end, `${req}(${sourceRaw})`)
     },
 
     // import.meta is module-only syntax; the worker passes an equivalent object
