@@ -1195,7 +1195,7 @@ describe('other syntax found by corpus testing', () => {
 
   it('brace-less loop body followed by a statement on the same line', () => {
     expectRunnable('for (const x of [1]) x;[2]')
-    expect(instrumentCode('for (const x of [1]) x;[2]')).toContain('__loopGuard__(); x; }__line__')
+    expect(instrumentCode('for (const x of [1]) x;[2]')).toContain('__loopGuard__(); __line__.value = 1; x; }__line__')
   })
 })
 
@@ -1255,7 +1255,35 @@ describe('WELCOME_CODE regression', () => {
   })
 })
 
+describe('console.log line attribution', () => {
+  it('statements in switch cases', async () => {
+    const { logs } = await runPipeline("switch (1) {\n  case 1:\n    console.log('a')\n}")
+    expect(logs).toEqual([[3, ['a']]])
+  })
+
+  it('brace-less if / else bodies on their own line', async () => {
+    expect((await runPipeline("if (true)\n  console.log('b')")).logs).toEqual([[2, ['b']]])
+    expect((await runPipeline("if (false) console.log(1)\nelse\n  console.log('c')")).logs).toEqual([[3, ['c']]])
+    expect((await runPipeline("if (false) 1\nelse if (true)\n  console.log('d')")).logs).toEqual([[3, ['d']]])
+  })
+
+  it('brace-less loop bodies on their own line', async () => {
+    expect((await runPipeline('for (const x of [1, 2])\n  console.log(x)')).logs).toEqual([[2, [1]], [2, [2]]])
+    expect((await runPipeline('let i = 0\nwhile (i < 1)\n  console.log(i++)')).logs).toEqual([[3, [0]]])
+  })
+
+  it('nested brace-less bodies stay valid', async () => {
+    const { logs } = await runPipeline('for (const x of [0, 1]) if (x) console.log(x); else console.log(-1)\nconsole.log(9)')
+    expect(logs).toEqual([[1, [-1]], [1, [1]], [2, [9]]])
+  })
+})
+
 describe('worker wrapper semantics', () => {
+  it('a comma expression reports its last value', async () => {
+    expect((await runPipeline('1, 2')).exprs).toEqual([[1, 2]])
+    expect((await runPipeline('(3, 4)')).exprs).toEqual([[1, 4]])
+  })
+
   it('user code may declare console and require', async () => {
     const { logs, exprs } = await runPipeline('const console = { log: () => {} }\nconsole.log("x")\nconst require = 5\nrequire')
     expect(logs).toEqual([])

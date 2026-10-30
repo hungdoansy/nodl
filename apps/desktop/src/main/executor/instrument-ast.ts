@@ -203,6 +203,10 @@ function stripExportKeyword(s: MagicString, code: string, exportStart: number, d
 // Main instrumenter
 // -------------------------------------------------------------------
 
+const LOOP_TYPES = new Set([
+  'ForStatement', 'WhileStatement', 'DoWhileStatement', 'ForInStatement', 'ForOfStatement',
+])
+
 export function instrumentWithAST(code: string): string {
   const ast = parse(code, PARSER_OPTIONS) as File
   const s = new MagicString(code)
@@ -247,22 +251,38 @@ export function instrumentWithAST(code: string): string {
     // drop the code to the regex fallback
     noScope: true,
 
-    // Insert __line__.value = N before every statement whose parent is a
-    // block-level context (Program, BlockStatement, StaticBlock).
+    // Insert __line__.value = N before every statement in a statement list
+    // (Program, BlockStatement, StaticBlock, switch case) and before brace-less
+    // if/else/loop bodies — otherwise `if (c)\n  console.log(x)` reports the `if` line.
     Statement(path: any): void {
       // BlockStatement is a container, not a trackable statement itself
       if (path.isBlockStatement() || path.isEmptyStatement()) return
 
-      const parent = path.parent
+      const { node, parent } = path
+      const line = node.loc?.start.line
+      if (line == null || node.start == null || node.end == null) return
+      const track = `__line__.value = ${line}; `
+
       if (
         parent.type === 'Program' ||
         parent.type === 'BlockStatement' ||
-        parent.type === 'StaticBlock'
+        parent.type === 'StaticBlock' ||
+        parent.type === 'SwitchCase'
       ) {
-        const line = path.node.loc?.start.line
-        if (line != null && path.node.start != null) {
-          s.appendLeft(path.node.start, `__line__.value = ${line}; `)
-        }
+        s.appendLeft(node.start, track)
+      } else if (LOOP_TYPES.has(parent.type) && path.key === 'body') {
+        // injectLoopGuard already wrapped the body in `{ __loopGuard__(); … }`
+        s.appendLeft(node.start, track)
+      } else if (
+        (parent.type === 'IfStatement' && path.key !== 'test') ||
+        parent.type === 'WithStatement'
+      ) {
+        // `else if` chains track their own bodies; a function declaration as a
+        // body (annex B) would change scope if wrapped
+        if (path.isIfStatement() || path.isFunctionDeclaration()) return
+        s.appendLeft(node.start, `{ ${track}`)
+        // appendLeft: see injectLoopGuard
+        s.appendLeft(node.end, ' }')
       }
     },
 
@@ -370,8 +390,11 @@ export function instrumentWithAST(code: string): string {
     if (expr.start == null || expr.end == null || !node.loc) continue
 
     const line = node.loc.start.line
-    s.appendLeft(expr.start, `__expr__(${line}, `)
-    s.appendRight(expr.end, `)`)
+    // `a, b` must stay one argument: __expr__(1, (a, b)), not __expr__(1, a, b).
+    // Also when parenthesized — expr.start is inside the source's own parens
+    const isSequence = expr.type === 'SequenceExpression'
+    s.appendLeft(expr.start, `__expr__(${line}, ${isSequence ? '(' : ''}`)
+    s.appendRight(expr.end, isSequence ? '))' : ')')
   }
 
   return s.toString()
