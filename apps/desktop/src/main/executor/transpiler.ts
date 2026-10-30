@@ -22,6 +22,9 @@ export function transpile(code: string): TranspileResult {
     const result = transformSync(code, {
       loader: 'ts',
       target: 'esnext',
+      // V8 can't run decorators yet, and `esnext` passes them through untouched —
+      // lower standard (TS 5 default) decorators and `accessor` fields to plain JS
+      supported: { decorators: false },
       sourcemap: false
     })
 

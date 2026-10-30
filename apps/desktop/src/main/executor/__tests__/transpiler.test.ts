@@ -184,6 +184,13 @@ describe('transpiler', () => {
     expect(result.js).toContain('x === -0')
   })
 
+  it('lowers decorators to plain JS (V8 has no decorator support)', () => {
+    const result = transpile('function d(t: any, c: any) {}\n@d class A { @d accessor x = 1 }')
+    expect(result.errors).toHaveLength(0)
+    expect(result.js).not.toMatch(/^\s*@d/m)
+    expect(result.js).not.toContain('accessor x')
+  })
+
   it('does not false-positive on comparison operators', () => {
     // `a < b` should not trigger JSX detection and cause issues
     const result = transpile('const x = 1 < 2')
