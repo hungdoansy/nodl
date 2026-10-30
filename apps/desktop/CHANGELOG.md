@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.4.0 (2026-10-30)
+
+- Playwright output folders are now ignored.
+- Toolbar buttons now support prefix matching for their titles, making them easier to find.
+- Enhanced code processing for `switch` statements and single-line code blocks.
+- Improved consistency and behavior when running user-provided code.
+- Enhanced support for valid module syntax, decorators, and namespaces.
+- Long-running loops are now terminated more reliably based on a configurable timeout setting.
+- Fixed an issue where valid TypeScript code was sometimes incorrectly flagged with errors.
+- Enhanced security by updating vulnerable dependencies.
+
 ## v2.3.1 (2026-07-18)
 
 - The web application now accurately displays its release version.
