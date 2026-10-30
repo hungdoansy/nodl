@@ -83,7 +83,14 @@ remaining 210: 97 are esbuild limits, about 60 are test-only syntax (annex B HTM
 comments, unshipped proposals), and some are TS conformance files that V8 rejects
 anyway (the esbuild oracle is looser than V8).
 
-Still open: line attribution in `switch` cases and brace-less bodies;
-`const require` / `const console` colliding with the wrapper parameters; `a, b`
-reporting `a`; `'use strict'` being ignored; TS imports that are only used as
-types, where a same-named `let` collides once the import becomes `const`.
+A third round fixed the rest:
+- `console.log` line attribution in `switch` cases and brace-less if/else/loop bodies.
+- `a, b` now reports `b`: a top-level comma expression is wrapped as one `__expr__` argument.
+- User code can declare `console`/`require`, and `'use strict'` takes effect. The first
+  attempt wrapped user code in a block, which fixed both but made 70 corpus snippets fail
+  (`function f() {} var f` is a SyntaxError inside a block). The corpus re-run caught it.
+  The fix that held: `console`/`require` became worker globals and user code is the
+  function body unchanged.
+
+Still open: TS imports that are only used as types, where a same-named `let` collides
+once the import becomes `const`.

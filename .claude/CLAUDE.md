@@ -56,7 +56,7 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
    - Converts `import` statements to `require()` calls (ESM → CJS)
    - Uses tagged delimiter stack to avoid inserting inside class bodies, object literals, switch statements, template literals
 2. `transpile(instrumented, 'ts')` — esbuild strips TypeScript, no format specified (allows require)
-3. Worker receives transpiled code, wraps in `new AsyncFunction(...)`, executes with captured console
+3. Worker receives transpiled code, runs it as the body of `new AsyncFunction(...WRAPPER_PARAMS, code)` with captured `console`/`require` installed as globals
 4. Worker intercepts `setTimeout`/`setInterval` globally to track pending timers
 5. Worker awaits Promise results from `__expr__` before exiting
 6. `waitForAsyncDrain()` polls until all timers complete (max 5s)
@@ -73,6 +73,8 @@ User code → instrumentCode() → transpile() → worker (child_process.fork)
 - **Loop guard is time-based** (`loop-guard.ts`): it throws only when a loop is still running just before the execution timeout (the Settings value, passed renderer → runner → worker). Never an iteration cap: a 1M-iteration cap broke ordinary benchmarks and nested loops.
 - **Decorators are lowered by esbuild** (`supported: { decorators: false }`): V8 can't run them and `esnext` passes them through. Standard (TS 5 default) decorators and `accessor` only; legacy/parameter decorators aren't supported. Babel needs the `decorators` + `decoratorAutoAccessors` plugins or it throws and the regex fallback runs.
 - **Import/export rewriting is top-level only**: inside `namespace`/`declare module`, `export` declares a member. Stripping it there leaves the member undefined.
+- **User code is the function body as-is** (`wrapper.ts`): nothing is prepended (a prefix demotes `'use strict'` to a plain string) and nothing wraps it in a block (`function f() {} var f` is a SyntaxError in a block). `console`/`require` are worker globals, not parameters, so a user's own `const console`/`const require` can shadow them. When user code declares `require`, rewritten imports call the `__require__` parameter instead (otherwise `import`s above `const require = createRequire(…)` hit its TDZ).
+- **Brace-less bodies get their own `__line__`**: if/else/with bodies are wrapped as `{ __line__.value = N; stmt }` (loops already get `{ __loopGuard__(); … }`). `else if` and function-declaration bodies are left alone. Switch-case statements are tracked like block statements.
 - **Zustand selectors**: Use module-level constants for empty defaults (`const EMPTY_ENTRIES: OutputEntry[] = []`), never `?? []` inline — causes infinite re-renders in React StrictMode.
 - **IPC subscriptions**: Must use `useOutputStore.getState()` in callbacks, not selector-derived values. Subscribed once in `useOutputListener()` at App level.
 - **Output buffering**: `addEntry()` buffers during execution, `setDone()` flushes atomically. This prevents output flash on re-run.
