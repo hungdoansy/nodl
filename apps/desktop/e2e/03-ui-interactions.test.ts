@@ -52,8 +52,8 @@ test('E2E-032: sidebar toggle works', async () => {
 
 // --- E2E-033: Output mode toggle ---
 test('E2E-033: output mode toggle switches', async () => {
-  const consoleMode = page.locator('button[title="Switch to console mode"]')
-  const alignedMode = page.locator('button[title="Switch to line-aligned mode"]')
+  const consoleMode = page.locator('button[title^="Switch to console mode"]')
+  const alignedMode = page.locator('button[title^="Switch to line-aligned mode"]')
 
   const consoleVisible = await consoleMode.isVisible().catch(() => false)
   if (consoleVisible) {
@@ -76,7 +76,7 @@ test('E2E-034: copy button shows feedback', async () => {
   await runCode(page)
   await waitForExecution(page)
 
-  const copyBtn = page.locator('button[title="Copy output"]')
+  const copyBtn = page.locator('button[title^="Copy output"]')
   await expect(copyBtn).toBeVisible()
   await copyBtn.click()
   // After click, title changes to "Copied!"

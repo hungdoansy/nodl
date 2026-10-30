@@ -128,7 +128,7 @@ export async function getErrorText(page: Page): Promise<string> {
  * Click a toolbar button by its title attribute.
  */
 export async function clickToolbarButton(page: Page, title: string): Promise<void> {
-  await page.locator(`button[title="${title}"]`).click()
+  await page.locator(`button[title^="${title}"]`).click()
 }
 
 /**

@@ -46,7 +46,7 @@ test('E2E-004: Monaco editor is present', async () => {
 
 // --- E2E-005: Run button exists ---
 test('E2E-005: Run button is visible', async () => {
-  const runBtn = page.locator('button[title="Run (Cmd+Enter)"]')
+  const runBtn = page.locator('button[title^="Run code"]')
   await expect(runBtn).toBeVisible()
 })
 
@@ -70,7 +70,7 @@ test('E2E-008: theme toggle button exists', async () => {
 
 // --- E2E-009: Clear output button exists ---
 test('E2E-009: clear output button exists', async () => {
-  const clear = page.locator('button[title="Clear output"]')
+  const clear = page.locator('button[title^="Clear output"]')
   await expect(clear).toBeVisible()
 })
 

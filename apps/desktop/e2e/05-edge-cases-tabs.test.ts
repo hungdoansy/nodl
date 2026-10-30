@@ -125,7 +125,7 @@ test('E2E-071: create new tab', async () => {
     await page.waitForTimeout(300)
   }
 
-  const newFileBtn = page.locator('button[title="New file"]')
+  const newFileBtn = page.locator('button[title^="New file"]')
   await newFileBtn.first().click()
   await page.waitForTimeout(500)
 
@@ -444,7 +444,7 @@ test('E2E-101: output panel scrolls to match editor after execution', async () =
   await typeCode(page, lines.join('\n'))
 
   // Ensure we're in aligned mode
-  const consoleToggle = page.locator('button[title="Switch to line-aligned mode"]')
+  const consoleToggle = page.locator('button[title^="Switch to line-aligned mode"]')
   if (await consoleToggle.isVisible().catch(() => false)) {
     await consoleToggle.click()
     await page.waitForTimeout(300)
