@@ -27,6 +27,16 @@ function expectValid(code: string) {
   return js
 }
 
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
+
+/** Valid through the pipeline via the AST instrumenter (no regex fallback), and compiles in V8 like the worker's wrapper */
+function expectRunnable(code: string): string {
+  expect(() => instrumentWithAST(code)).not.toThrow()
+  const js = expectValid(code)
+  expect(() => new AsyncFunction('__console__', 'require', '__expr__', '__line__', '__loopGuard__', '__importMeta__', js)).not.toThrow()
+  return js
+}
+
 describe('pipeline: instrument → transpile', () => {
   // --- Simple expressions ---
   it('handles number literal', () => {
@@ -1077,6 +1087,95 @@ describe('valid TS that node runs must not error', () => {
 
   it('JSX is not supported (ts loader only)', () => {
     expect(pipeline('const el = <div>hi</div>').errors.length).toBeGreaterThan(0)
+  })
+})
+
+describe('decorators and namespaces', () => {
+  it('class decorator', () => {
+    expectRunnable('function dec(t: any, c: any) { return t }\n@dec class A {}\nA.name')
+  })
+
+  it('method decorator and accessor field', () => {
+    expectRunnable('function d(t: any, c: any) {}\nclass B {\n  @d m() {}\n  @d accessor x = 1\n}\nnew B().x')
+  })
+
+  it('decorator before export', () => {
+    expectRunnable('function d(t: any, c: any) {}\n@d\nexport class E {}\nE.name')
+    expectRunnable('function d(t: any, c: any) {}\n@d export default class G {}\nG.name')
+  })
+
+  it('keeps export inside a namespace (namespace members)', () => {
+    const js = expectRunnable('namespace N { export const a = 1 }\nN.a')
+    expect(js).toMatch(/\.a = 1/)
+  })
+
+  it('keeps export inside nested namespaces and declare module', () => {
+    expectRunnable('namespace O.P {\n  export function f() { return 2 }\n}\nO.P.f()')
+    expectRunnable('declare module "x" {\n  export const a: number\n}\n1')
+  })
+})
+
+describe('module syntax', () => {
+  it('strips local export lists', () => {
+    const js = expectRunnable('const a = 1\nexport { a, a as b }\nexport type { T }')
+    expect(js).not.toContain('export')
+  })
+
+  it('anonymous export default becomes an expression', () => {
+    expectRunnable('export default function () { return 1 }')
+    expectRunnable('export default class {}')
+    expectRunnable('export default class extends Array {}')
+    expectRunnable('export default (function () {})')
+    expectRunnable('export default function () {} if (true) { 1 }')
+    expectRunnable('export default class {};\n1')
+  })
+
+  it('export default object literal is not parsed as a block', () => {
+    expect(expectRunnable('export default { a: 1, b: 2 }')).toContain('a: 1')
+  })
+
+  it('named export default stays a usable declaration', () => {
+    expectRunnable('export default function named() { return 1 }\nnamed()')
+  })
+
+  it('export * as ns binds ns', () => {
+    expect(expectRunnable('export * as ns from "path"\nns.sep')).toContain('const ns = require("path")')
+  })
+
+  it('re-exports bind the exported name and skip non-bindable names', () => {
+    expect(expectRunnable('export { default } from "path"')).toContain('require("path")')
+    expect(expectRunnable('export { default as p, sep } from "path"')).toContain('const { default: p, sep } = require("path")')
+    expectRunnable('export { "☿" as a } from "x"')
+    expect(instrumentCode('export { "☿" as a } from "x"')).toContain('const { "☿": a } = require("x")')
+  })
+
+  it('re-export does not redeclare an imported name', () => {
+    expectRunnable('import foo from "x"\nexport { foo } from "x"')
+  })
+
+  it('string import names are quoted keys', () => {
+    expect(expectRunnable('import { "a-b" as ab } from "x"')).toContain('"a-b": ab')
+  })
+
+  it('import.meta becomes the injected __importMeta__', () => {
+    expect(expectRunnable('import.meta.url')).toContain('__importMeta__.url')
+  })
+
+  it('valid TS that trips Babel scope tracking stays on the AST path', () => {
+    expectRunnable('import type X from "x"\nlet X = 1')
+  })
+})
+
+describe('other syntax found by corpus testing', () => {
+  it('shebang line', () => {
+    const code = '#!/usr/bin/env node\nconsole.log(1)'
+    expectRunnable(code)
+    expect(instrumentCode(code).split('\n')).toHaveLength(2)
+  })
+
+  it('brace-less loop body followed by a statement on the same line', () => {
+    expectRunnable('for (const x of [1]) x;[2]')
+    expect(instrumentCode('for (const x of [1]) x;[2]')).toContain('__loopGuard__(); x; }__line__')
   })
 })
 

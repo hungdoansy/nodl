@@ -12,8 +12,9 @@
  * of the output is line N of the source — esbuild error/warning lines match the editor.
  */
 
-import { parse } from '@babel/parser'
+import { parse, type ParserPlugin } from '@babel/parser'
 import MagicString from 'magic-string'
+import { getBindingIdentifiers, isValidIdentifier } from '@babel/types'
 import type {
   ImportDeclaration,
   ImportSpecifier,
@@ -39,7 +40,9 @@ const PARSER_OPTIONS = {
   allowAwaitOutsideFunction: true,   // Top-level await support
   allowReturnOutsideFunction: true,  // Bare return is valid in scratchpad
   errorRecovery: true,               // Partial AST on incomplete/invalid code
-  plugins: ['typescript'] as 'typescript'[], // no 'jsx': it makes `<T>(x) => x` and `<string>v` ambiguous
+  // no 'jsx': it makes `<T>(x) => x` and `<string>v` ambiguous. Decorator plugins: without
+  // them Babel throws on `@dec`/`accessor` and the code falls to the regex instrumenter
+  plugins: ['typescript', 'decorators', 'decoratorAutoAccessors'] as ParserPlugin[],
   ranges: true,                      // Provide start/end character offsets
 }
 
@@ -100,10 +103,9 @@ function buildRequire(
     const specStr = namedSpecs
       .map((s) => {
         // imported can be Identifier or StringLiteral (for `import { "foo" as bar }`)
-        const importedName =
-          s.imported.type === 'Identifier' ? s.imported.name : s.imported.value
+        const importedName = moduleExportName(s.imported)
         const localName = s.local.name
-        return importedName === localName ? importedName : `${importedName}: ${localName}`
+        return importedName === localName ? importedName : `${propertyKey(importedName)}: ${localName}`
       })
       .join(', ')
     parts.push(`const { ${specStr} } = require(${sourceRaw})`)
@@ -112,23 +114,57 @@ function buildRequire(
   return parts.join('; ')
 }
 
+/** Name of an import/export specifier — `{ "a-b" as c }` uses a string literal */
+function moduleExportName(node: { type: string; name?: string; value?: string }): string {
+  return node.type === 'Identifier' ? node.name! : node.value!
+}
+
+/** A destructuring key: bare when it's an identifier name, quoted otherwise */
+function propertyKey(name: string): string {
+  return /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name)
+}
+
 /**
- * Build a require() for a re-export with source: export { a, b } from "mod"
+ * Build a require() for a re-export with source: export { a, b as c } from "mod".
+ *
+ * Scratchpad convenience: the exported names also become local bindings
+ * (`const { a, b: c } = require("mod")`), unless the name can't be a binding
+ * (`default`, string names) or is already declared — a collision would be a
+ * SyntaxError. `export * as ns from "mod"` → `const ns = require("mod")`.
+ * With no bindings left it's just `require("mod")`, which still loads the module.
  */
-function buildReexportRequire(node: ExportNamedDeclaration): string {
+function buildReexportRequire(node: ExportNamedDeclaration, declared: Set<string>): string {
   const sourceRaw = rawSource(node.source!)
-  const valueSpecs = (node.specifiers as ExportSpecifier[]).filter(
-    (s) => s.exportKind !== 'type'
-  )
+  const valueSpecs = node.specifiers.filter((s) => (s as ExportSpecifier).exportKind !== 'type')
   if (valueSpecs.length === 0) return '' // all type exports → strip
 
-  const specStr = valueSpecs
-    .map((s) => {
-      // local is the imported name from the source module
-      return s.local.type === 'Identifier' ? s.local.name : (s.local as any).value
-    })
-    .join(', ')
-  return `const { ${specStr} } = require(${sourceRaw})`
+  const props: string[] = []
+  const parts: string[] = []
+  for (const spec of valueSpecs) {
+    const exported = moduleExportName(spec.exported)
+    if (!isValidIdentifier(exported) || declared.has(exported)) continue
+    declared.add(exported)
+    if (spec.type === 'ExportNamespaceSpecifier') {
+      parts.push(`const ${exported} = require(${sourceRaw})`)
+    } else if (spec.type === 'ExportSpecifier') {
+      const imported = moduleExportName(spec.local)
+      props.push(imported === exported ? exported : `${propertyKey(imported)}: ${exported}`)
+    }
+  }
+  if (props.length > 0) parts.push(`const { ${props.join(', ')} } = require(${sourceRaw})`)
+  return parts.length > 0 ? parts.join('; ') : `require(${sourceRaw})`
+}
+
+/** Names declared at the top level — re-export bindings must not collide with them */
+function topLevelNames(program: File['program']): Set<string> {
+  const names = new Set<string>()
+  for (const stmt of program.body) {
+    if (stmt.type === 'ExportNamedDeclaration' && stmt.source) continue
+    for (const name of Object.keys(getBindingIdentifiers(stmt))) names.add(name)
+    const id = (stmt as { id?: { type: string; name?: string } }).id // TS enum / namespace
+    if (id?.type === 'Identifier') names.add(id.name!)
+  }
+  return names
 }
 
 /**
@@ -140,6 +176,28 @@ function overwriteKeepLines(s: MagicString, code: string, start: number, end: nu
   s.overwrite(start, end, text + '\n'.repeat(newlines))
 }
 
+/**
+ * Import/export rewriting applies to the scratchpad's own top level only. Inside a
+ * `namespace` or `declare module` block, `export` declares a namespace member —
+ * esbuild compiles that itself, and stripping it would leave the member undefined.
+ */
+function isModuleLevel(path: any): boolean {
+  return path.parent.type === 'Program'
+}
+
+/**
+ * Replace `export ` / `export default ` in front of a declaration (default: remove it).
+ * With decorators before the keyword (`@dec export class A {}`) the class node starts
+ * at the decorator, so the keyword sits inside it, after the last decorator.
+ */
+function stripExportKeyword(s: MagicString, code: string, exportStart: number, decl: any, replacement = ''): void {
+  // Match the keyword text itself: a range up to decl.start would also eat the
+  // `(` of `export default (expr)`
+  const from = exportStart < decl.start ? exportStart : decl.decorators?.at(-1)?.end ?? exportStart
+  const keyword = /export\s+(default\s+)?/.exec(code.slice(from))
+  if (keyword) overwriteKeepLines(s, code, from + keyword.index, from + keyword.index + keyword[0].length, replacement)
+}
+
 // -------------------------------------------------------------------
 // Main instrumenter
 // -------------------------------------------------------------------
@@ -147,6 +205,7 @@ function overwriteKeepLines(s: MagicString, code: string, start: number, end: nu
 export function instrumentWithAST(code: string): string {
   const ast = parse(code, PARSER_OPTIONS) as File
   const s = new MagicString(code)
+  const declared = topLevelNames(ast.program)
 
   // Shared loop body handler for all loop types
   const injectLoopGuard = (path: any): void => {
@@ -159,7 +218,10 @@ export function instrumentWithAST(code: string): string {
     } else {
       // Single-statement body — wrap in a block
       s.appendLeft(body.start, '{ __loopGuard__(); ')
-      s.appendRight(body.end, ' }')
+      // appendLeft, not appendRight: a statement starting right at body.end
+      // (`for (…) foo;bar()`) gets its __line__ prefix appended left at the same
+      // position, and appendRight content would land after that prefix
+      s.appendLeft(body.end, ' }')
     }
   }
 
@@ -175,6 +237,11 @@ export function instrumentWithAST(code: string): string {
   // -------------------------------------------------------------------
 
   traverse(ast, {
+    // No scope tracking: the visitors don't need it, and Babel's scope crawl throws
+    // "Duplicate declaration" on valid TS (`import type X` + `let X`), which would
+    // drop the code to the regex fallback
+    noScope: true,
+
     // Insert __line__.value = N before every statement whose parent is a
     // block-level context (Program, BlockStatement, StaticBlock).
     Statement(path: any): void {
@@ -197,7 +264,7 @@ export function instrumentWithAST(code: string): string {
     // Transform ESM imports → require()
     ImportDeclaration(path: any): void {
       const node = path.node as ImportDeclaration
-      if (node.start == null || node.end == null) return
+      if (node.start == null || node.end == null || !isModuleLevel(path)) return
 
       // import type { Foo } → strip entirely (no runtime effect)
       if (node.importKind === 'type') {
@@ -212,7 +279,7 @@ export function instrumentWithAST(code: string): string {
     // Transform export named → strip export keyword or require() for re-exports
     ExportNamedDeclaration(path: any): void {
       const node = path.node as ExportNamedDeclaration
-      if (node.start == null || node.end == null) return
+      if (node.start == null || node.end == null || !isModuleLevel(path)) return
 
       if (node.source) {
         // export { a, b } from "mod" or export type { ... } from "mod"
@@ -220,40 +287,59 @@ export function instrumentWithAST(code: string): string {
           overwriteKeepLines(s, code, node.start, node.end, '')
           return
         }
-        const replacement = buildReexportRequire(node)
+        const replacement = buildReexportRequire(node, declared)
         overwriteKeepLines(s, code, node.start, node.end, replacement)
       } else if (node.declaration) {
         // export const x = 1 → const x = 1 (strip "export ")
         const decl = node.declaration as any
-        if (decl.start != null) {
-          overwriteKeepLines(s, code, node.start, decl.start, '')
-        }
+        if (decl.start != null) stripExportKeyword(s, code, node.start, decl)
+      } else {
+        // export { a, b as c } of local names: the names already exist — nothing to do
+        overwriteKeepLines(s, code, node.start, node.end, '')
       }
-      // export { a, b } without source: local re-export, unusual in scratchpad
-      // Leave as-is — will fail at runtime in AsyncFunction context, which is
-      // expected behaviour (same as current regex instrumenter).
     },
 
-    // export default expr → expr (strip "export default ")
+    // export default function f() {} → function f() {} (named declarations stay usable)
+    // export default expr / anonymous function or class → (expr): anonymous
+    // declarations are invalid on their own, and `export default { a: 1 }` stripped
+    // to `{ a: 1 }` would parse as a block
     ExportDefaultDeclaration(path: any): void {
       const node = path.node
-      if (node.start == null || node.end == null) return
+      if (node.start == null || node.end == null || !isModuleLevel(path)) return
       const decl = node.declaration as any
-      if (decl.start != null) {
-        overwriteKeepLines(s, code, node.start, decl.start, '')
+      if (decl.start == null) return
+      const isNamedDeclaration =
+        decl.id != null || decl.type === 'TSInterfaceDeclaration' || decl.type === 'TSDeclareFunction'
+      if (isNamedDeclaration) {
+        stripExportKeyword(s, code, node.start, decl)
+      } else {
+        stripExportKeyword(s, code, node.start, decl, '(')
+        // An anonymous declaration ends without `;` (`export default function () {} next()`),
+        // so the new expression needs one. Expressions can't take it: their end may sit
+        // inside the source's own parens — `export default (expr)`
+        const isDeclaration = decl.type === 'FunctionDeclaration' || decl.type === 'ClassDeclaration'
+        s.appendLeft(decl.end, isDeclaration ? ');' : ')')
       }
     },
 
     // export * from "mod" → require("mod")
     ExportAllDeclaration(path: any): void {
       const node = path.node
-      if (node.start == null || node.end == null) return
+      if (node.start == null || node.end == null || !isModuleLevel(path)) return
       if (node.exportKind === 'type') {
         overwriteKeepLines(s, code, node.start, node.end, '')
         return
       }
       const sourceRaw = rawSource(node.source)
       overwriteKeepLines(s, code, node.start, node.end, `require(${sourceRaw})`)
+    },
+
+    // import.meta is module-only syntax; the worker passes an equivalent object
+    MetaProperty(path: any): void {
+      const node = path.node
+      if (node.meta.name === 'import' && node.property.name === 'meta') {
+        s.overwrite(node.start, node.end, '__importMeta__')
+      }
     },
 
     // Inject loop guards into all loop types

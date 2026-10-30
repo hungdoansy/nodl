@@ -178,12 +178,18 @@ function isChainContinuation(trimmed: string): boolean {
   return false
 }
 
+/** `export { a, b as c }` / `export type { A }` without a `from` clause */
+const LOCAL_EXPORT_LIST = /^export\s+(type\s+)?\{[^}]*\}\s*;?\s*$/
+
 /**
  * Convert ESM import statements to require() calls.
  * Needed because user code runs inside AsyncFunction (not a module).
  */
 export function transformImports(line: string): string {
   const trimmed = line.trim()
+
+  // export { a, b as c } of local names → strip (the names already exist)
+  if (LOCAL_EXPORT_LIST.test(trimmed)) return ''
 
   // Handle re-exports: export { ... } from "mod" and export * from "mod"
   if (trimmed.startsWith('export ') && trimmed.includes(' from ')) {
@@ -260,6 +266,9 @@ export function transformImports(line: string): string {
  * implementation if parsing fails entirely.
  */
 export function instrumentCode(code: string): string {
+  // A shebang is only valid as the very first line of a script; the worker puts
+  // its own code above ours, so turn it into a comment (same length, same lines)
+  if (code.startsWith('#!')) code = '//' + code.slice(2)
   try {
     return instrumentWithAST(code)
   } catch {
@@ -303,7 +312,7 @@ function instrumentWithRegex(code: string): string {
       const track = `__line__.value = ${lineNum}; `
 
       // Transform import/export-from statements to require() calls
-      if (trimmed.startsWith('import ') || (trimmed.startsWith('export ') && trimmed.includes(' from '))) {
+      if (trimmed.startsWith('import ') || (trimmed.startsWith('export ') && trimmed.includes(' from ')) || LOCAL_EXPORT_LIST.test(trimmed)) {
         const transformed = transformImports(trimmed)
         result.push(track + transformed)
       } else if (stack.length === 0 && isExpression(trimmed) && !nextIsContinuation) {
