@@ -1,5 +1,5 @@
 name: Release
-run-name: Release v${{ inputs.version }}
+run-name: Release v${{ inputs.version }}${{ inputs.dry_run && ' (dry run)' || '' }}
 
 on:
   workflow_dispatch:
@@ -7,10 +7,31 @@ on:
       version:
         description: 'Version to release (e.g. 2.2.0)'
         required: true
+      # Untick a target to skip it for one run, or flip its `default` to skip it every run.
+      mac_arm64:
+        description: 'Build macOS arm64'
+        type: boolean
+        default: true
+      mac_x64:
+        description: 'Build macOS x64'
+        type: boolean
+        default: true
+      windows_x64:
+        description: 'Build Windows x64'
+        type: boolean
+        default: true
+      linux_x64:
+        description: 'Build Linux x64'
+        type: boolean
+        default: true
+      dry_run:
+        description: 'Dry run: build everything, but push and publish nothing'
+        type: boolean
+        default: false
 
+# Only the release job gets write access.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 jobs:
   prepare:
@@ -22,12 +43,14 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
       date: ${{ steps.meta.outputs.date }}
-      changelog: ${{ steps.changelog.outputs.text }}
+      matrix: ${{ steps.targets.outputs.matrix }}
+      changelog: ${{ steps.meta.outputs.changelog }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
 
@@ -40,25 +63,27 @@ jobs:
         working-directory: .
         run: pnpm install
 
-      - name: Validate version
+      - name: Validate version and draft notes
         id: meta
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-        run: |
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Version must be in X.Y.Z format (got: $VERSION)"
-            exit 1
-          fi
+        uses: hungdoansy/desktop-release-actions/validate-and-draft-notes@v1
+        with:
+          version: ${{ inputs.version }}
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          gemini-model: gemini-2.5-flash
+          gemini-api-version: v1beta
 
-          TAG="v$VERSION"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "::error::Tag $TAG already exists"
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - name: Pick build targets
+        id: targets
+        uses: hungdoansy/desktop-release-actions/select-build-targets@v1
+        with:
+          selected: ${{ toJSON(inputs) }}
+          targets: |
+            [
+              { "input": "mac_arm64", "os": "macos-latest", "arch": "arm64" },
+              { "input": "mac_x64", "os": "macos-latest", "arch": "x64" },
+              { "input": "windows_x64", "os": "windows-latest", "arch": "x64" },
+              { "input": "linux_x64", "os": "ubuntu-latest", "arch": "x64" }
+            ]
 
       - name: Lint
         run: pnpm run lint
@@ -68,28 +93,11 @@ jobs:
       - name: Test
         run: pnpm run test --reporter=default
 
-      - name: Generate changelog
-        id: changelog
-        working-directory: .
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TAG: ${{ steps.meta.outputs.tag }}
-        run: node .github/scripts/generate-changelog.mjs
-
   build:
     needs: prepare
     strategy:
       fail-fast: true
-      matrix:
-        include:
-          - os: macos-latest
-            arch: arm64
-          - os: macos-latest
-            arch: x64
-          - os: windows-latest
-            arch: x64
-          - os: ubuntu-latest
-            arch: x64
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -98,6 +106,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
 
@@ -126,12 +136,12 @@ jobs:
 
       # Before the build: the About dialog bundles CHANGELOG.md
       - name: Add changelog entry
-        working-directory: .
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-          DATE: ${{ needs.prepare.outputs.date }}
-          ENTRIES: ${{ needs.prepare.outputs.changelog }}
-        run: node .github/scripts/prepend-changelog.mjs
+        uses: hungdoansy/desktop-release-actions/prepend-changelog-entry@v1
+        with:
+          file: apps/desktop/CHANGELOG.md
+          tag: ${{ needs.prepare.outputs.tag }}
+          date: ${{ needs.prepare.outputs.date }}
+          entries: ${{ needs.prepare.outputs.changelog }}
 
       - name: Build app
         run: pnpm run build
@@ -157,6 +167,9 @@ jobs:
   release:
     needs: [prepare, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
 
     steps:
       - uses: actions/checkout@v4
@@ -177,13 +190,6 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Update CHANGELOG.md
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-          DATE: ${{ needs.prepare.outputs.date }}
-          ENTRIES: ${{ needs.prepare.outputs.changelog }}
-        run: node .github/scripts/prepend-changelog.mjs
-
       - name: Update package.json version
         working-directory: apps/desktop
         env:
@@ -196,25 +202,23 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-      - name: Commit, tag, and push
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add apps/desktop/CHANGELOG.md apps/desktop/package.json
-          git commit -m "release: $TAG"
-          git tag -m "$TAG" "$TAG"
-          git push origin main
-          git push origin "$TAG"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Update CHANGELOG.md
+        uses: hungdoansy/desktop-release-actions/prepend-changelog-entry@v1
         with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          name: ${{ needs.prepare.outputs.tag }}
-          body: ${{ needs.prepare.outputs.changelog }}
-          draft: false
+          file: apps/desktop/CHANGELOG.md
+          tag: ${{ needs.prepare.outputs.tag }}
+          date: ${{ needs.prepare.outputs.date }}
+          entries: ${{ needs.prepare.outputs.changelog }}
+
+      - name: Tag and publish
+        uses: hungdoansy/desktop-release-actions/tag-and-publish-release@v1
+        with:
+          tag: ${{ needs.prepare.outputs.tag }}
+          changelog: ${{ needs.prepare.outputs.changelog }}
+          dry-run: ${{ inputs.dry_run }}
+          paths: |
+            apps/desktop/CHANGELOG.md
+            apps/desktop/package.json
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.zip
@@ -222,12 +226,15 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.deb
 
+      # A dry run keeps the installers for a day, so they can be downloaded and checked.
       - name: Delete artifacts
+        if: ${{ !inputs.dry_run }}
         uses: geekyeggo/delete-artifact@v5
         with:
           name: nodl-*
 
       - name: Trigger web deploy
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run deploy-web.yml --ref main
