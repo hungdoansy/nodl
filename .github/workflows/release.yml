@@ -77,13 +77,7 @@ jobs:
         uses: hungdoansy/desktop-release-actions/select-build-targets@v1
         with:
           selected: ${{ toJSON(inputs) }}
-          targets: |
-            [
-              { "input": "mac_arm64", "os": "macos-latest", "arch": "arm64" },
-              { "input": "mac_x64", "os": "macos-latest", "arch": "x64" },
-              { "input": "windows_x64", "os": "windows-latest", "arch": "x64" },
-              { "input": "linux_x64", "os": "ubuntu-latest", "arch": "x64" }
-            ]
+          targets: mac_arm64, mac_x64, windows_x64, linux_x64
 
       - name: Lint
         run: pnpm run lint
@@ -94,6 +88,7 @@ jobs:
         run: pnpm run test --reporter=default
 
   build:
+    name: Build ${{ matrix.name }}
     needs: prepare
     strategy:
       fail-fast: true
