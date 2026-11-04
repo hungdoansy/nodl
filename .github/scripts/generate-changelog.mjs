@@ -19,6 +19,9 @@ const TAG = process.env.TAG || "";
 const GITHUB_OUTPUT = process.env.GITHUB_OUTPUT || "";
 const GITHUB_STEP_SUMMARY = process.env.GITHUB_STEP_SUMMARY || "";
 
+// Commit types users don't need to read about, scoped or not: "docs: ", "chore(deps)!: ".
+const INTERNAL_COMMIT = /^(release|docs|test|chore|ci|build|style|refactor)(\(.+?\))?!?:/;
+
 function sh(cmd) {
   return execSync(cmd, { encoding: "utf8" }).trimEnd();
 }
@@ -39,10 +42,11 @@ function buildRawEntries() {
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
-    .filter((l) => !/^release:/.test(l))
-    .filter((l) => !/^docs:/.test(l))
-    // Strip conventional-commit prefixes: "feat: ", "fix(foo): ", etc.
-    .map((l) => l.replace(/^[a-z]+(\(.+?\))?:\s*/, ""))
+    .filter((l) => !INTERNAL_COMMIT.test(l))
+    // Strip conventional-commit prefixes: "feat: ", "fix(foo): ", "feat!: ", etc.
+    .map((l) => l.replace(/^[a-z]+(\(.+?\))?!?:\s*/, ""))
+    // Strip a trailing PR number: "add thing (#123)"
+    .map((l) => l.replace(/\s*\(#\d+\)$/, ""))
     .map((l) => `- ${l}`);
 
   return {
@@ -123,7 +127,9 @@ async function main() {
       geminiStatus = `Successfully fetched changelog from Gemini (model: ${GEMINI_MODEL})`;
       console.log(geminiStatus);
     } catch (err) {
-      geminiStatus = `Gemini request failed — using raw git log. Reason: ${err.message}`;
+      // The full error can hold the raw response body: job log only, not the run page.
+      console.log("Gemini request failed:", err);
+      geminiStatus = `Gemini unavailable (model: ${GEMINI_MODEL}), using raw git log`;
       console.warn(`::warning::${geminiStatus}`);
     }
   }

@@ -42,9 +42,9 @@ jobs:
 
       - name: Validate version
         id: meta
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Version must be in X.Y.Z format (got: $VERSION)"
             exit 1
@@ -63,8 +63,10 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      # Explicit reporter: in Actions, Vitest adds github-actions, which appends
+      # a "Vitest Test Report" to the run summary on every run.
       - name: Test
-        run: pnpm run test
+        run: pnpm run test --reporter=default
 
       - name: Generate changelog
         id: changelog
@@ -120,7 +122,7 @@ jobs:
           "
 
       - name: Run unit tests
-        run: pnpm run test
+        run: pnpm run test --reporter=default
 
       # Before the build: the About dialog bundles CHANGELOG.md
       - name: Add changelog entry
@@ -150,7 +152,7 @@ jobs:
             apps/desktop/dist/*.exe
             apps/desktop/dist/*.AppImage
             apps/desktop/dist/*.deb
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   release:
     needs: [prepare, build]
@@ -184,18 +186,20 @@ jobs:
 
       - name: Update package.json version
         working-directory: apps/desktop
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$VERSION';
+            pkg.version = process.env.VERSION;
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
       - name: Commit, tag, and push
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          TAG="${{ needs.prepare.outputs.tag }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps/desktop/CHANGELOG.md apps/desktop/package.json
