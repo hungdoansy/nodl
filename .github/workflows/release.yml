@@ -69,8 +69,6 @@ jobs:
         with:
           version: ${{ inputs.version }}
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          gemini-model: gemini-2.5-flash
-          gemini-api-version: v1beta
 
       - name: Pick build targets
         id: targets
