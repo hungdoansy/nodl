@@ -51,6 +51,7 @@ function buildRawEntries() {
 
   return {
     lastTag,
+    hasCommits: lines.length > 0,
     entries: lines.length ? lines.join("\n") : "- No notable changes",
   };
 }
@@ -111,14 +112,18 @@ function writeSummary(text) {
 }
 
 async function main() {
-  const { lastTag, entries: raw } = buildRawEntries();
+  const { lastTag, hasCommits, entries: raw } = buildRawEntries();
   console.log(`Last tag: ${lastTag || "(none)"}`);
   console.log(`Raw commits:\n${raw}\n`);
 
   let entries = raw;
   let geminiStatus;
 
-  if (!GEMINI_API_KEY) {
+  if (!hasCommits) {
+    // Nothing to rewrite: asking anyway invites invented release notes.
+    geminiStatus = "No notable commits, skipped Gemini";
+    console.log(geminiStatus);
+  } else if (!GEMINI_API_KEY) {
     geminiStatus = "GEMINI_API_KEY not set — using raw git log";
     console.warn(`::warning::${geminiStatus}`);
   } else {
