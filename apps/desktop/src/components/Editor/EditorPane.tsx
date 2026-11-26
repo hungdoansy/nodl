@@ -283,6 +283,7 @@ export function EditorPane() {
             wordWrap: wordWrap ? 'on' : 'off',
             tabSize,
             automaticLayout: true,
+            fixedOverflowWidgets: true,
             glyphMargin: true,
             lineNumbersMinChars: 3,
             folding: false,
